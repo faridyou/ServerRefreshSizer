@@ -1,0 +1,13 @@
+# IBM rPerf / CPW (no API). rPerf by SMT mode for the whole system (all cores). Source: IBM Power performance report.
+systems:
+  - {key: S824, model: Power S824, generation: POWER8, cores: 24, ghz: "3.50", rperf: {1: 197.0, 2: 285.6, 4: 371.3, 8: 397.3}, cpw: 218510, url: "https://www.ibm.com/downloads/cas/K90RQOW8"}
+  - {key: S924, model: Power S924, generation: POWER9, cores: 24, ghz: "3.4-3.9", rperf: {1: 197.2, 2: 335.3, 4: 462.7, 8: 583.1}, cpw: 370700, url: "https://www.ibm.com/downloads/cas/K90RQOW8"}
+  - {key: E980, model: Power E980, generation: POWER9, cores: 48, ghz: "3.55-3.9", rperf: {8: 1270.2}, url: "https://www.ibm.com/downloads/cas/K90RQOW8"}
+  - {key: E1080, model: Power E1080, generation: Power10, cores: 120, ghz: "3.55-4.0", rperf: {8: 3999.3}, url: "https://www.ibm.com/downloads/cas/K90RQOW8"}
+# rPerf -> SPECrate2017_int_base anchors (IBM's own SPEC results). F = SPEC / rPerf(SMT8, same system).
+anchors:
+  - {system: Power S924 24c, generation: POWER9, spec_int_base: 213, rperf_smt8: 583.1, factor: 0.365}
+  - {system: Power E950 40c, generation: POWER9, spec_int_base: 392}
+  - {system: Power E1050 96c, generation: Power10, spec_int_base: 1220}
+  - {system: Power E1080 120c, generation: Power10, spec_int_base: 1700, rperf_smt8: 3999.3, factor: 0.425}
+conservative_factor: 0.425

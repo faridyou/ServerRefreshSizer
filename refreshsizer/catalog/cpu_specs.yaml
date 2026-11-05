@@ -1,0 +1,183 @@
+# CPU specifications (Intel ARK / AMD product pages / IBM). Editable; prices are placeholders (1k-unit list order).
+# Short keys: m=model name, f=family, cn=codename, c=cores, t=threads/core, b=base GHz, tb=max turbo GHz,
+# l3=MB, w=TDP W, ch=memory channels/socket, mts=max MT/s, s=socket, ms=max sockets, ct=core type, p=price USD
+# Refresh helper: `refreshsizer bench update --cpu-specs` scrapes when allowed, otherwise keeps this file.
+defaults:
+  intel: {vendor: Intel, ofc: 0.5, url: "https://ark.intel.com"}
+  amd: {vendor: AMD, ofc: 0.5, url: "https://www.amd.com/en/products/processors/server/epyc.html"}
+  ibm: {vendor: IBM, ofc: 1.0, url: "https://www.ibm.com/power"}
+  oracle: {vendor: Oracle, ofc: 0.5, url: "https://www.oracle.com/servers/sparc/"}
+cpus:
+  # ---- Intel Xeon E5 v2 (Ivy Bridge-EP) ----
+  - {v: intel, m: Intel Xeon E5-2620 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 6, t: 2, b: 2.1, tb: 2.6, l3: 15, w: 80, ch: 4, mts: 1600, s: LGA2011, ms: 2, ct: P, p: 406}
+  - {v: intel, m: Intel Xeon E5-2630 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 6, t: 2, b: 2.6, tb: 3.1, l3: 15, w: 80, ch: 4, mts: 1600, s: LGA2011, ms: 2, ct: P, p: 612}
+  - {v: intel, m: Intel Xeon E5-2650 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 8, t: 2, b: 2.6, tb: 3.4, l3: 20, w: 95, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 1166}
+  - {v: intel, m: Intel Xeon E5-2660 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 10, t: 2, b: 2.2, tb: 3.0, l3: 25, w: 95, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 1389}
+  - {v: intel, m: Intel Xeon E5-2670 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 10, t: 2, b: 2.5, tb: 3.3, l3: 25, w: 115, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 1552}
+  - {v: intel, m: Intel Xeon E5-2680 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 10, t: 2, b: 2.8, tb: 3.6, l3: 25, w: 115, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 1723}
+  - {v: intel, m: Intel Xeon E5-2690 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 10, t: 2, b: 3.0, tb: 3.6, l3: 25, w: 130, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 2057}
+  - {v: intel, m: Intel Xeon E5-2697 v2, f: Xeon E5 v2, cn: Ivy Bridge-EP, c: 12, t: 2, b: 2.7, tb: 3.5, l3: 30, w: 130, ch: 4, mts: 1866, s: LGA2011, ms: 2, ct: P, p: 2614}
+  # ---- Intel Xeon E5 v3 (Haswell-EP) ----
+  - {v: intel, m: Intel Xeon E5-2620 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 6, t: 2, b: 2.4, tb: 3.2, l3: 15, w: 85, ch: 4, mts: 1866, s: LGA2011-3, ms: 2, ct: P, p: 417}
+  - {v: intel, m: Intel Xeon E5-2630 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 8, t: 2, b: 2.4, tb: 3.2, l3: 20, w: 85, ch: 4, mts: 1866, s: LGA2011-3, ms: 2, ct: P, p: 667}
+  - {v: intel, m: Intel Xeon E5-2640 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 8, t: 2, b: 2.6, tb: 3.4, l3: 20, w: 90, ch: 4, mts: 1866, s: LGA2011-3, ms: 2, ct: P, p: 939}
+  - {v: intel, m: Intel Xeon E5-2650 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 10, t: 2, b: 2.3, tb: 3.0, l3: 25, w: 105, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 1166}
+  - {v: intel, m: Intel Xeon E5-2660 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 10, t: 2, b: 2.6, tb: 3.3, l3: 25, w: 105, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 1445}
+  - {v: intel, m: Intel Xeon E5-2670 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 12, t: 2, b: 2.3, tb: 3.1, l3: 30, w: 120, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 1589}
+  - {v: intel, m: Intel Xeon E5-2680 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 12, t: 2, b: 2.5, tb: 3.3, l3: 30, w: 120, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 1745}
+  - {v: intel, m: Intel Xeon E5-2690 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 12, t: 2, b: 2.6, tb: 3.5, l3: 30, w: 135, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 2090}
+  - {v: intel, m: Intel Xeon E5-2695 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 14, t: 2, b: 2.3, tb: 3.3, l3: 35, w: 120, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 2424}
+  - {v: intel, m: Intel Xeon E5-2697 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 14, t: 2, b: 2.6, tb: 3.6, l3: 35, w: 145, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 2702}
+  - {v: intel, m: Intel Xeon E5-2698 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 16, t: 2, b: 2.3, tb: 3.6, l3: 40, w: 135, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 3226}
+  - {v: intel, m: Intel Xeon E5-2699 v3, f: Xeon E5 v3, cn: Haswell-EP, c: 18, t: 2, b: 2.3, tb: 3.6, l3: 45, w: 145, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 4115}
+  # ---- Intel Xeon E5 v4 (Broadwell-EP) ----
+  - {v: intel, m: Intel Xeon E5-2620 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 8, t: 2, b: 2.1, tb: 3.0, l3: 20, w: 85, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 417}
+  - {v: intel, m: Intel Xeon E5-2630 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 10, t: 2, b: 2.2, tb: 3.1, l3: 25, w: 85, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 667}
+  - {v: intel, m: Intel Xeon E5-2640 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 10, t: 2, b: 2.4, tb: 3.4, l3: 25, w: 90, ch: 4, mts: 2133, s: LGA2011-3, ms: 2, ct: P, p: 939}
+  - {v: intel, m: Intel Xeon E5-2650 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 12, t: 2, b: 2.2, tb: 2.9, l3: 30, w: 105, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 1166}
+  - {v: intel, m: Intel Xeon E5-2660 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 14, t: 2, b: 2.0, tb: 3.2, l3: 35, w: 105, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 1445}
+  - {v: intel, m: Intel Xeon E5-2680 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 14, t: 2, b: 2.4, tb: 3.3, l3: 35, w: 120, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 1745}
+  - {v: intel, m: Intel Xeon E5-2683 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 16, t: 2, b: 2.1, tb: 3.0, l3: 40, w: 120, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 1846}
+  - {v: intel, m: Intel Xeon E5-2690 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 14, t: 2, b: 2.6, tb: 3.5, l3: 35, w: 135, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 2090}
+  - {v: intel, m: Intel Xeon E5-2695 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 18, t: 2, b: 2.1, tb: 3.3, l3: 45, w: 120, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 2424}
+  - {v: intel, m: Intel Xeon E5-2697 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 18, t: 2, b: 2.3, tb: 3.6, l3: 45, w: 145, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 2702}
+  - {v: intel, m: Intel Xeon E5-2698 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 20, t: 2, b: 2.2, tb: 3.6, l3: 50, w: 135, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 3226}
+  - {v: intel, m: Intel Xeon E5-2699 v4, f: Xeon E5 v4, cn: Broadwell-EP, c: 22, t: 2, b: 2.2, tb: 3.6, l3: 55, w: 145, ch: 4, mts: 2400, s: LGA2011-3, ms: 2, ct: P, p: 4115}
+  # ---- Intel Xeon Scalable gen 1 (Skylake-SP) ----
+  - {v: intel, m: Intel Xeon Silver 4110, f: Xeon Scalable 1, cn: Skylake-SP, c: 8, t: 2, b: 2.1, tb: 3.0, l3: 11, w: 85, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 501}
+  - {v: intel, m: Intel Xeon Silver 4114, f: Xeon Scalable 1, cn: Skylake-SP, c: 10, t: 2, b: 2.2, tb: 3.0, l3: 13.75, w: 85, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 694}
+  - {v: intel, m: Intel Xeon Silver 4116, f: Xeon Scalable 1, cn: Skylake-SP, c: 12, t: 2, b: 2.1, tb: 3.0, l3: 16.5, w: 85, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 1002}
+  - {v: intel, m: Intel Xeon Gold 5118, f: Xeon Scalable 1, cn: Skylake-SP, c: 12, t: 2, b: 2.3, tb: 3.2, l3: 16.5, w: 105, ch: 6, mts: 2400, s: LGA3647, ms: 4, ct: P, p: 1273}
+  - {v: intel, m: Intel Xeon Gold 5120, f: Xeon Scalable 1, cn: Skylake-SP, c: 14, t: 2, b: 2.2, tb: 3.2, l3: 19.25, w: 105, ch: 6, mts: 2400, s: LGA3647, ms: 4, ct: P, p: 1555}
+  - {v: intel, m: Intel Xeon Gold 6130, f: Xeon Scalable 1, cn: Skylake-SP, c: 16, t: 2, b: 2.1, tb: 3.7, l3: 22, w: 125, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 1900}
+  - {v: intel, m: Intel Xeon Gold 6132, f: Xeon Scalable 1, cn: Skylake-SP, c: 14, t: 2, b: 2.6, tb: 3.7, l3: 19.25, w: 140, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 2111}
+  - {v: intel, m: Intel Xeon Gold 6136, f: Xeon Scalable 1, cn: Skylake-SP, c: 12, t: 2, b: 3.0, tb: 3.7, l3: 24.75, w: 150, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 2460}
+  - {v: intel, m: Intel Xeon Gold 6138, f: Xeon Scalable 1, cn: Skylake-SP, c: 20, t: 2, b: 2.0, tb: 3.7, l3: 27.5, w: 125, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 2612}
+  - {v: intel, m: Intel Xeon Gold 6140, f: Xeon Scalable 1, cn: Skylake-SP, c: 18, t: 2, b: 2.3, tb: 3.7, l3: 24.75, w: 140, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 2445}
+  - {v: intel, m: Intel Xeon Gold 6148, f: Xeon Scalable 1, cn: Skylake-SP, c: 20, t: 2, b: 2.4, tb: 3.7, l3: 27.5, w: 150, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 3072}
+  - {v: intel, m: Intel Xeon Gold 6152, f: Xeon Scalable 1, cn: Skylake-SP, c: 22, t: 2, b: 2.1, tb: 3.7, l3: 30.25, w: 140, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 3655}
+  - {v: intel, m: Intel Xeon Gold 6154, f: Xeon Scalable 1, cn: Skylake-SP, c: 18, t: 2, b: 3.0, tb: 3.7, l3: 24.75, w: 200, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 3543}
+  - {v: intel, m: Intel Xeon Platinum 8160, f: Xeon Scalable 1, cn: Skylake-SP, c: 24, t: 2, b: 2.1, tb: 3.7, l3: 33, w: 150, ch: 6, mts: 2666, s: LGA3647, ms: 8, ct: P, p: 4702}
+  - {v: intel, m: Intel Xeon Platinum 8168, f: Xeon Scalable 1, cn: Skylake-SP, c: 24, t: 2, b: 2.7, tb: 3.7, l3: 33, w: 205, ch: 6, mts: 2666, s: LGA3647, ms: 8, ct: P, p: 5890}
+  - {v: intel, m: Intel Xeon Platinum 8180, f: Xeon Scalable 1, cn: Skylake-SP, c: 28, t: 2, b: 2.5, tb: 3.8, l3: 38.5, w: 205, ch: 6, mts: 2666, s: LGA3647, ms: 8, ct: P, p: 10009}
+  # ---- Intel Xeon Scalable gen 2 (Cascade Lake / Refresh) ----
+  - {v: intel, m: Intel Xeon Silver 4210, f: Xeon Scalable 2, cn: Cascade Lake, c: 10, t: 2, b: 2.2, tb: 3.2, l3: 13.75, w: 85, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 501}
+  - {v: intel, m: Intel Xeon Silver 4214, f: Xeon Scalable 2, cn: Cascade Lake, c: 12, t: 2, b: 2.2, tb: 3.2, l3: 16.5, w: 85, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 694}
+  - {v: intel, m: Intel Xeon Silver 4216, f: Xeon Scalable 2, cn: Cascade Lake, c: 16, t: 2, b: 2.1, tb: 3.2, l3: 22, w: 100, ch: 6, mts: 2400, s: LGA3647, ms: 2, ct: P, p: 1002}
+  - {v: intel, m: Intel Xeon Gold 5218, f: Xeon Scalable 2, cn: Cascade Lake, c: 16, t: 2, b: 2.3, tb: 3.9, l3: 22, w: 125, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 1273}
+  - {v: intel, m: Intel Xeon Gold 5220, f: Xeon Scalable 2, cn: Cascade Lake, c: 18, t: 2, b: 2.2, tb: 3.9, l3: 24.75, w: 125, ch: 6, mts: 2666, s: LGA3647, ms: 4, ct: P, p: 1555}
+  - {v: intel, m: Intel Xeon Gold 6226, f: Xeon Scalable 2, cn: Cascade Lake, c: 12, t: 2, b: 2.7, tb: 3.7, l3: 19.25, w: 125, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 1776}
+  - {v: intel, m: Intel Xeon Gold 6230, f: Xeon Scalable 2, cn: Cascade Lake, c: 20, t: 2, b: 2.1, tb: 3.9, l3: 27.5, w: 125, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 1894}
+  - {v: intel, m: Intel Xeon Gold 6238, f: Xeon Scalable 2, cn: Cascade Lake, c: 22, t: 2, b: 2.1, tb: 3.7, l3: 30.25, w: 140, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 2612}
+  - {v: intel, m: Intel Xeon Gold 6240, f: Xeon Scalable 2, cn: Cascade Lake, c: 18, t: 2, b: 2.6, tb: 3.9, l3: 24.75, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 2445}
+  - {v: intel, m: Intel Xeon Gold 6242, f: Xeon Scalable 2, cn: Cascade Lake, c: 16, t: 2, b: 2.8, tb: 3.9, l3: 22, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 2529}
+  - {v: intel, m: Intel Xeon Gold 6248, f: Xeon Scalable 2, cn: Cascade Lake, c: 20, t: 2, b: 2.5, tb: 3.9, l3: 27.5, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 3072}
+  - {v: intel, m: Intel Xeon Gold 6252, f: Xeon Scalable 2, cn: Cascade Lake, c: 24, t: 2, b: 2.1, tb: 3.7, l3: 35.75, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 3655}
+  - {v: intel, m: Intel Xeon Gold 6254, f: Xeon Scalable 2, cn: Cascade Lake, c: 18, t: 2, b: 3.1, tb: 4.0, l3: 24.75, w: 200, ch: 6, mts: 2933, s: LGA3647, ms: 4, ct: P, p: 3803}
+  - {v: intel, m: Intel Xeon Platinum 8260, f: Xeon Scalable 2, cn: Cascade Lake, c: 24, t: 2, b: 2.4, tb: 3.9, l3: 35.75, w: 165, ch: 6, mts: 2933, s: LGA3647, ms: 8, ct: P, p: 4702}
+  - {v: intel, m: Intel Xeon Platinum 8280, f: Xeon Scalable 2, cn: Cascade Lake, c: 28, t: 2, b: 2.7, tb: 4.0, l3: 38.5, w: 205, ch: 6, mts: 2933, s: LGA3647, ms: 8, ct: P, p: 10009}
+  - {v: intel, m: Intel Xeon Gold 5218R, f: Xeon Scalable 2, cn: Cascade Lake, c: 20, t: 2, b: 2.1, tb: 4.0, l3: 27.5, w: 125, ch: 6, mts: 2666, s: LGA3647, ms: 2, ct: P, p: 1273}
+  - {v: intel, m: Intel Xeon Gold 5220R, f: Xeon Scalable 2, cn: Cascade Lake, c: 24, t: 2, b: 2.2, tb: 4.0, l3: 35.75, w: 150, ch: 6, mts: 2666, s: LGA3647, ms: 2, ct: P, p: 1555}
+  - {v: intel, m: Intel Xeon Gold 6226R, f: Xeon Scalable 2, cn: Cascade Lake, c: 16, t: 2, b: 2.9, tb: 3.9, l3: 22, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 2, ct: P, p: 1300}
+  - {v: intel, m: Intel Xeon Gold 6230R, f: Xeon Scalable 2, cn: Cascade Lake, c: 26, t: 2, b: 2.1, tb: 4.0, l3: 35.75, w: 150, ch: 6, mts: 2933, s: LGA3647, ms: 2, ct: P, p: 1894}
+  - {v: intel, m: Intel Xeon Gold 6240R, f: Xeon Scalable 2, cn: Cascade Lake, c: 24, t: 2, b: 2.4, tb: 4.0, l3: 35.75, w: 165, ch: 6, mts: 2933, s: LGA3647, ms: 2, ct: P, p: 2445}
+  - {v: intel, m: Intel Xeon Gold 6248R, f: Xeon Scalable 2, cn: Cascade Lake, c: 24, t: 2, b: 3.0, tb: 4.0, l3: 35.75, w: 205, ch: 6, mts: 2933, s: LGA3647, ms: 2, ct: P, p: 2700}
+  - {v: intel, m: Intel Xeon Gold 6258R, f: Xeon Scalable 2, cn: Cascade Lake, c: 28, t: 2, b: 2.7, tb: 4.0, l3: 38.5, w: 205, ch: 6, mts: 2933, s: LGA3647, ms: 2, ct: P, p: 3950}
+  # ---- Intel Xeon Scalable gen 3 (Ice Lake-SP) ----
+  - {v: intel, m: Intel Xeon Silver 4310, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 12, t: 2, b: 2.1, tb: 3.3, l3: 18, w: 120, ch: 8, mts: 2666, s: LGA4189, ms: 2, ct: P, p: 501}
+  - {v: intel, m: Intel Xeon Silver 4314, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 16, t: 2, b: 2.4, tb: 3.4, l3: 24, w: 135, ch: 8, mts: 2666, s: LGA4189, ms: 2, ct: P, p: 694}
+  - {v: intel, m: Intel Xeon Gold 5318Y, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 24, t: 2, b: 2.1, tb: 3.4, l3: 36, w: 165, ch: 8, mts: 2933, s: LGA4189, ms: 2, ct: P, p: 1273}
+  - {v: intel, m: Intel Xeon Gold 6326, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 16, t: 2, b: 2.9, tb: 3.5, l3: 24, w: 185, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 1300}
+  - {v: intel, m: Intel Xeon Gold 6330, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 28, t: 2, b: 2.0, tb: 3.1, l3: 42, w: 205, ch: 8, mts: 2933, s: LGA4189, ms: 2, ct: P, p: 1894}
+  - {v: intel, m: Intel Xeon Gold 6334, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 8, t: 2, b: 3.6, tb: 3.7, l3: 18, w: 165, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 2214}
+  - {v: intel, m: Intel Xeon Gold 6338, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 32, t: 2, b: 2.0, tb: 3.2, l3: 48, w: 205, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 2612}
+  - {v: intel, m: Intel Xeon Gold 6342, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 24, t: 2, b: 2.8, tb: 3.5, l3: 36, w: 230, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 2529}
+  - {v: intel, m: Intel Xeon Gold 6348, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 28, t: 2, b: 2.6, tb: 3.5, l3: 42, w: 235, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 3072}
+  - {v: intel, m: Intel Xeon Platinum 8358, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 32, t: 2, b: 2.6, tb: 3.4, l3: 48, w: 250, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 3950}
+  - {v: intel, m: Intel Xeon Platinum 8380, f: Xeon Scalable 3, cn: Ice Lake-SP, c: 40, t: 2, b: 2.3, tb: 3.4, l3: 60, w: 270, ch: 8, mts: 3200, s: LGA4189, ms: 2, ct: P, p: 8099}
+  # ---- Intel Xeon Scalable gen 4 (Sapphire Rapids) ----
+  - {v: intel, m: Intel Xeon Gold 5418Y, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 24, t: 2, b: 2.0, tb: 3.8, l3: 45, w: 185, ch: 8, mts: 4400, s: LGA4677, ms: 2, ct: P, p: 1483}
+  - {v: intel, m: Intel Xeon Gold 6426Y, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 16, t: 2, b: 2.5, tb: 4.1, l3: 37.5, w: 185, ch: 8, mts: 4800, s: LGA4677, ms: 2, ct: P, p: 1517}
+  - {v: intel, m: Intel Xeon Gold 6430, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 32, t: 2, b: 2.1, tb: 3.4, l3: 60, w: 270, ch: 8, mts: 4400, s: LGA4677, ms: 2, ct: P, p: 2128}
+  - {v: intel, m: Intel Xeon Gold 6438Y+, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 32, t: 2, b: 2.0, tb: 4.0, l3: 60, w: 205, ch: 8, mts: 4800, s: LGA4677, ms: 2, ct: P, p: 2507}
+  - {v: intel, m: Intel Xeon Gold 6448Y, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 32, t: 2, b: 2.1, tb: 4.1, l3: 60, w: 225, ch: 8, mts: 4800, s: LGA4677, ms: 2, ct: P, p: 3584}
+  - {v: intel, m: Intel Xeon Platinum 8460Y+, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 40, t: 2, b: 2.0, tb: 3.7, l3: 105, w: 300, ch: 8, mts: 4800, s: LGA4677, ms: 2, ct: P, p: 5558}
+  - {v: intel, m: Intel Xeon Platinum 8480+, f: Xeon Scalable 4, cn: Sapphire Rapids, c: 56, t: 2, b: 2.0, tb: 3.8, l3: 105, w: 350, ch: 8, mts: 4800, s: LGA4677, ms: 8, ct: P, p: 10710}
+  # ---- Intel Xeon Scalable gen 5 (Emerald Rapids) ----
+  - {v: intel, m: Intel Xeon Gold 6526Y, f: Xeon Scalable 5, cn: Emerald Rapids, c: 16, t: 2, b: 2.8, tb: 3.9, l3: 37.5, w: 195, ch: 8, mts: 5200, s: LGA4677, ms: 2, ct: P, p: 1517}
+  - {v: intel, m: Intel Xeon Gold 6542Y, f: Xeon Scalable 5, cn: Emerald Rapids, c: 24, t: 2, b: 2.9, tb: 4.1, l3: 60, w: 250, ch: 8, mts: 5200, s: LGA4677, ms: 2, ct: P, p: 2878}
+  - {v: intel, m: Intel Xeon Gold 6548Y+, f: Xeon Scalable 5, cn: Emerald Rapids, c: 32, t: 2, b: 2.5, tb: 4.1, l3: 60, w: 250, ch: 8, mts: 5200, s: LGA4677, ms: 2, ct: P, p: 3726}
+  - {v: intel, m: Intel Xeon Platinum 8562Y+, f: Xeon Scalable 5, cn: Emerald Rapids, c: 32, t: 2, b: 2.8, tb: 4.1, l3: 60, w: 300, ch: 8, mts: 5600, s: LGA4677, ms: 2, ct: P, p: 5945}
+  - {v: intel, m: Intel Xeon Platinum 8592+, f: Xeon Scalable 5, cn: Emerald Rapids, c: 64, t: 2, b: 1.9, tb: 3.9, l3: 320, w: 350, ch: 8, mts: 5600, s: LGA4677, ms: 2, ct: P, p: 11600}
+  # ---- Intel Xeon 6 (6700E Sierra Forest, 6700P/6500P Granite Rapids-SP: 8 ch; 6900P: 12 ch, MRDIMM 8800) ----
+  - {v: intel, m: Intel Xeon 6740E, f: Xeon 6, cn: Sierra Forest, c: 96, t: 1, b: 2.4, tb: 3.2, l3: 96, w: 250, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: E, p: 4000}
+  - {v: intel, m: Intel Xeon 6780E, f: Xeon 6, cn: Sierra Forest, c: 144, t: 1, b: 2.2, tb: 3.0, l3: 108, w: 330, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: E, p: 9595}
+  - {v: intel, m: Intel Xeon 6517P, f: Xeon 6, cn: Granite Rapids, c: 16, t: 2, b: 3.2, tb: 4.2, l3: 72, w: 190, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 1195}
+  - {v: intel, m: Intel Xeon 6527P, f: Xeon 6, cn: Granite Rapids, c: 24, t: 2, b: 3.0, tb: 4.2, l3: 144, w: 255, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 2878}
+  - {v: intel, m: Intel Xeon 6737P, f: Xeon 6, cn: Granite Rapids, c: 32, t: 2, b: 2.9, tb: 4.0, l3: 144, w: 270, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 4500}
+  - {v: intel, m: Intel Xeon 6747P, f: Xeon 6, cn: Granite Rapids, c: 48, t: 2, b: 2.7, tb: 3.9, l3: 288, w: 330, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 6500}
+  - {v: intel, m: Intel Xeon 6760P, f: Xeon 6, cn: Granite Rapids, c: 64, t: 2, b: 2.2, tb: 3.8, l3: 320, w: 330, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 5600}
+  - {v: intel, m: Intel Xeon 6767P, f: Xeon 6, cn: Granite Rapids, c: 64, t: 2, b: 2.4, tb: 3.9, l3: 336, w: 350, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 8000}
+  - {v: intel, m: Intel Xeon 6787P, f: Xeon 6, cn: Granite Rapids, c: 86, t: 2, b: 2.0, tb: 3.8, l3: 336, w: 350, ch: 8, mts: 6400, s: LGA4710, ms: 2, ct: P, p: 10400}
+  - {v: intel, m: Intel Xeon 6952P, f: Xeon 6, cn: Granite Rapids-AP, c: 96, t: 2, b: 2.1, tb: 3.9, l3: 480, w: 400, ch: 12, mts: 6400, s: LGA7529, ms: 2, ct: P, p: 11400}
+  - {v: intel, m: Intel Xeon 6972P, f: Xeon 6, cn: Granite Rapids-AP, c: 96, t: 2, b: 2.4, tb: 3.9, l3: 480, w: 500, ch: 12, mts: 6400, s: LGA7529, ms: 2, ct: P, p: 14600}
+  - {v: intel, m: Intel Xeon 6980P, f: Xeon 6, cn: Granite Rapids-AP, c: 128, t: 2, b: 2.0, tb: 3.9, l3: 504, w: 500, ch: 12, mts: 6400, s: LGA7529, ms: 2, ct: P, p: 17800}
+  - {v: intel, m: Intel Xeon 6+ 6900E+ (Clearwater Forest), f: Xeon 6+, cn: Clearwater Forest, c: 288, t: 1, b: 2.0, tb: 3.0, l3: 576, w: 450, ch: 12, mts: 8000, s: LGA7529, ms: 2, ct: E, p: 15000, sizable: false, notes: "placeholder - not yet sizable until SPEC results exist"}
+  # ---- AMD EPYC 7001 (Naples) ----
+  - {v: amd, m: AMD EPYC 7351, f: EPYC 7001, cn: Naples, c: 16, t: 2, b: 2.4, tb: 2.9, l3: 64, w: 170, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 1100}
+  - {v: amd, m: AMD EPYC 7401, f: EPYC 7001, cn: Naples, c: 24, t: 2, b: 2.0, tb: 3.0, l3: 64, w: 170, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 1850}
+  - {v: amd, m: AMD EPYC 7451, f: EPYC 7001, cn: Naples, c: 24, t: 2, b: 2.3, tb: 3.2, l3: 64, w: 180, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 2400}
+  - {v: amd, m: AMD EPYC 7501, f: EPYC 7001, cn: Naples, c: 32, t: 2, b: 2.0, tb: 3.0, l3: 64, w: 170, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 3400}
+  - {v: amd, m: AMD EPYC 7551, f: EPYC 7001, cn: Naples, c: 32, t: 2, b: 2.0, tb: 3.0, l3: 64, w: 180, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 3400}
+  - {v: amd, m: AMD EPYC 7601, f: EPYC 7001, cn: Naples, c: 32, t: 2, b: 2.2, tb: 3.2, l3: 64, w: 180, ch: 8, mts: 2666, s: SP3, ms: 2, ct: other, p: 4200}
+  # ---- AMD EPYC 7002 (Rome) ----
+  - {v: amd, m: AMD EPYC 7302, f: EPYC 7002, cn: Rome, c: 16, t: 2, b: 3.0, tb: 3.3, l3: 128, w: 155, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 978}
+  - {v: amd, m: AMD EPYC 7402, f: EPYC 7002, cn: Rome, c: 24, t: 2, b: 2.8, tb: 3.35, l3: 128, w: 180, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 1783}
+  - {v: amd, m: AMD EPYC 7452, f: EPYC 7002, cn: Rome, c: 32, t: 2, b: 2.35, tb: 3.35, l3: 128, w: 155, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 2025}
+  - {v: amd, m: AMD EPYC 7502, f: EPYC 7002, cn: Rome, c: 32, t: 2, b: 2.5, tb: 3.35, l3: 128, w: 180, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 2600}
+  - {v: amd, m: AMD EPYC 7542, f: EPYC 7002, cn: Rome, c: 32, t: 2, b: 2.9, tb: 3.4, l3: 128, w: 225, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 3400}
+  - {v: amd, m: AMD EPYC 7702, f: EPYC 7002, cn: Rome, c: 64, t: 2, b: 2.0, tb: 3.35, l3: 256, w: 200, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 6450}
+  - {v: amd, m: AMD EPYC 7742, f: EPYC 7002, cn: Rome, c: 64, t: 2, b: 2.25, tb: 3.4, l3: 256, w: 225, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 6950}
+  # ---- AMD EPYC 7003 (Milan) ----
+  - {v: amd, m: AMD EPYC 7313, f: EPYC 7003, cn: Milan, c: 16, t: 2, b: 3.0, tb: 3.7, l3: 128, w: 155, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 1083}
+  - {v: amd, m: AMD EPYC 7343, f: EPYC 7003, cn: Milan, c: 16, t: 2, b: 3.2, tb: 3.9, l3: 128, w: 190, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 1565}
+  - {v: amd, m: AMD EPYC 7413, f: EPYC 7003, cn: Milan, c: 24, t: 2, b: 2.65, tb: 3.6, l3: 128, w: 180, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 1825}
+  - {v: amd, m: AMD EPYC 7443, f: EPYC 7003, cn: Milan, c: 24, t: 2, b: 2.85, tb: 4.0, l3: 128, w: 200, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 2010}
+  - {v: amd, m: AMD EPYC 7513, f: EPYC 7003, cn: Milan, c: 32, t: 2, b: 2.6, tb: 3.65, l3: 128, w: 200, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 2840}
+  - {v: amd, m: AMD EPYC 7543, f: EPYC 7003, cn: Milan, c: 32, t: 2, b: 2.8, tb: 3.7, l3: 256, w: 225, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 3761}
+  - {v: amd, m: AMD EPYC 7713, f: EPYC 7003, cn: Milan, c: 64, t: 2, b: 2.0, tb: 3.675, l3: 256, w: 225, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 7060}
+  - {v: amd, m: AMD EPYC 7763, f: EPYC 7003, cn: Milan, c: 64, t: 2, b: 2.45, tb: 3.5, l3: 256, w: 280, ch: 8, mts: 3200, s: SP3, ms: 2, ct: other, p: 7890}
+  # ---- AMD EPYC 9004 (Genoa) ----
+  - {v: amd, m: AMD EPYC 9124, f: EPYC 9004, cn: Genoa, c: 16, t: 2, b: 3.0, tb: 3.7, l3: 64, w: 200, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 1083}
+  - {v: amd, m: AMD EPYC 9254, f: EPYC 9004, cn: Genoa, c: 24, t: 2, b: 2.9, tb: 4.15, l3: 128, w: 200, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 2299}
+  - {v: amd, m: AMD EPYC 9354, f: EPYC 9004, cn: Genoa, c: 32, t: 2, b: 3.25, tb: 3.8, l3: 256, w: 280, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 3420}
+  - {v: amd, m: AMD EPYC 9454, f: EPYC 9004, cn: Genoa, c: 48, t: 2, b: 2.75, tb: 3.8, l3: 256, w: 290, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 5225}
+  - {v: amd, m: AMD EPYC 9554, f: EPYC 9004, cn: Genoa, c: 64, t: 2, b: 3.1, tb: 3.75, l3: 256, w: 360, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 9087}
+  - {v: amd, m: AMD EPYC 9654, f: EPYC 9004, cn: Genoa, c: 96, t: 2, b: 2.4, tb: 3.7, l3: 384, w: 360, ch: 12, mts: 4800, s: SP5, ms: 2, ct: other, p: 11805}
+  # ---- AMD EPYC 9005 (Turin: Zen5 / Zen5c), 12 ch DDR5-6400 ----
+  - {v: amd, m: AMD EPYC 9015, f: EPYC 9005, cn: Turin, c: 8, t: 2, b: 3.6, tb: 4.1, l3: 64, w: 125, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 527}
+  - {v: amd, m: AMD EPYC 9115, f: EPYC 9005, cn: Turin, c: 16, t: 2, b: 2.6, tb: 4.1, l3: 64, w: 125, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 726}
+  - {v: amd, m: AMD EPYC 9135, f: EPYC 9005, cn: Turin, c: 16, t: 2, b: 3.65, tb: 4.3, l3: 64, w: 200, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 1214}
+  - {v: amd, m: AMD EPYC 9175F, f: EPYC 9005, cn: Turin, c: 16, t: 2, b: 4.2, tb: 5.0, l3: 512, w: 320, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 4256}
+  - {v: amd, m: AMD EPYC 9255, f: EPYC 9005, cn: Turin, c: 24, t: 2, b: 3.25, tb: 4.3, l3: 128, w: 200, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 2495}
+  - {v: amd, m: AMD EPYC 9335, f: EPYC 9005, cn: Turin, c: 32, t: 2, b: 3.0, tb: 4.4, l3: 128, w: 210, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 3178}
+  - {v: amd, m: AMD EPYC 9355, f: EPYC 9005, cn: Turin, c: 32, t: 2, b: 3.55, tb: 4.4, l3: 256, w: 280, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 3694}
+  - {v: amd, m: AMD EPYC 9355P, f: EPYC 9005, cn: Turin, c: 32, t: 2, b: 3.55, tb: 4.4, l3: 256, w: 280, ch: 12, mts: 6400, s: SP5, ms: 1, ct: Zen5, p: 2998}
+  - {v: amd, m: AMD EPYC 9455, f: EPYC 9005, cn: Turin, c: 48, t: 2, b: 3.15, tb: 4.4, l3: 256, w: 300, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 5412}
+  - {v: amd, m: AMD EPYC 9475F, f: EPYC 9005, cn: Turin, c: 48, t: 2, b: 3.65, tb: 4.8, l3: 256, w: 400, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 7592}
+  - {v: amd, m: AMD EPYC 9535, f: EPYC 9005, cn: Turin, c: 64, t: 2, b: 2.4, tb: 4.3, l3: 256, w: 300, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 8992}
+  - {v: amd, m: AMD EPYC 9555, f: EPYC 9005, cn: Turin, c: 64, t: 2, b: 3.2, tb: 4.4, l3: 256, w: 360, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 9826}
+  - {v: amd, m: AMD EPYC 9555P, f: EPYC 9005, cn: Turin, c: 64, t: 2, b: 3.2, tb: 4.4, l3: 256, w: 360, ch: 12, mts: 6400, s: SP5, ms: 1, ct: Zen5, p: 7983}
+  - {v: amd, m: AMD EPYC 9575F, f: EPYC 9005, cn: Turin, c: 64, t: 2, b: 3.3, tb: 5.0, l3: 256, w: 400, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 11791}
+  - {v: amd, m: AMD EPYC 9655, f: EPYC 9005, cn: Turin, c: 96, t: 2, b: 2.6, tb: 4.5, l3: 384, w: 400, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 11852}
+  - {v: amd, m: AMD EPYC 9755, f: EPYC 9005, cn: Turin, c: 128, t: 2, b: 2.7, tb: 4.1, l3: 512, w: 500, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5, p: 12984}
+  - {v: amd, m: AMD EPYC 9825, f: EPYC 9005, cn: Turin Dense, c: 144, t: 2, b: 2.2, tb: 3.7, l3: 384, w: 390, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5c, p: 13006}
+  - {v: amd, m: AMD EPYC 9965, f: EPYC 9005, cn: Turin Dense, c: 192, t: 2, b: 2.25, tb: 3.7, l3: 384, w: 500, ch: 12, mts: 6400, s: SP5, ms: 2, ct: Zen5c, p: 14813}
+  - {v: amd, m: AMD EPYC 9006 Venice (placeholder), f: EPYC 9006, cn: Venice, c: 256, t: 2, b: 2.5, tb: 4.0, l3: 1024, w: 600, ch: 16, mts: 8000, s: SP7, ms: 2, ct: Zen6c, p: 15000, sizable: false, notes: "placeholder - not yet sizable until SPEC results exist"}
+  # ---- IBM POWER (system-level rPerf in ibm_rperf.yaml) ----
+  - {v: ibm, m: IBM POWER8, f: POWER8, cn: POWER8, c: 12, t: 8, b: 3.5, tb: 3.5, w: 190, ch: 8, ms: 2, ct: POWER}
+  - {v: ibm, m: IBM POWER9, f: POWER9, cn: POWER9, c: 12, t: 8, b: 3.4, tb: 3.9, w: 190, ch: 8, ms: 4, ct: POWER}
+  - {v: ibm, m: IBM Power10, f: Power10, cn: Power10, c: 15, t: 8, b: 3.55, tb: 4.0, w: 250, ch: 16, ms: 16, ct: POWER}
+  # ---- Oracle SPARC ----
+  - {v: oracle, m: Oracle SPARC T7, f: SPARC, cn: SPARC M7, c: 32, t: 8, b: 4.13, tb: 4.13, w: 300, ms: 4, ct: SPARC}
+  - {v: oracle, m: Oracle SPARC M8, f: SPARC, cn: SPARC M8, c: 32, t: 8, b: 5.0, tb: 5.0, w: 300, ms: 8, ct: SPARC}

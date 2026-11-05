@@ -1,0 +1,11 @@
+# Legacy server models (2012-2022) -> supported CPU families. Used when only the server model is known.
+# Rule: newest generation listed, most common core count, most powerful SKU of that core count (conservative).
+models:
+  - {match: ["dl380 gen8", "dl360 gen8", "r720", "r620", "x3650 m4", "x3550 m4", "c240 m3"], families: ["Xeon E5 v2"]}
+  - {match: ["dl380 gen9", "dl360 gen9", "dl560 gen9", "bl460c gen9", "r730", "r630", "r730xd", "fc630", "x3650 m5", "x3550 m5", "c240 m4", "c220 m4"], families: ["Xeon E5 v3", "Xeon E5 v4"]}
+  - {match: ["dl380 gen10", "dl360 gen10", "dl560 gen10", "r740", "r640", "r740xd", "r840", "sr650", "sr630", "c240 m5", "c220 m5", "synergy 480 gen10"], families: ["Xeon Scalable 1", "Xeon Scalable 2"]}
+  - {match: ["dl380 gen10 plus", "dl360 gen10 plus", "r750", "r650", "r750xs", "sr650 v2", "sr630 v2", "c240 m6"], families: ["Xeon Scalable 3"]}
+  - {match: ["dl380 gen11", "dl360 gen11", "r760", "r660", "sr650 v3", "sr630 v3", "c240 m7"], families: ["Xeon Scalable 4", "Xeon Scalable 5"]}
+  - {match: ["dl385 gen10", "r7425", "r6415", "r7415"], families: ["EPYC 7001"]}
+  - {match: ["dl385 gen10 plus", "r7525", "r6525", "r7515", "r6515", "sr665", "sr645"], families: ["EPYC 7002", "EPYC 7003"]}
+  - {match: ["r7625", "r6625", "r7615", "r6615", "dl385 gen11", "sr665 v3"], families: ["EPYC 9004"]}

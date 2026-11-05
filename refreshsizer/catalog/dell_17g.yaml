@@ -1,0 +1,157 @@
+# Dell PowerEdge 17G target platforms (seed; editable). The Dell spec sheet / configurator is authoritative.
+cpu_groups:
+  xeon6_p: [intel-xeon-6517p, intel-xeon-6527p, intel-xeon-6737p, intel-xeon-6747p, intel-xeon-6760p, intel-xeon-6767p, intel-xeon-6787p]
+  xeon6_e: [intel-xeon-6740e, intel-xeon-6780e]
+  xeon6_ap: [intel-xeon-6952p, intel-xeon-6972p, intel-xeon-6980p]
+  epyc9005_2s: [amd-epyc-9015, amd-epyc-9115, amd-epyc-9135, amd-epyc-9175f, amd-epyc-9255, amd-epyc-9335, amd-epyc-9355, amd-epyc-9455, amd-epyc-9475f, amd-epyc-9535, amd-epyc-9555, amd-epyc-9575f, amd-epyc-9655, amd-epyc-9755, amd-epyc-9825, amd-epyc-9965]
+  epyc9005_1s: [amd-epyc-9015, amd-epyc-9115, amd-epyc-9135, amd-epyc-9175f, amd-epyc-9255, amd-epyc-9335, amd-epyc-9355p, amd-epyc-9355, amd-epyc-9455, amd-epyc-9475f, amd-epyc-9535, amd-epyc-9555p, amd-epyc-9555, amd-epyc-9575f, amd-epyc-9655, amd-epyc-9755, amd-epyc-9825, amd-epyc-9965]
+dimm_sizes:
+  xeon6_p: [16, 32, 48, 64, 96, 128, 256]
+  xeon6_e: [32, 64]          # E-core Xeon limited to 32/64 GB DIMMs
+  xeon6_ap: [32, 64, 96, 128, 256]
+  epyc9005: [16, 32, 48, 64, 96, 128, 256]
+platforms:
+  - model: R670
+    form_factor_u: 1
+    sockets: 2
+    cpu_family: xeon6
+    cpu_groups: [xeon6_p, xeon6_e]
+    dimm_slots: 32
+    channels_per_socket: 8
+    dpc_max: 2
+    max_mem_tb: 8
+    mem_speed_by_dpc: {1: 6400, 2: 5200}
+    drive_bays: 10
+    drive_form: 2.5in NVMe / E3.S
+    pcie_slots: 3
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1100W, 1500W]
+    base_power_w: 220
+  - model: R770
+    form_factor_u: 2
+    sockets: 2
+    cpu_family: xeon6
+    cpu_groups: [xeon6_p, xeon6_e]
+    dimm_slots: 32
+    channels_per_socket: 8
+    dpc_max: 2
+    max_mem_tb: 8
+    mem_speed_by_dpc: {1: 6400, 2: 5200}
+    drive_bays: 24
+    drive_form: 2.5in NVMe (up to 40 E3.S)
+    pcie_slots: 8
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1500W, 2400W]
+    base_power_w: 260
+  - model: R770AP
+    form_factor_u: 2
+    sockets: 2
+    cpu_family: xeon6ap
+    cpu_groups: [xeon6_ap]
+    dimm_slots: 24
+    channels_per_socket: 12
+    dpc_max: 1
+    max_mem_tb: 6
+    mem_speed_by_dpc: {1: 6400}
+    drive_bays: 16
+    drive_form: E3.S NVMe
+    pcie_slots: 8
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [2400W, 3200W]
+    base_power_w: 300
+  - model: R470
+    form_factor_u: 1
+    sockets: 1
+    cpu_family: xeon6
+    cpu_groups: [xeon6_p, xeon6_e]
+    dimm_slots: 16
+    channels_per_socket: 8
+    dpc_max: 2
+    max_mem_tb: 4
+    mem_speed_by_dpc: {1: 6400, 2: 5200}
+    drive_bays: 10
+    drive_form: 2.5in NVMe
+    pcie_slots: 3
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [800W, 1100W]
+    base_power_w: 180
+  - model: R570
+    form_factor_u: 2
+    sockets: 1
+    cpu_family: xeon6
+    cpu_groups: [xeon6_p, xeon6_e]
+    dimm_slots: 16
+    channels_per_socket: 8
+    dpc_max: 2
+    max_mem_tb: 4
+    mem_speed_by_dpc: {1: 6400, 2: 5200}
+    drive_bays: 24
+    drive_form: 2.5in NVMe
+    pcie_slots: 6
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1100W, 1500W]
+    base_power_w: 200
+  - model: R6715
+    form_factor_u: 1
+    sockets: 1
+    cpu_family: epyc9005
+    cpu_groups: [epyc9005_1s]
+    dimm_slots: 24
+    channels_per_socket: 12
+    dpc_max: 2
+    max_mem_tb: 6
+    mem_speed_by_dpc: {1: 6400, 2: 5200}   # 2 DPC derate for EPYC 9005
+    drive_bays: 20
+    drive_form: E3.S NVMe
+    pcie_slots: 3
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1100W, 1500W]
+    base_power_w: 190
+  - model: R7715
+    form_factor_u: 2
+    sockets: 1
+    cpu_family: epyc9005
+    cpu_groups: [epyc9005_1s]
+    dimm_slots: 24
+    channels_per_socket: 12
+    dpc_max: 2
+    max_mem_tb: 6
+    mem_speed_by_dpc: {1: 6400, 2: 5200}
+    drive_bays: 24
+    drive_form: 2.5in NVMe (up to 40 E3.S)
+    pcie_slots: 8
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1400W, 1800W]
+    base_power_w: 220
+  - model: R6725
+    form_factor_u: 1
+    sockets: 2
+    cpu_family: epyc9005
+    cpu_groups: [epyc9005_2s]
+    dimm_slots: 24
+    channels_per_socket: 12
+    dpc_max: 1
+    max_mem_tb: 6
+    mem_speed_by_dpc: {1: 6400}
+    drive_bays: 16
+    drive_form: E3.S NVMe
+    pcie_slots: 4
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1500W, 2400W]
+    base_power_w: 240
+  - model: R7725
+    form_factor_u: 2
+    sockets: 2
+    cpu_family: epyc9005
+    cpu_groups: [epyc9005_2s]
+    dimm_slots: 24
+    channels_per_socket: 12
+    dpc_max: 1
+    max_mem_tb: 6
+    mem_speed_by_dpc: {1: 6400}
+    drive_bays: 24
+    drive_form: 2.5in NVMe (up to 40 E3.S)
+    pcie_slots: 8
+    nic_options: [2x25GbE, 2x100GbE]
+    psu_options: [1800W, 2400W]
+    base_power_w: 260

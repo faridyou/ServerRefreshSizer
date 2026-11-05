@@ -1,0 +1,7 @@
+# Curated workload-specific benchmarks (optional k_wl). Certificate numbers / URLs to be refreshed.
+results:
+  - {id: sap-sd-2x9654, suite: saps, metric: SAP SD 2-tier users, cpu: AMD EPYC 9654, chips: 2, cores: 192, value: 148000, url: "https://www.sap.com/about/benchmark.html", notes: "certificate number to be refreshed"}
+  - {id: sap-sd-2x7763, suite: saps, metric: SAP SD 2-tier users, cpu: AMD EPYC 7763, chips: 2, cores: 128, value: 75000, url: "https://www.sap.com/about/benchmark.html", notes: "certificate number to be refreshed"}
+  - {id: vmmark4-r770-6787p, suite: vmmark4, metric: VMmark 4 score, cpu: Intel Xeon 6787P, chips: 4, cores: 344, system: 2x Dell PowerEdge R770, value: 3.34, notes: "@ 4.2 tiles", url: "https://www.vmware.com/products/vmmark/results4x.html"}
+  - {id: vmmark4-sr650v4-6787p, suite: vmmark4, metric: VMmark 4 score, cpu: Intel Xeon 6787P, chips: 4, cores: 344, system: 2x Lenovo ThinkSystem SR650 V4, value: 3.39, notes: "@ 3.8 tiles", url: "https://www.vmware.com/products/vmmark/results4x.html"}
+  - {id: vmmark4-sr665v3-9005, suite: vmmark4, metric: VMmark 4 score, cpu: AMD EPYC 9005, chips: 4, system: 2x Lenovo ThinkSystem SR665 V3, value: 5.56, notes: "@ 6 tiles", url: "https://www.vmware.com/products/vmmark/results4x.html"}

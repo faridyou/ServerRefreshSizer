@@ -1,0 +1,13 @@
+# Oracle Processor Core Factor Table (excerpt). Under VMware (no hard partitioning) every core of the host/cluster counts.
+factors:
+  - {match: "intel xeon", factor: 0.5}
+  - {match: "amd epyc", factor: 0.5}
+  - {match: "ibm power", factor: 1.0}
+  - {match: "power8", factor: 1.0}
+  - {match: "power9", factor: 1.0}
+  - {match: "power10", factor: 1.0}
+  - {match: "ibm z", factor: 1.0}
+  - {match: "sparc", factor: 0.5}
+  - {match: "ampere", factor: 0.25}
+default_factor: 1.0
+url: "https://www.oracle.com/assets/processor-core-factor-table-070634.pdf"

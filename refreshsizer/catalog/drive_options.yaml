@@ -1,0 +1,7 @@
+# NVMe drive options (TB decimal). Price per TB in config/prices.yaml.
+drives:
+  - {tb: 3.84, type: NVMe TLC mixed-use/read-intensive, endurance_dwpd: 1}
+  - {tb: 7.68, type: NVMe TLC read-intensive, endurance_dwpd: 1}
+  - {tb: 15.36, type: NVMe TLC read-intensive, endurance_dwpd: 1}
+  - {tb: 30.72, type: NVMe QLC/TLC read-intensive, endurance_dwpd: 0.5}
+tb_to_tib: 0.9095

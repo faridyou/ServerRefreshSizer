@@ -1,0 +1,52 @@
+# Curated published SPECrate2017_int_base results (offline fallback). source=curated.
+# A live fetch from spec.org overrides a curated row with the same result id.
+# Fields: id, cpu (canonical name), system, vendor, chips, cores (enabled), tpc, base, test_date, sponsor, software, url
+suite: cpu2017
+metric: SPECrate2017_int_base
+results:
+  - {id: cur-e5-2680v3-dl380g9, cpu: Intel Xeon E5-2680 v3, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 24, tpc: 2, base: 127, test_date: 2017-10, sponsor: HPE}
+  - {id: cur-e5-2680v4-dl380g9, cpu: Intel Xeon E5-2680 v4, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 28, tpc: 2, base: 149, test_date: 2023-03, sponsor: HPE, software: RHEL 9.0}
+  - {id: cur-gold6230-r640, cpu: Intel Xeon Gold 6230, system: Dell PowerEdge R640, vendor: Dell Inc., chips: 2, cores: 40, tpc: 2, base: 225, test_date: 2019-04, sponsor: Dell Inc.}
+  - {id: cur-gold6230r-r640, cpu: Intel Xeon Gold 6230R, system: Dell PowerEdge R640, vendor: Dell Inc., chips: 2, cores: 52, tpc: 2, base: 288, test_date: 2020-03, sponsor: Dell Inc.}
+  - {id: cur-gold6334-r650, cpu: Intel Xeon Gold 6334, system: Dell PowerEdge R650, vendor: Dell Inc., chips: 2, cores: 16, tpc: 2, base: 146, test_date: 2021-06, sponsor: Dell Inc.}
+  - {id: cur-gold6426y-r660, cpu: Intel Xeon Gold 6426Y, system: Dell PowerEdge R660, vendor: Dell Inc., chips: 2, cores: 32, tpc: 2, base: 329, test_date: 2023-02, sponsor: Dell Inc.}
+  - {id: cur-6740e-r770, cpu: Intel Xeon 6740E, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 192, tpc: 1, base: 966, test_date: 2025-03, sponsor: Dell Inc.}
+  - {id: cur-6780e-r770, cpu: Intel Xeon 6780E, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 288, tpc: 1, base: 1330, test_date: 2025-03, sponsor: Dell Inc., notes: 1 thread/core}
+  - {id: cur-6760p-r770, cpu: Intel Xeon 6760P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1270, test_date: 2025-03, sponsor: Dell Inc.}
+  - {id: cur-6787p-r770, cpu: Intel Xeon 6787P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 172, tpc: 2, base: 1540, test_date: 2025-03, sponsor: Dell Inc.}
+  - {id: cur-6952p-r770ap, cpu: Intel Xeon 6952P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1810, test_date: 2025-04, sponsor: Dell Inc.}
+  - {id: cur-6972p-r770ap, cpu: Intel Xeon 6972P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1940, test_date: 2025-04, sponsor: Dell Inc.}
+  - {id: cur-9015-r7725, cpu: AMD EPYC 9015, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 16, tpc: 2, base: 233, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9135-r7715, cpu: AMD EPYC 9135, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 16, tpc: 2, base: 232, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9175f-r7725, cpu: AMD EPYC 9175F, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 32, tpc: 2, base: 579, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9335-r7715, cpu: AMD EPYC 9335, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 32, tpc: 2, base: 457, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9355-r7725, cpu: AMD EPYC 9355, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 64, tpc: 2, base: 964, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9555p-r7715, cpu: AMD EPYC 9555P, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 64, tpc: 2, base: 825, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9555-r7725, cpu: AMD EPYC 9555, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1610, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9555-r6725, cpu: AMD EPYC 9555, system: Dell PowerEdge R6725, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1620, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9755-r7725, cpu: AMD EPYC 9755, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 256, tpc: 2, base: 2620, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9825-r7725, cpu: AMD EPYC 9825, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 288, tpc: 2, base: 2480, test_date: 2025-03, sponsor: Dell Inc.}
+  - {id: cur-power9-s924, cpu: IBM POWER9, system: IBM Power System S924, vendor: IBM, chips: 2, cores: 24, tpc: 8, base: 213, test_date: 2018-05, sponsor: IBM, notes: SMT8}
+  - {id: cur-power9-e950, cpu: IBM POWER9, system: IBM Power System E950, vendor: IBM, chips: 4, cores: 40, tpc: 8, base: 392, test_date: 2018-08, sponsor: IBM}
+  - {id: cur-power10-e1050, cpu: IBM Power10, system: IBM Power E1050, vendor: IBM, chips: 4, cores: 96, tpc: 8, base: 1220, test_date: 2022-07, sponsor: IBM}
+  - {id: cur-power10-e1080, cpu: IBM Power10, system: IBM Power E1080, vendor: IBM, chips: 8, cores: 120, tpc: 8, base: 1700, test_date: 2021-09, sponsor: IBM}
+# Generation-average SPC (SPECrate2017_int_base per core), used only as last-resort fallback (LOW confidence).
+generation_avg_spc:
+  Ivy Bridge-EP: 4.6
+  Haswell-EP: 5.3
+  Broadwell-EP: 5.3
+  Skylake-SP: 5.6
+  Cascade Lake: 5.6
+  Ice Lake-SP: 7.0
+  Sapphire Rapids: 9.5
+  Emerald Rapids: 10.0
+  Granite Rapids: 9.6
+  Granite Rapids-AP: 9.7
+  Sierra Forest: 4.8
+  Naples: 4.0
+  Rome: 5.8
+  Milan: 7.2
+  Genoa: 10.5
+  Turin: 13.0
+  Turin Dense: 8.6
+  x86_unknown: 5.0
