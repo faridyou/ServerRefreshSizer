@@ -22,7 +22,8 @@ NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 
 def slug(name: str) -> str:
-    s = re.sub(r"[^a-z0-9._-]+", "-", name.strip().lower()).strip("-.")
+    s = re.sub(r"[^a-z0-9._-]+", "-", name.strip().lower())
+    s = re.sub(r"[-_.]*-[-_.]*", "-", s).strip("-.")
     return s[:64] or "project"
 
 
