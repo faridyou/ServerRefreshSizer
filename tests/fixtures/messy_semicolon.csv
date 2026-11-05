@@ -1,0 +1,4 @@
+Serveur;Processeur;Sockets;Coeurs par socket;Fréquence GHz;RAM (Go);CPU p95 %;Cluster
+lnx-db01;Intel Xeon Gold 6334;2;8;3,6;384;41,5;Cluster-DB
+lnx-db02;Intel Xeon Gold 6334;2;8;3,6;384;37,2;Cluster-DB
+lnx-app01;Intel Xeon Gold 6426Y;2;16;2,5;512;55,0;Cluster-DB

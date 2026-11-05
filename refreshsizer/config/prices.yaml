@@ -1,0 +1,35 @@
+# All prices are EDITABLE PLACEHOLDERS in USD (list-price order of magnitude only, not quotes).
+currency: USD
+platform_base_usd:      # chassis, PSUs, boot (BOSS), iDRAC, rails, base support
+  R670: 9000
+  R770: 11000
+  R770AP: 14000
+  R470: 7000
+  R570: 8500
+  R6715: 9000
+  R7715: 10000
+  R6725: 11000
+  R7725: 12000
+cpu_price_source: catalog/cpu_specs.yaml (list_price_usd); fallback 3000 per CPU
+cpu_price_default_usd: 3000
+dimm_usd_per_gb: {ddr5: 6.0}
+dimm_premium_large: {128: 1.15, 256: 1.6}   # price/GB multiplier for large DIMMs
+drive_usd_per_tb: {3.84: 130, 7.68: 110, 15.36: 125, 30.72: 150}   # NVMe price/TB sweet spot at 7.68
+nic_usd: {2x25GbE: 600, 2x100GbE: 1800}
+support_pct_per_year_hw: 0.0   # hardware support beyond base, fraction of capex/yr
+power:
+  usd_per_kwh: 0.15
+  pue: 1.5
+  avg_load_factor: 0.6   # average draw as fraction of nameplate (TDP+base)
+licensing:
+  vmware_vcf_usd_per_core_year: 350    # reported list, negotiable
+  vmware_vvf_usd_per_core_year: 150    # reported list, negotiable
+  windows_dc_usd_per_2core_pack: 850   # perpetual, amortized over horizon
+  windows_std_usd_per_2core_pack: 140
+  sql_ent_usd_per_2core_pack: 15123
+  sql_std_usd_per_2core_pack: 3945
+  sql_sa_pct_per_year: 0.25
+  oracle_ee_usd_per_processor: 47500
+  oracle_se2_usd_per_socket: 17500
+  oracle_support_pct_per_year: 0.22
+  rhel_usd_per_socket_pair_year: 1300

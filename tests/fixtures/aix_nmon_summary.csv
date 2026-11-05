@@ -1,0 +1,5 @@
+lpar,system_model,system,system_cores,ghz,smt,ec,vp,physc_p95,physc_max,mem_inuse_gb,iops_p95,workload_class,licensing
+ora1,Power S824,S824-A,24,3.5,8,8.0,10,6.0,7.5,256,9000,oltp_db,oracle_ee
+ora2,Power S824,S824-A,24,3.5,8,5.0,8,4.0,5.2,128,4000,oltp_db,oracle_ee
+ora3,Power S924,S924-B,24,3.4,8,6.0,8,5.0,6.1,192,7000,oltp_db,oracle_ee
+ora4,Power S924,S924-B,24,3.4,8,4.0,6,3.0,4.0,128,3000,oltp_db,oracle_ee

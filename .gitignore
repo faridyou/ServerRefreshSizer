@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+build/
+dist/
+data/benchmarks.sqlite
+data/*.sqlite-journal
+reports/
+out/
+*.log
