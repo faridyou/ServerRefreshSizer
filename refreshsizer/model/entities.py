@@ -293,6 +293,7 @@ class Project(BaseModel):
     ingest: IngestSummary = Field(default_factory=IngestSummary)
     data_quality: list[DataQuality] = Field(default_factory=list)
     customer_questions: list[str] = Field(default_factory=list)
+    customer_questions_fr: list[str] = Field(default_factory=list)
     sizing: dict[str, Any] | None = None  # serialized engine output (SizingRun)
 
     def cluster(self, name: str) -> Cluster:

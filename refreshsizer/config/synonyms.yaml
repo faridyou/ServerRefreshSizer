@@ -1,0 +1,76 @@
+# Multilingual (EN + FR) synonym dictionary for universal column mapping. Extensible: add entries freely.
+# Matching is case/accent/punctuation-insensitive; units in headers are detected separately.
+host_id: [host, hostname, host name, host-name, server, server name, servername, serveur, nom serveur, nom du serveur,
+  nom hote, hote, hôte, machine, equipment, équipement, node, noeud, nœud, asset, asset name, physical server,
+  serveur physique, esx, esxi host, hyperviseur, hypervisor host, nom machine, device name, ci name]
+vm_name: [vm, vm name, vmname, virtual machine, machine virtuelle, nom vm, nom de la vm, guest, guest name, vm id,
+  nom machine virtuelle, mv, vm hostname, instance, instance name, workload, charge, application server, nom invite,
+  virtual server, serveur virtuel, lpar, partition]
+host_ref: [host, hote, hôte, esx host, esxi host, hyperviseur, running on, serveur hote, serveur physique, physical host,
+  parent host, host name, nom hote, current host, hôte actuel, placement, host server, server]
+cluster: [cluster, cluster name, nom cluster, grappe, ferme, farm, pool, resource pool, vsphere cluster, cluster vmware,
+  regroupement, groupe, group, environment cluster, cluster esx, cluster hyper-v, failover cluster, ha cluster]
+site: [site, datacenter, data center, centre de donnees, centre de données, dc, location, localisation, salle, room,
+  campus, ville, city, region, région, building, batiment]
+vendor: [vendor, manufacturer, constructeur, fabricant, marque, brand, make, oem, fournisseur, editeur materiel,
+  hardware vendor, server vendor, maker, supplier, provider, hw vendor]
+model: [model, server model, modele, modèle, modele serveur, modèle serveur, hardware model, product, produit,
+  platform, plateforme, type serveur, server type, machine type, chassis, system model, hw model, modele materiel]
+cpu_model: [cpu, cpu model, processor, processeur, type cpu, modele cpu, modèle cpu, cpu type, processor model,
+  modele processeur, modèle processeur, cpu description, cpu name, processor type, proc, type de processeur, chip,
+  puce, socket type, cpu reference, référence cpu]
+cpu_composite: [cpu configuration, configuration cpu, cpu config, processeurs, processors, cpus detail, cpu detail,
+  detail cpu, config processeur, configuration processeur, cpu spec, specification cpu, cpu summary, cpu (qty x model),
+  processor configuration, configuration processeurs]
+sockets: [sockets, socket, cpu sockets, nb sockets, nombre de sockets, num cpu, number of cpus, nb cpu, nombre cpu,
+  nombre de processeurs, nb processeurs, processors count, cpu count, physical cpus, cpus physiques, qty cpu,
+  quantite cpu, quantité cpu, packages]
+cores_per_socket: [cores per socket, cores per cpu, coeurs par socket, cœurs par socket, coeurs/proc, coeurs par cpu,
+  cœurs par cpu, cores/socket, cores per processor, nb coeurs par cpu, coeurs par processeur, core per socket,
+  cores/cpu, cpu cores per socket, cœurs/socket, nombre de coeurs par processeur]
+total_cores: [cores, total cores, nb coeurs, nombre de coeurs, nombre de cœurs, coeurs, cœurs, cpu cores, num cores,
+  physical cores, coeurs physiques, cœurs physiques, core count, total cpu cores, coeurs totaux, cœurs totaux,
+  nb cores, cores total]
+threads_per_core: [threads per core, threads/core, smt, hyperthreading, ht, threads par coeur, threads par cœur,
+  logical per core, hyper-threading, ht active, smt mode, mode smt, threads par cœur physique, ht enabled, multithreading]
+nominal_ghz: [ghz, frequency, frequence, fréquence, cpu speed, speed, clock, clock speed, frequence cpu, fréquence cpu,
+  vitesse, vitesse cpu, cpu frequency, base frequency, frequence nominale, cpu clock, cpu mhz, mhz, cpu ghz]
+ram_gb: [ram, memory, memoire, mémoire, memoire go, mémoire (go), ram (go), ram gb, memory gb, installed memory,
+  memoire installee, mémoire installée, physical memory, memoire physique, total memory, mémoire totale, ram totale,
+  host memory, capacite memoire, capacité mémoire, memory size]
+mem_used_gb: [memory used, used memory, memoire utilisee, mémoire utilisée, ram utilisee, ram utilisée, memory usage,
+  consommation memoire, consommation mémoire, mem used, peak memory, pic memoire, pic mémoire, memory consumed,
+  mémoire consommée, active memory host, memoire active]
+cpu_util_peak_pct: [cpu max, cpu max %, pic cpu, pic cpu %, charge cpu max, cpu peak, peak cpu, peak cpu %, cpu maximum,
+  max cpu, max cpu %, utilisation cpu max, utilisation maximale cpu, cpu pic, cpu usage max, charge maximale,
+  peak cpu percentage, cpu high, pointe cpu]
+cpu_util_p95_pct: [cpu p95, p95 cpu, cpu 95, cpu 95th, 95th percentile cpu, cpu percentile 95, percentile 95 cpu,
+  cpu 95e percentile, charge cpu p95, utilisation cpu p95, cpu p95 %, 95% cpu, cpu 95 pct, cpu quantile 95, p95 charge cpu]
+cpu_util_avg_pct: [cpu avg, cpu average, average cpu, cpu moyen, cpu moyenne, charge cpu moyenne, cpu mean,
+  utilisation cpu moyenne, cpu usage, cpu usage %, utilisation cpu, charge cpu, cpu %, cpu utilization, taux cpu,
+  average cpu %, moyenne cpu]
+vcpu: [vcpu, vcpus, nb vcpu, nombre de vcpu, virtual cpu, virtual cpus, cpus, num cpu vm, cpu virtuels, processeurs virtuels,
+  vcpu count, nb cpu virtuels, vproc, virtual processors, configured vcpu, vcpu configures, vcpu configurés]
+ram_gb_configured: [ram, memory, memoire, mémoire, ram (go), mémoire (go), configured memory, memoire configuree,
+  mémoire configurée, vram, provisioned memory, memoire allouee, mémoire allouée, allocated memory, vm memory,
+  ram vm, taille memoire, memory size]
+storage_used: [used, utilise, utilisé, consomme, consommé, occupe, occupé, disk used, disque utilise, disque utilisé,
+  storage used, stockage utilise, stockage utilisé, used space, espace utilise, espace utilisé, in use, used capacity,
+  capacite utilisee, capacité utilisée, consumed]
+storage_provisioned: [provisioned, provisionne, provisionné, disk size, taille disque, disque provisionne,
+  disque provisionné, allocated, alloue, alloué, capacity, capacite, capacité, storage provisioned, stockage provisionné,
+  total disk, disque total, disk capacity, provisioned space, espace provisionne]
+os: [os, operating system, systeme, système, systeme exploitation, système d'exploitation, os name, guest os, os version,
+  version os, platform os, distribution, os type, type os, os family]
+powerstate: [powerstate, power state, etat, état, state, status, statut, running, en marche, power, alimentation,
+  etat vm, état vm, vm state, is running]
+iops_p95: [iops, iops p95, p95 iops, 95% iops, iops 95, iops peak, peak iops, pic iops, iops max, max iops, iops moyen,
+  average iops, iops avg, io/s, e/s par seconde]
+workload_class: [workload class, class, classe, type de charge, workload type, application type, type application, role,
+  rôle, usage, fonction, function, service type, categorie, catégorie]
+licensing: [licensing, license, licence, licences, edition, édition, license type, type licence, db edition, sql edition,
+  oracle edition, product license, licence produit]
+timestamp: [timestamp, time, date, datetime, horodatage, heure, date heure, date/heure, ts, sample time, collected at]
+physc_p95: [physc p95, physc, physical consumed p95, physc_p95, physc 95]
+db_cpu_p95_cores: [db cpu, db cpu p95, db_cpu_s_per_s_p95, db cpu s/s, cpu base de donnees]
+array: [array, baie, storage array, baie de stockage, san, nas, datastore, magasin de donnees, volume, lun, pool stockage]
