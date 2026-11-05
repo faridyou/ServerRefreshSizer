@@ -172,6 +172,7 @@ class ClusterSizing(BaseModel):
     demand: ClusterDemand
     candidates: list[Candidate] = Field(default_factory=list)
     pareto: list[Candidate] = Field(default_factory=list)
+    all_points: list[tuple[int, float]] = Field(default_factory=list)
     recommended: Candidate | None = None
     naive: NaiveResult | None = None
     uncertainty: Uncertainty | None = None

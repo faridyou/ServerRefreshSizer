@@ -227,7 +227,8 @@ def optimize(d: ClusterDemand, policy: Policy, prices: dict[str, Any], cache: Be
     obj = policy.objective
     pm = bool(getattr(policy, "prefer_measured_spec", True))
     feas.sort(key=lambda c: sort_key(c, obj, d.is_db_cluster, pm))
-    return feas[: policy.top_n], pareto(feas), len(allc), len(allc) - len(feas), feas
+    pool = [c for c in feas if c.spc_confidence.value == "HIGH"] if pm else feas
+    return feas[: policy.top_n], pareto(pool or feas), len(allc), len(allc) - len(feas), feas
 
 
 def evaluate_named(d: ClusterDemand, platform: str, cpu_id: str, policy: Policy, prices: dict[str, Any],

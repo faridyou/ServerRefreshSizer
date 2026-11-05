@@ -1,0 +1,87 @@
+# All report labels (EN / FR). Add a language by adding a column.
+title: {en: "Server refresh sizing report", fr: "Rapport de dimensionnement du renouvellement serveurs"}
+generated: {en: "Generated", fr: "Généré le"}
+s1: {en: "1. Executive summary", fr: "1. Synthèse"}
+s2: {en: "2. Input data and confidence", fr: "2. Données d'entrée et niveau de confiance"}
+s3: {en: "3. Source inventory and measured demand", fr: "3. Inventaire source et demande mesurée"}
+s4: {en: "4. Benchmark basis", fr: "4. Base de benchmarks"}
+s5: {en: "5. Normalization math", fr: "5. Calculs de normalisation"}
+s6: {en: "6. Growth and headroom", fr: "6. Croissance et marge"}
+s7: {en: "7. Candidate comparison", fr: "7. Comparaison des configurations candidates"}
+s8: {en: "8. Recommended bill of materials (per host)", fr: "8. Nomenclature recommandée (par hôte)"}
+s9: {en: "9. Memory, storage and network", fr: "9. Mémoire, stockage et réseau"}
+s10: {en: "10. Licensing analysis", fr: "10. Analyse des licences"}
+s11: {en: "11. Constraint checks", fr: "11. Vérification des contraintes"}
+s12: {en: "12. Uncertainty", fr: "12. Incertitude"}
+s13: {en: "13. Validation plan", fr: "13. Plan de validation"}
+s14: {en: "14. Appendix", fr: "14. Annexe"}
+cluster: {en: "Cluster", fr: "Cluster"}
+mode: {en: "Sizing mode", fr: "Mode de dimensionnement"}
+confidence: {en: "Confidence", fr: "Confiance"}
+recommended: {en: "Recommended configuration", fr: "Configuration recommandée"}
+hosts: {en: "Hosts", fr: "Hôtes"}
+cores: {en: "Cores", fr: "Cœurs"}
+su: {en: "SPEC Units (SU)", fr: "Unités SPEC (SU)"}
+headroom: {en: "Headroom", fr: "Marge"}
+util_normal: {en: "Utilization (all hosts up)", fr: "Utilisation (tous hôtes actifs)"}
+util_failed: {en: "Utilization (HA hosts failed)", fr: "Utilisation (hôtes HA en panne)"}
+core_match: {en: "Naive core match", fr: "Correspondance naïve en cœurs"}
+ghz_match: {en: "Naive GHz match", fr: "Correspondance naïve en GHz"}
+licensing_delta: {en: "Licensing delta (horizon)", fr: "Écart de licences (horizon)"}
+tco: {en: "TCO over horizon (USD, placeholders)", fr: "TCO sur l'horizon (USD, prix indicatifs)"}
+capex: {en: "Capex (USD)", fr: "Capex (USD)"}
+power: {en: "Power (W)", fr: "Puissance (W)"}
+rack_units: {en: "Rack units", fr: "Unités de rack"}
+files: {en: "Files", fr: "Fichiers"}
+sheets: {en: "Sheets", fr: "Onglets"}
+mappings: {en: "Column mappings", fr: "Correspondance des colonnes"}
+assumptions: {en: "Assumptions", fr: "Hypothèses"}
+warnings: {en: "Warnings", fr: "Avertissements"}
+questions: {en: "Questions for the customer", fr: "Questions pour le client"}
+estate: {en: "Estate summary", fr: "Synthèse du parc"}
+formula: {en: "Formula", fr: "Formule"}
+inputs: {en: "Inputs", fr: "Entrées"}
+result: {en: "Result", fr: "Résultat"}
+sources: {en: "Sources", fr: "Sources"}
+value: {en: "Value", fr: "Valeur"}
+system: {en: "System", fr: "Système"}
+sponsor: {en: "Test sponsor", fr: "Sponsor du test"}
+test_date: {en: "Test date", fr: "Date du test"}
+retrieved: {en: "Retrieved", fr: "Récupéré le"}
+base_vs_peak: {en: "All SPEC CPU values are base metrics (SPECrate2017_int_base); peak results are never used.",
+  fr: "Toutes les valeurs SPEC CPU sont des métriques base (SPECrate2017_int_base) ; les résultats peak ne sont jamais utilisés."}
+very_low_banner: {en: "VERY LOW CONFIDENCE: no utilization data. This sizing assumes utilization and must be confirmed by a 7-30 day Live Optics collection before the final BoM.",
+  fr: "CONFIANCE TRÈS FAIBLE : aucune donnée d'utilisation. Ce dimensionnement suppose l'utilisation et doit être confirmé par une collecte Live Optics de 7 à 30 jours avant la nomenclature finale."}
+low_banner: {en: "LOW CONFIDENCE: point-in-time utilization only (snapshot x burst factor).",
+  fr: "CONFIANCE FAIBLE : utilisation instantanée uniquement (snapshot x facteur de pointe)."}
+sensitivity: {en: "Sensitivity to assumed utilization", fr: "Sensibilité à l'utilisation supposée"}
+with_headroom: {en: "with headroom", fr: "avec marge"}
+without_headroom: {en: "without headroom", fr: "sans marge"}
+p50: {en: "P50 hosts", fr: "Hôtes P50"}
+p90: {en: "P90 hosts (recommended)", fr: "Hôtes P90 (recommandé)"}
+tornado: {en: "Sensitivity tornado", fr: "Tornade de sensibilité"}
+pareto: {en: "Pareto front (hosts vs TCO)", fr: "Front de Pareto (hôtes vs TCO)"}
+cpu: {en: "CPU", fr: "Processeur"}
+memory: {en: "Memory", fr: "Mémoire"}
+drives: {en: "Drives", fr: "Disques"}
+network: {en: "Network", fr: "Réseau"}
+psu: {en: "Power supply", fr: "Alimentation"}
+dimm_diagram: {en: "DIMM slot / channel diagram", fr: "Schéma des emplacements DIMM / canaux"}
+product: {en: "Product", fr: "Produit"}
+metric: {en: "Metric", fr: "Métrique"}
+quantity: {en: "Quantity", fr: "Quantité"}
+source_side: {en: "Source estate", fr: "Parc source"}
+target_side: {en: "Target", fr: "Cible"}
+check: {en: "Check", fr: "Contrôle"}
+status: {en: "Status", fr: "Statut"}
+config_values: {en: "Configuration values", fr: "Valeurs de configuration"}
+raw_data: {en: "Parsed raw data", fr: "Données brutes analysées"}
+disclaimer: {en: "Disclaimers", fr: "Avertissements légaux"}
+gpu_placeholder: {en: "GPU / AI training sizing is out of scope (placeholder). Mainframe MIPS conversion: proof of concept required.",
+  fr: "Le dimensionnement GPU / entraînement IA est hors périmètre (emplacement réservé). Conversion MIPS mainframe : preuve de concept requise."}
+validation_steps: {en: "Validation steps", fr: "Étapes de validation"}
+host_comparison: {en: "Hosts: recommended vs naive methods", fr: "Hôtes : recommandé vs méthodes naïves"}
+mc_hist: {en: "Monte Carlo host count distribution", fr: "Distribution Monte Carlo du nombre d'hôtes"}
+host_demand: {en: "Demand per source host (SU)", fr: "Demande par hôte source (SU)"}
+naive_note: {en: "Naive methods ignore per-core performance differences between generations; they are shown for comparison only.",
+  fr: "Les méthodes naïves ignorent les écarts de performance par cœur entre générations ; elles sont données à titre de comparaison."}

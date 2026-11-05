@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ t('title') }} - {{ project.name }}</title>
+<style>
+{% if pdf %}
+@page { size: a4 portrait; margin: 1.4cm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #0b0b0b; }
+h1 { font-size: 16pt; } h2 { font-size: 12pt; color: #1f4e79; margin-top: 12pt; } h3 { font-size: 10pt; }
+table { width: 100%; border: 0.5pt solid #c9c8c2; } td, th { padding: 2pt; border: 0.5pt solid #c9c8c2; font-size: 7.5pt; }
+th { background-color: #eef2f7; }
+.banner { background-color: #fde8e4; border: 1pt solid #c0392b; padding: 4pt; }
+.lowbanner { background-color: #fff4dc; border: 1pt solid #c98500; padding: 4pt; }
+.formula { font-family: Courier; font-size: 7.5pt; }
+img { width: 15cm; }
+.muted { color: #52514e; }
+{% else %}
+:root { --ink:#0b0b0b; --ink2:#52514e; --line:#e4e3df; --surface:#fcfcfb; --accent:#1f4e79; --bg:#f4f3ef; }
+body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink);
+       background: var(--bg); margin: 0; line-height: 1.45; font-size: 14px; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+header { background: var(--accent); color: #fff; padding: 20px 16px; }
+header .inner { max-width: 1180px; margin: 0 auto; }
+h1 { margin: 0; font-size: 24px; } h2 { color: var(--accent); border-bottom: 2px solid var(--line);
+       padding-bottom: 4px; margin-top: 36px; } h3 { margin-top: 22px; }
+section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 18px;
+       margin: 14px 0; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+th { background: #eef2f7; font-weight: 600; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kpi { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.kpi .v { font-size: 22px; font-weight: 700; } .kpi .l { color: var(--ink2); font-size: 12px; }
+.banner { background: #fde8e4; border-left: 5px solid #c0392b; padding: 10px; border-radius: 4px; font-weight: 600; }
+.lowbanner { background: #fff4dc; border-left: 5px solid #c98500; padding: 10px; border-radius: 4px; }
+.formula { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background: #f6f6f3; padding: 4px 6px;
+       border-radius: 4px; display: block; white-space: pre-wrap; }
+.muted { color: var(--ink2); } img.chart { max-width: 100%; height: auto; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.OK { background: #ddf3e6; color: #0b5d2a; } .WARN { background: #fff1cc; color: #7a5200; }
+.FAIL { background: #fde0de; color: #8f1d1b; }
+pre.dimm { font-size: 12px; background: #f6f6f3; padding: 8px; overflow-x: auto; }
+details summary { cursor: pointer; color: var(--accent); }
+{% endif %}
+</style>
+{% if not pdf %}
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']] } };</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+{% endif %}
+</head>
+<body>
+{% macro expl(e) %}
+<tr><td><b>{{ e.title }}</b>{% if e.confidence != 'HIGH' %} <span class="muted">({{ t('confidence') }}: {{ e.confidence.value if e.confidence.value else e.confidence }})</span>{% endif %}</td>
+<td>{% if e.formula_latex and not pdf %}\({{ e.formula_latex }}\)<br>{% endif %}<span class="formula">{{ e.formula_text }}</span>
+{% if e.inputs %}<div class="muted">{{ t('inputs') }}: {{ e.inputs | fmt }}</div>{% endif %}
+{% for a in e.assumptions %}<div class="muted">ASSUMPTION: {{ a }}</div>{% endfor %}
+{% for s in e.source_refs[:6] %}<div class="muted">{{ t('sources') }}: {{ s }}</div>{% endfor %}</td>
+<td class="num"><b>{{ e.output | fmt }}</b> {{ e.unit }}</td></tr>
+{% endmacro %}
+{% if pdf %}<h1>{{ t('title') }}</h1><p>{{ project.name }} - {{ t('generated') }} {{ run.generated_at }} - RefreshSizer {{ version }}</p>
+{% else %}<header><div class="inner"><h1>{{ t('title') }}</h1>
+<div>{{ project.name }} · {{ t('generated') }} {{ run.generated_at }} · RefreshSizer {{ version }}</div></div></header>{% endif %}
+<main>
+
+<h2>{{ t('s1') }}</h2>
+<section class="card">
+<table><tr><th>{{ t('cluster') }}</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th><th>{{ t('recommended') }}</th>
+<th>{{ t('hosts') }}</th><th>{{ t('cores') }}</th><th>SU</th><th>{{ t('util_failed') }}</th><th>{{ t('core_match') }}</th>
+<th>{{ t('ghz_match') }}</th><th>P90</th><th>{{ t('licensing_delta') }}</th><th>{{ t('tco') }}</th></tr>
+{% for c in clusters %}{% set r = c.rec %}
+<tr><td>{{ c.d.cluster }}</td><td>{{ c.d.mode.value }}</td><td>{{ c.d.confidence.value }}</td>
+<td>{{ r.label if r else 'none feasible' }}</td><td class="num">{{ r.n_total if r else '-' }}</td>
+<td class="num">{{ (r.n_total * r.config.cpu_count * r.config.cores_per_cpu) if r else '-' }}</td>
+<td class="num">{{ (r.n_total * r.su_host) | fmt if r else '-' }}</td><td class="num">{{ r.util_failed | pct if r else '-' }}</td>
+<td class="num">{{ c.cs.naive.core_match_hosts if c.cs.naive else '-' }}</td><td class="num">{{ c.cs.naive.ghz_match_hosts if c.cs.naive else '-' }}</td>
+<td class="num">{{ c.cs.uncertainty.p90_hosts if c.cs.uncertainty else '-' }}</td>
+<td class="num">{{ c.license_delta | money if c.license_delta is not none else '-' }}</td><td class="num">{{ r.tco | money if r else '-' }}</td></tr>
+{% endfor %}</table>
+<p class="muted">{{ t('naive_note') }}</p>
+{% for c in clusters %}{% if c.banner %}<p class="{{ 'banner' if c.banner == 'very_low_banner' else 'lowbanner' }}">{{ c.d.cluster }}: {{ t(c.banner) }}</p>{% endif %}
+{% if c.charts.hosts %}<img class="chart" src="{{ c.charts.hosts }}" alt="{{ t('host_comparison') }} {{ c.d.cluster }}">{% endif %}{% endfor %}
+{% for w in run.warnings %}<p class="lowbanner">{{ w }}</p>{% endfor %}
+</section>
+
+<h2>{{ t('s2') }}</h2>
+<section class="card">
+<h3>{{ t('files') }}</h3><ul>{% for f in project.ingest.files %}<li>{{ f }} ({{ project.ingest.formats.get(f, '') }})</li>{% endfor %}</ul>
+{% for x in project.ingest.transformations if x.startswith('LLM:') %}<p class="muted">{{ x }}</p>{% endfor %}
+<h3>{{ t('sheets') }}</h3>
+<table><tr><th>file</th><th>sheet</th><th>used</th><th>class</th><th>rows</th><th>reason</th></tr>
+{% for s in project.ingest.sheets %}<tr><td>{{ s.file }}</td><td>{{ s.sheet }}</td><td>{{ 'yes' if s.used else 'no' }}</td><td>{{ s.classification }}</td><td class="num">{{ s.rows }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</table>
+{% set um = project.ingest.mappings | rejectattr('method', 'equalto', 'parser') | list %}
+{% if um %}<h3>{{ t('mappings') }}</h3><table><tr><th>sheet</th><th>column</th><th>field</th><th>unit</th><th>conf.</th><th>method</th><th>sample</th><th>transformed</th></tr>
+{% for m in um %}<tr><td>{{ m.sheet }}</td><td>{{ m.column }}</td><td>{{ m.target or '-' }}</td><td>{{ m.unit or '' }}</td><td class="num">{{ '%.2f' % m.confidence }}</td><td>{{ m.method }}</td><td>{{ m.sample or '' }}</td><td>{{ m.transformed or '' }}</td></tr>{% endfor %}</table>{% endif %}
+<h3>{{ t('estate') }}</h3>
+<table><tr><th>{{ t('cluster') }}</th><th>{{ t('hosts') }}</th><th>sockets</th><th>{{ t('cores') }}</th><th>CPU / benchmark</th><th>RAM GB</th><th>VMs</th><th>vCPU</th><th>vRAM GB</th><th>prov. TiB</th><th>used TiB</th><th>IOPS</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th></tr>
+{% for e in estate %}<tr><td>{{ e.cluster }}</td><td class="num">{{ e.hosts }}</td><td class="num">{{ e.sockets }}</td><td class="num">{{ e.cores }}</td><td>{% for k, v in e.cpu_models.items() %}{{ k }} -> {{ v }}<br>{% endfor %}</td>
+<td class="num">{{ e.ram_gb | fmt }}</td><td class="num">{{ e.vms }}</td><td class="num">{{ e.vcpu | fmt }}</td><td class="num">{{ e.vram_gb | fmt }}</td><td class="num">{{ e.storage_prov_tib | fmt }}</td><td class="num">{{ e.storage_used_tib | fmt }}</td><td class="num">{{ e.iops | fmt }}</td><td>{{ e.mode }}</td><td>{{ e.confidence }}</td></tr>{% endfor %}</table>
+<h3>{{ t('assumptions') }}</h3><ul>{% for a in project.ingest.assumptions %}<li>{{ a.category }}: {{ a.text }}</li>{% endfor %}
+{% for c in clusters %}{% for f in c.d.flags %}<li>[{{ c.d.cluster }}] {{ f }}</li>{% endfor %}{% endfor %}</ul>
+{% if project.ingest.transformations %}<details {% if pdf %}open{% endif %}><summary>Transformations ({{ project.ingest.transformations | length }})</summary><ul>{% for x in project.ingest.transformations %}<li>{{ x }}</li>{% endfor %}</ul></details>{% endif %}
+{% if project.ingest.conflicts or project.ingest.warnings %}<h3>{{ t('warnings') }}</h3><ul>{% for x in project.ingest.conflicts + project.ingest.warnings %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+<h3>{{ t('questions') }}</h3><ol>{% for q in questions %}<li>{{ q }}</li>{% endfor %}</ol>
+</section>
+
+{% for c in clusters %}{% set d = c.d %}{% set r = c.rec %}
+<h2>{{ t('s3') }} - {{ d.cluster }}</h2>
+<section class="card">
+<div class="kpis">
+<div class="kpi"><div class="v">{{ d.source_hosts }}</div><div class="l">source {{ t('hosts') | lower }}</div></div>
+<div class="kpi"><div class="v">{{ d.source_cores }}</div><div class="l">source {{ t('cores') | lower }}</div></div>
+<div class="kpi"><div class="v">{{ d.su_cap_total | fmt }}</div><div class="l">SU capacity</div></div>
+<div class="kpi"><div class="v">{{ d.d0 | fmt }}</div><div class="l">D0 (SU)</div></div>
+<div class="kpi"><div class="v">{{ d.vm_count }}</div><div class="l">workloads</div></div>
+<div class="kpi"><div class="v">{{ d.m0 | fmt }}</div><div class="l">M0 (GB)</div></div>
+</div>
+{% if c.charts.demand %}<img class="chart" src="{{ c.charts.demand }}" alt="{{ t('host_demand') }}">{% endif %}
+<table><tr><th>host</th><th>CPU</th><th>{{ t('cores') }}</th><th>SPC</th><th>SU cap</th><th>U used</th><th>basis</th><th>SU demand</th><th>method</th></tr>
+{% for h in d.hosts[:60] %}<tr><td>{{ h.host_id }}</td><td>{{ h.cpu_name }}</td><td class="num">{{ h.cores }}</td><td class="num">{{ h.spc | fmt }}</td><td class="num">{{ h.su_cap | fmt }}</td><td class="num">{{ h.util_used_pct | fmt }}</td><td>{{ h.util_basis or '' }}</td><td class="num">{{ h.demand_su | fmt }}</td><td>{{ h.method }}</td></tr>{% endfor %}</table>
+{% if d.hosts | length > 60 %}<p class="muted">... {{ d.hosts | length - 60 }} more hosts in the Excel workbook.</p>{% endif %}
+</section>
+
+<h2>{{ t('s4') }} - {{ d.cluster }}</h2>
+<section class="card">
+<p>{{ t('base_vs_peak') }}</p>
+<table><tr><th>side</th><th>CPU</th><th>{{ t('metric') }}</th><th>{{ t('value') }}</th><th>cores</th><th>SPC</th><th>{{ t('system') }}</th><th>{{ t('sponsor') }}</th><th>{{ t('test_date') }}</th><th>URL</th><th>{{ t('retrieved') }}</th><th>source</th></tr>
+{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu }}</td><td>{{ b.metric }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.sponsor }}</td><td>{{ b.date }}</td><td>{{ b.url }}</td><td>{{ b.retrieved }}</td><td>{{ b.source }}{% if b.note %}<div class="muted">{{ b.note }}</div>{% endif %}</td></tr>{% endfor %}</table>
+{% if d.rperf_factor %}<p>rPerf → SPEC factor used: <b>{{ d.rperf_factor }}</b> (generation-matched value: {{ d.rperf_factor_matched if d.rperf_factor_matched else 'no anchor' }}; conservative value 0.425; anchors: S924 213/583.1 = 0.365, E1080 1,700/3,999.3 = 0.425).</p>{% endif %}
+</section>
+
+<h2>{{ t('s5') }} - {{ d.cluster }}</h2>
+<section class="card"><table><tr><th>step</th><th>{{ t('formula') }}</th><th>{{ t('result') }}</th></tr>
+{% for e in d.explanations if e.step_id in ('src_capacity', 'd0', 'adjust') %}{{ expl(e) }}{% endfor %}
+{% if r %}{% for e in r.explanations if e.step_id == 'target_su' %}{{ expl(e) }}{% endfor %}{% endif %}
+</table></section>
+
+<h2>{{ t('s6') }} - {{ d.cluster }}</h2>
+<section class="card"><table><tr><th>step</th><th>{{ t('formula') }}</th><th>{{ t('result') }}</th></tr>
+{% for e in d.explanations if e.step_id in ('growth', 'headroom') %}{{ expl(e) }}{% endfor %}
+{% if r %}{% for e in r.explanations if e.step_id == 'ha' %}{{ expl(e) }}{% endfor %}{% endif %}
+{% if c.cs.naive %}{% for e in c.cs.naive.explanations %}{{ expl(e) }}{% endfor %}{% endif %}
+</table></section>
+
+<h2>{{ t('s7') }} - {{ d.cluster }}</h2>
+<section class="card">
+<p class="muted">Objective: {{ c.cs.objective }} · evaluated {{ c.cs.evaluated }} configs, {{ c.cs.infeasible }} infeasible.</p>
+<table><tr><th>#</th><th>config</th><th>SPC</th><th>SU/host</th><th>{{ t('hosts') }}</th><th>{{ t('util_failed') }}</th><th>RAM/host</th><th>{{ t('drives') }}</th><th>{{ t('power') }}</th><th>RU</th><th>{{ t('capex') }}</th><th>licenses</th><th>TCO</th></tr>
+{% for x in c.cs.candidates %}<tr><td>{{ loop.index }}</td><td>{{ x.label }}{% if x.spc_flags %}<div class="muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.util_failed | pct }}</td>
+<td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num">{{ x.capex_total | money }}</td><td class="num">{{ x.license_total | money }}</td><td class="num">{{ x.tco | money }}</td></tr>{% endfor %}</table>
+{% if c.charts.pareto %}<img class="chart" src="{{ c.charts.pareto }}" alt="{{ t('pareto') }}">{% endif %}
+</section>
+
+{% if r %}
+<h2>{{ t('s8') }} - {{ d.cluster }}</h2>
+<section class="card">
+<table><tr><th>item</th><th>{{ t('value') }}</th></tr>
+<tr><td>Platform</td><td>Dell PowerEdge {{ r.config.platform }} ({{ c.platform.form_factor_u }}U) x {{ r.n_total }}</td></tr>
+<tr><td>{{ t('cpu') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_name }} ({{ r.config.cores_per_cpu }} cores, {{ c.cpu.base_ghz }} GHz base, {{ c.cpu.tdp_w }} W)</td></tr>
+<tr><td>{{ t('memory') }}</td><td>{% if r.dimm %}{{ r.dimm.dimm_count }} x {{ r.dimm.dimm_size_gb }} GB DDR5 = {{ r.dimm.total_gb }} GB, {{ r.dimm.dpc }} DPC @ {{ r.dimm.speed_mt_s }} MT/s{% endif %}</td></tr>
+<tr><td>{{ t('drives') }}</td><td>{% if r.drives %}{{ r.drives.count }} x {{ r.drives.drive_tb }} TB NVMe ({{ r.drives.raw_tib }} TiB raw){% else %}boot only (BOSS); data on external storage{% endif %}</td></tr>
+<tr><td>{{ t('network') }}</td><td>{{ r.nics }} (OCP 3.0)</td></tr>
+<tr><td>{{ t('psu') }}</td><td>2 x {{ r.config.psu }} (redundant)</td></tr></table>
+{% if c.dimm_diagram %}<h3>{{ t('dimm_diagram') }}</h3><pre class="dimm">{% for l in c.dimm_diagram %}{{ l }}
+{% endfor %}</pre>{% endif %}
+<p class="muted">The Dell spec sheet / configurator is authoritative for supported configurations.</p>
+</section>
+
+<h2>{{ t('s9') }} - {{ d.cluster }}</h2>
+<section class="card"><table><tr><th>step</th><th>{{ t('formula') }}</th><th>{{ t('result') }}</th></tr>
+{% for e in d.explanations if e.step_id in ('memory', 'storage', 'iops') %}{{ expl(e) }}{% endfor %}
+{% for e in r.explanations if e.step_id in ('dimm', 'drives', 'network') %}{{ expl(e) }}{% endfor %}
+</table></section>
+
+<h2>{{ t('s10') }} - {{ d.cluster }}</h2>
+<section class="card">
+<h3>{{ t('target_side') }}</h3>
+<table><tr><th>{{ t('product') }}</th><th>{{ t('metric') }}</th><th>{{ t('quantity') }}</th><th>unit price</th><th>one-time</th><th>annual</th><th>horizon</th><th>note</th></tr>
+{% for l in r.licenses %}<tr><td>{{ l.product }}</td><td>{{ l.metric }}</td><td class="num">{{ l.quantity | fmt }}</td><td class="num">{{ l.unit_price | money }}</td><td class="num">{{ l.one_time_usd | money }}</td><td class="num">{{ l.annual_usd | money }}</td><td class="num">{{ l.horizon_usd | money }}</td><td>{{ l.note }}</td></tr>{% endfor %}</table>
+{% if r.oracle_licenses_all %}<p>Oracle processor licenses: <b>{{ r.oracle_licenses_active | fmt }}</b> (active nodes only) / {{ r.oracle_licenses_all | fmt }} (all nodes licensed).</p>{% endif %}
+<h3>{{ t('source_side') }}</h3>
+<table><tr><th>{{ t('product') }}</th><th>{{ t('metric') }}</th><th>{{ t('quantity') }}</th><th>annual</th><th>horizon</th><th>note</th></tr>
+{% for l in c.cs.source_licensing %}<tr><td>{{ l.product }}</td><td>{{ l.metric }}</td><td class="num">{{ l.quantity | fmt }}</td><td class="num">{{ l.annual_usd | money }}</td><td class="num">{{ l.horizon_usd | money }}</td><td>{{ l.note }}</td></tr>{% endfor %}</table>
+<p>{{ t('licensing_delta') }}: <b>{{ c.license_delta | money }}</b> (target {{ r.license_total | money }} vs source {{ c.src_license_total | money }}). Prices are placeholders.</p>
+</section>
+
+<h2>{{ t('s11') }} - {{ d.cluster }}</h2>
+<section class="card"><table><tr><th>{{ t('check') }}</th><th>detail</th><th>{{ t('status') }}</th></tr>
+{% for k in c.constraints %}<tr><td>{{ k.check }}</td><td>{{ k.detail }}</td><td><span class="tag {{ k.status }}">{{ k.status }}</span></td></tr>{% endfor %}</table></section>
+{% endif %}
+
+<h2>{{ t('s12') }} - {{ d.cluster }}</h2>
+<section class="card">
+{% if c.cs.uncertainty %}{% set u = c.cs.uncertainty %}
+<p>Monte Carlo: {{ u.runs }} runs, seed {{ u.seed }}. {{ t('p50') }}: <b>{{ u.p50_hosts }}</b> · {{ t('p90') }}: <b>{{ u.p90_hosts }}</b> · mean {{ u.mean_hosts }}.</p>
+<p class="muted">{{ u.parameters | fmt }}</p>
+{% if c.charts.hist %}<img class="chart" src="{{ c.charts.hist }}" alt="{{ t('mc_hist') }}">{% endif %}
+{% if c.charts.tornado %}<img class="chart" src="{{ c.charts.tornado }}" alt="{{ t('tornado') }}">{% endif %}
+<table><tr><th>parameter</th><th>low</th><th>high</th><th>C_req low</th><th>C_req high</th><th>hosts low</th><th>hosts high</th></tr>
+{% for x in u.tornado %}<tr><td>{{ x.parameter }}</td><td>{{ x.low }}</td><td>{{ x.high }}</td><td class="num">{{ x.c_req_low | fmt }}</td><td class="num">{{ x.c_req_high | fmt }}</td><td class="num">{{ x.hosts_low }}</td><td class="num">{{ x.hosts_high }}</td></tr>{% endfor %}</table>{% endif %}
+{% if d.inventory_sensitivity %}<h3>{{ t('sensitivity') }}</h3>
+<table><tr><th>assumed utilization</th><th>D0 SU</th><th>D_T SU</th><th>C_req SU</th><th>{{ t('hosts') }}</th></tr>
+{% for s in d.inventory_sensitivity %}<tr><td>{{ s.assumed_util | pct }}</td><td class="num">{{ s.d0 | fmt }}</td><td class="num">{{ s.d_t | fmt }}</td><td class="num">{{ s.c_req | fmt }}</td><td class="num">{{ s.hosts }}</td></tr>{% endfor %}</table>
+<p>{{ t('hosts') }}: {{ r.n_total if r else '-' }} ({{ t('with_headroom') if d.apply_headroom else t('without_headroom') }}) / {{ c.cs.inventory_no_headroom_hosts }} ({{ t('without_headroom') if d.apply_headroom else t('with_headroom') }}).</p>{% endif %}
+</section>
+
+<h2>{{ t('s13') }} - {{ d.cluster }}</h2>
+<section class="card"><ol>{% for x in c.cs.recommendations %}<li>{{ x }}</li>{% endfor %}</ol></section>
+{% endfor %}
+
+<h2>{{ t('s14') }}</h2>
+<section class="card">
+<p>{{ t('gpu_placeholder') }}</p>
+<h3>{{ t('config_values') }}</h3>
+<table><tr><th>key</th><th>{{ t('value') }}</th></tr>{% for k, v in policy.items() %}<tr><td>{{ k }}</td><td>{{ v | fmt }}</td></tr>{% endfor %}</table>
+<h3>{{ t('raw_data') }}</h3>
+{% for cl in project.clusters %}<details {% if pdf %}open{% endif %}><summary>{{ cl.name }}: {{ cl.hosts | length }} hosts, {{ cl.workloads | length }} workloads</summary>
+<table><tr><th>host</th><th>model</th><th>CPU</th><th>sockets</th><th>cores</th><th>GHz</th><th>RAM</th><th>p95</th><th>peak</th><th>avg</th><th>snapshot</th></tr>
+{% for h in cl.hosts[:200] %}<tr><td>{{ h.host_id }}</td><td>{{ h.model or '' }}</td><td>{{ h.cpu_model or '' }}</td><td>{{ h.sockets or '' }}</td><td>{{ h.total_cores or '' }}</td><td>{{ h.nominal_ghz or '' }}</td><td>{{ h.ram_gb | fmt }}</td><td>{{ h.cpu_util_p95_pct | fmt }}</td><td>{{ h.cpu_util_peak_pct | fmt }}</td><td>{{ h.cpu_util_avg_pct | fmt }}</td><td>{{ h.cpu_util_snapshot_pct | fmt }}</td></tr>{% endfor %}</table>
+{% if not pdf %}<table><tr><th>workload</th><th>host</th><th>class</th><th>vCPU</th><th>RAM GB</th><th>used GiB</th><th>prov GiB</th><th>licensing</th></tr>
+{% for w in cl.workloads[:500] %}<tr><td>{{ w.workload_id }}</td><td>{{ w.host_id or '' }}</td><td>{{ w.workload_class }}</td><td>{{ w.vcpu | fmt }}</td><td>{{ w.ram_gb_configured | fmt }}</td><td>{{ w.storage_used_gib | fmt }}</td><td>{{ w.storage_provisioned_gib | fmt }}</td><td>{{ w.licensing }}</td></tr>{% endfor %}</table>{% endif %}
+</details>{% endfor %}
+<h3>{{ t('disclaimer') }}</h3><ul>{% for x in run.disclaimers %}<li>{{ x }}</li>{% endfor %}</ul>
+<p class="muted">Benchmark DB: {{ run.benchmark_db | fmt }}</p>
+</section>
+</main>
+</body>
+</html>

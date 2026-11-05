@@ -55,7 +55,8 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
         d.flags.insert(0, f"mode {d.mode.value}: {why}")
         top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache)
         cs = ClusterSizing(demand=d, candidates=top, pareto=front, objective="db: min licensed cores, max SPC"
-                           if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf)
+                           if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf,
+                           all_points=[(c2.n_total, c2.tco) for c2 in feas])
         if top:
             rec = top[0]
             cs.recommended = rec
