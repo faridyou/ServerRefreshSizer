@@ -75,6 +75,6 @@ def parse_composite_cpu(s: Any) -> dict[str, Any] | None:
 
 
 def is_fraction_column(values: list[Any]) -> bool:
-    nums = [to_float(v) for v in values if v is not None and "%" not in str(v)]
-    nums = [n for n in nums if n is not None]
+    raw = [to_float(v) for v in values if v is not None and "%" not in str(v)]
+    nums: list[float] = [n for n in raw if n is not None]
     return bool(nums) and all(0 <= n <= 1.0 for n in nums) and any(0 < n < 1 for n in nums)

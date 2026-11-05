@@ -7,7 +7,15 @@ from pathlib import Path
 import pandas as pd
 
 from refreshsizer.ingest.base import ParseResult
-from refreshsizer.ingest.common import ColumnMapper, pct_value, read_workbook, to_bool, to_float, to_int, to_str
+from refreshsizer.ingest.common import (
+    ColumnMapper,
+    pct_value,
+    read_workbook,
+    to_bool,
+    to_float,
+    to_int,
+    to_str,
+)
 from refreshsizer.model.entities import SheetUse, SourceHost, SourceWorkload
 
 MIB_PER_GIB = 1024.0

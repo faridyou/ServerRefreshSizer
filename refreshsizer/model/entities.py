@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Confidence(str, Enum):
+class Confidence(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
@@ -28,7 +28,7 @@ class Confidence(str, Enum):
         return order[max(0, self.rank - 1)]
 
 
-class SizingMode(str, Enum):
+class SizingMode(StrEnum):
     MEASURED = "MEASURED"
     SUMMARY = "SUMMARY"
     SNAPSHOT = "SNAPSHOT"

@@ -5,7 +5,14 @@ from __future__ import annotations
 from refreshsizer.catalog.dimm_rules import choose_dimms
 from refreshsizer.config.schema import Policy
 from refreshsizer.engine.growth import growth_factor
-from refreshsizer.model.entities import DimmConfig, Explanation, SizingMode, SourceHost, SourceWorkload, TargetPlatform
+from refreshsizer.model.entities import (
+    DimmConfig,
+    Explanation,
+    SizingMode,
+    SourceHost,
+    SourceWorkload,
+    TargetPlatform,
+)
 
 
 def memory_demand(workloads: list[SourceWorkload], hosts: list[SourceHost], share: float, policy: Policy,

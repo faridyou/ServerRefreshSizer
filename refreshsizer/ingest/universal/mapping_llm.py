@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from refreshsizer.ingest.universal.classify import CLASSES
-from refreshsizer.ingest.universal.mapping_rules import ALL_FIELDS, IP_RE
+from refreshsizer.ingest.universal.mapping_rules import ALL_FIELDS
 from refreshsizer.ingest.universal.profile import TableProfile
 
 log = logging.getLogger("refreshsizer.llm")

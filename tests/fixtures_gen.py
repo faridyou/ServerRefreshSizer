@@ -219,7 +219,7 @@ def gen_messy_fr(out: Path) -> Path:
     ws["H3"] = "Modèle"
     for c in ("A3", "B3", "C3", "E3", "F3", "H3", "C4", "D4", "F4", "G4"):
         ws[c].font = Font(bold=True)
-    data = [
+    data: list[list[object]] = [
         ["SRV-ESX01", "Cluster-Paris", "2x Xeon Gold 6230 (20c)", "2,1", "768 Go", "62%", "35%", "PowerEdge R640"],
         ["SRV-ESX02", "Cluster-Paris", "2x Xeon Gold 6230 (20c)", "2,1", "768 Go", "58%", "31%", "PowerEdge R640"],
         ["SRV-ESX03", "Cluster-Paris", "2x Xeon Gold 6230 (20c)", "2,1", "768 Go", "66%", "38%", "PowerEdge R640"],

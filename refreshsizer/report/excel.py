@@ -121,7 +121,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             else:
                 ws.write(rr, 1, value)
             ws.write(rr, 2, note, bk.wrap)
-            R[key] = _abs(sheet, rr, 1)
+            R[key] = _abs(sheet, rr, 1)  # noqa: B023 - called within the same iteration
             return rr + 1
 
         ws5.write(r5, 0, f"{d.cluster} - {d.mode.value} ({d.confidence.value})", bk.b)
@@ -246,8 +246,8 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         bk.header(ws10, r10, ["side", "product", "quantity", "unit price", "one-time", "annual", "years",
                               "horizon", "note"])
         r10 += 1
-        tgt_rows = []
-        src_rows = []
+        tgt_rows: list[int] = []
+        src_rows: list[int] = []
         lines = [("target", x) for x in (rec.licenses if rec else [])] + [("source", x) for x in cs.source_licensing]
         for side, ln in lines:
             rr = r10

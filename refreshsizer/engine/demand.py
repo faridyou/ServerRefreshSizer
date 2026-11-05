@@ -85,6 +85,9 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
 
     # ---- 7.1 source capacity ------------------------------------------------
     caps: dict[str, Capacity] = {}
+    cap: Capacity | None
+    h: SourceHost | None
+    u: float | None
     hcs: list[HostCapacity] = []
     for h in hosts:
         cap = host_capacity(h, policy, cache)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -32,7 +33,9 @@ class BenchCache:
     def __init__(self, path: Path | None = None):
         self.path = Path(path) if path else bench_db_path()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        # shared by the web UI worker threads: one connection, serialized by a lock
+        self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        self.lock = threading.RLock()
         self.conn.executescript(SCHEMA)
 
     def close(self) -> None:
@@ -46,7 +49,7 @@ class BenchCache:
         for r in results:
             d = r.model_dump()
             rows.append(tuple(None if d[f] is None else str(d[f]) for f in FIELDS))
-        with self.conn:
+        with self.lock, self.conn:
             self.conn.executemany(sql, rows)
         return len(rows)
 
@@ -76,42 +79,49 @@ class BenchCache:
         if metric:
             sql += " AND metric = ?"
             args.append(metric)
-        return [self._row(r) for r in self.conn.execute(sql, args).fetchall()]
+        with self.lock:
+            fetched = self.conn.execute(sql, args).fetchall()
+        return [self._row(r) for r in fetched]
 
     def search(self, text: str) -> list[BenchmarkResult]:
         like = f"%{text.lower()}%"
         sql = (f"SELECT {', '.join(FIELDS)} FROM results WHERE lower(cpu_name) LIKE ? OR lower(cpu_model_id) LIKE ?"
                " OR lower(system_name) LIKE ?")
-        return [self._row(r) for r in self.conn.execute(sql, (like, like, like)).fetchall()]
+        with self.lock:
+            fetched = self.conn.execute(sql, (like, like, like)).fetchall()
+        return [self._row(r) for r in fetched]
 
     def count(self, source: str | None = None) -> int:
-        if source:
-            return int(self.conn.execute("SELECT COUNT(*) FROM results WHERE source=?", (source,)).fetchone()[0])
-        return int(self.conn.execute("SELECT COUNT(*) FROM results").fetchone()[0])
+        with self.lock:
+            if source:
+                return int(self.conn.execute("SELECT COUNT(*) FROM results WHERE source=?", (source,)).fetchone()[0])
+            return int(self.conn.execute("SELECT COUNT(*) FROM results").fetchone()[0])
 
     # ---- meta / log -----------------------------------------------------
     def get_meta(self, key: str, default: Any = None) -> Any:
-        row = self.conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        with self.lock:
+            row = self.conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
 
     def set_meta(self, key: str, value: Any) -> None:
-        with self.conn:
+        with self.lock, self.conn:
             self.conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", (key, json.dumps(value)))
 
     def log(self, level: str, message: str) -> None:
-        with self.conn:
+        with self.lock, self.conn:
             self.conn.execute("INSERT INTO fetch_log VALUES (?, ?, ?)",
                               (datetime.now().isoformat(timespec="seconds"), level, message))
 
     # ---- HTTP cache -----------------------------------------------------
     def http_get(self, url: str) -> dict[str, Any] | None:
-        row = self.conn.execute("SELECT etag, last_modified, fetched_at, status, body FROM http_cache WHERE url=?",
-                                (url,)).fetchone()
+        with self.lock:
+            row = self.conn.execute("SELECT etag, last_modified, fetched_at, status, body FROM http_cache WHERE url=?",
+                                    (url,)).fetchone()
         if not row:
             return None
         return {"etag": row[0], "last_modified": row[1], "fetched_at": row[2], "status": row[3], "body": row[4]}
 
     def http_put(self, url: str, etag: str | None, last_modified: str | None, status: int, body: bytes) -> None:
-        with self.conn:
+        with self.lock, self.conn:
             self.conn.execute("INSERT OR REPLACE INTO http_cache VALUES (?, ?, ?, ?, ?, ?)",
                               (url, etag, last_modified, datetime.now().isoformat(timespec="seconds"), status, body))

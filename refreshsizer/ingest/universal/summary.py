@@ -128,7 +128,8 @@ def render_ingest_summary(project: Project, console: Console | None = None, lang
     con = console or Console()
     ing = project.ingest
     con.rule("[bold]Ingest summary")
-    con.print(f"Files: {', '.join(f'{f} ({ing.formats.get(f, "?")})' for f in ing.files)}")
+    listed = ", ".join(f"{f} ({ing.formats.get(f, '?')})" for f in ing.files)
+    con.print(f"Files: {listed}")
     t = Table(title="Sheets")
     for h in ("file", "sheet", "used", "class", "rows", "reason"):
         t.add_column(h)
@@ -168,5 +169,5 @@ def render_ingest_summary(project: Project, console: Console | None = None, lang
     qs = project.customer_questions_fr if lang == "fr" else project.customer_questions
     con.print("[bold]" + ("Questions pour le client (prêtes à coller)" if lang == "fr" else
                           "Questions for the customer (ready to paste)") + "[/bold]")
-    for i, q in enumerate(qs, 1):
-        con.print(f"{i}. {q}", markup=False, highlight=False)
+    for n, q in enumerate(qs, 1):
+        con.print(f"{n}. {q}", markup=False, highlight=False)

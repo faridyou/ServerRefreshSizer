@@ -53,10 +53,13 @@ def parse_result_csv(text: str, url: str, retrieved_at: str | None = None) -> Be
     assert mm
     suite = f"cpu{mm.group(2)}"
     enabled = kv.get("enabled", "")
-    cores = _num(re.search(r"(\d+)\s*cores?", enabled).group(1)) if re.search(r"(\d+)\s*cores?", enabled) else None
-    chips = _num(re.search(r"(\d+)\s*chips?", enabled).group(1)) if re.search(r"(\d+)\s*chips?", enabled) else None
-    tpc = _num(re.search(r"(\d+)\s*threads?\s*/\s*core", enabled).group(1)) \
-        if re.search(r"(\d+)\s*threads?\s*/\s*core", enabled) else None
+    def grab(rx: str) -> float | None:
+        m2 = re.search(rx, enabled)
+        return _num(m2.group(1)) if m2 else None
+
+    cores = grab(r"(\d+)\s*cores?")
+    chips = grab(r"(\d+)\s*chips?")
+    tpc = grab(r"(\d+)\s*threads?\s*/\s*core")
     cpu_name = kv.get("cpu name", "")
     match = match_cpu(cpu_name)
     rid = re.sub(r"\.csv$", "", url.rsplit("/", 1)[-1])

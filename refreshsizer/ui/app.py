@@ -84,7 +84,7 @@ Data stays on this machine (only redacted headers/samples go to the LLM, and onl
         proj = _ingest(d)
         (d / "project.json").write_text(proj.model_dump_json(), encoding="utf-8")
         rows = []
-        for i, m in enumerate(proj.ingest.mappings):
+        for _i, m in enumerate(proj.ingest.mappings):
             if m.method == "parser":
                 continue
             cls = "hi" if m.confidence >= 0.9 else "mid" if m.confidence >= 0.6 else "lo"

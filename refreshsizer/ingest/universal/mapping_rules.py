@@ -131,7 +131,7 @@ def score_columns(t: TableProfile) -> dict[str, dict[str, float]]:
 
 ENTITY_FIELDS = {"physical_hosts": HOST_FIELDS, "vms": VM_FIELDS, "performance_timeseries": TS_FIELDS,
                  "storage_arrays": STORAGE_FIELDS, "datastores": STORAGE_FIELDS}
-ALIASES = {
+ALIASES: dict[str, dict[str, str | None]] = {
     "physical_hosts": {"vm_name": None, "host_ref": "host_id", "ram_gb_configured": "ram_gb"},
     "vms": {"host_id": "host_ref", "ram_gb": "ram_gb_configured", "model": None},
     "performance_timeseries": {"host_id": "host_ref", "cpu_util_peak_pct": "cpu_util_avg_pct",

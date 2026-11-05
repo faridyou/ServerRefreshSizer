@@ -8,7 +8,7 @@ import logging
 import math
 import re
 import unicodedata
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -218,7 +218,7 @@ def row_get(row: pd.Series, col: str | None) -> Any:
 class ColumnMapper:
     """Map logical names to actual columns of one sheet and remember what stayed unmapped."""
 
-    def __init__(self, df: pd.DataFrame, spec: dict[str, tuple[str, ...]], sheet: str, file: str):
+    def __init__(self, df: pd.DataFrame, spec: Mapping[str, tuple[str, ...]], sheet: str, file: str):
         self.df = df
         self.sheet = sheet
         self.file = file

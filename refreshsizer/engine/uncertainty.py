@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import numpy as np
 
@@ -63,7 +64,7 @@ def run(d: ClusterDemand, c: Candidate, policy: Policy) -> Uncertainty:
     p90 = int(np.percentile(n, 90, method="inverted_cdf"))
     vals, counts = np.unique(n, return_counts=True)
     # tornado
-    tornado = []
+    tornado: list[dict[str, Any]] = []
 
     def one(label: str, factor_lo: float, factor_hi: float, lo_lbl: str, hi_lbl: str) -> None:
         res = []

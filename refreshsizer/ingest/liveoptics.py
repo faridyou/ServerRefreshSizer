@@ -227,7 +227,7 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
             cluster = to_str(m.get(row, "cluster"))
             if not cluster and host and host.lower() in hosts:
                 cluster = hosts[host.lower()].cluster
-            def gib(key: str) -> float | None:
+            def gib(key: str, row: pd.Series = row) -> float | None:
                 v = to_float(m.get(row, key))
                 return v / MIB_PER_GIB if v is not None else None
             used_gib = gib("guest_used")

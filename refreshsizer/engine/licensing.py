@@ -51,8 +51,8 @@ def target_licensing(d: ClusterDemand, n_total: int, k_ha: int, cpus: int, cores
     lic = d.licensing
     host_cores = cpus * cores
     if "windows_dc" in lic:
-        per_host = max(16, cpus * max(8, cores))
-        q = n_total * per_host
+        per_host_w = max(16, cpus * max(8, cores))
+        q: float = n_total * per_host_w
         p = _lp(prices, "windows_dc_usd_per_2core_pack", 850)
         lines.append(LicenseLine(product="Windows Server Datacenter", metric="cores (min 8/CPU, 16/server)",
                                  quantity=q, unit_price=p / 2, one_time_usd=q / 2 * p, horizon_usd=q / 2 * p,
@@ -61,7 +61,7 @@ def target_licensing(d: ClusterDemand, n_total: int, k_ha: int, cpus: int, cores
         if ed in lic:
             p = _lp(prices, f"{ed}_usd_per_2core_pack", 15123 if ed == "sql_ent" else 3945)
             sa = _lp(prices, "sql_sa_pct_per_year", 0.25)
-            per_host_q = n_total * cpus * max(4, cores)
+            per_host_q: float = n_total * cpus * max(4, cores)
             per_vm_q = float(lic[ed].get("vm_cores_min4", 4.0 * lic[ed]["workloads"]))
             q = min(per_host_q, per_vm_q)
             mode = "per physical core (all hosts)" if q == per_host_q else "per VM (min 4 cores/VM, requires SA)"
