@@ -53,3 +53,27 @@ def save(profile: MappingProfile, d: Path | None = None) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(profile.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
     return p
+
+
+def apply_user_edits(files: list[Path], edits: dict[tuple[str, str, str], str | None],
+                     d: Path | None = None) -> int:
+    """Store user-edited mappings {(file, sheet, column): target} into the matching table profiles."""
+    from refreshsizer.ingest.universal.profile import profile_file
+
+    n = 0
+    for f in files:
+        for t in profile_file(Path(f)).tables:
+            mine = {k[2]: v for k, v in edits.items() if k[0] == t.file and k[1] == t.sheet}
+            if not mine:
+                continue
+            prof = load(t, d) or MappingProfile(fingerprint=fingerprint(t), classification="physical_hosts",
+                                                headers=[c.name for c in t.columns], source=f"{t.file} / {t.sheet}")
+            by = {m.column: m for m in prof.mappings}
+            for col, target in mine.items():
+                if col in {c.name for c in t.columns}:
+                    old = by.get(col)
+                    by[col] = SavedMapping(column=col, target=target or None, unit=old.unit if old else None)
+                    n += 1
+            prof.mappings = list(by.values())
+            save(prof, d)
+    return n
