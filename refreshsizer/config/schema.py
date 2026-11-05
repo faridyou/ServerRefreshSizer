@@ -85,6 +85,7 @@ class Policy(BaseModel):
     network_vmotion_mbps: float = 1250
     network_replication_mbps: float = 0
     split_clusters: str | bool = "auto"
+    prefer_measured_spec: bool = True
     objective: str = "min_tco"
     top_n: int = 5
     rack_unit_budget: int | None = None

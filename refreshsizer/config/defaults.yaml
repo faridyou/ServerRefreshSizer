@@ -54,6 +54,7 @@ vmware_order_min_cores: 0
 network_vmotion_mbps: 1250
 network_replication_mbps: 0
 split_clusters: auto
+prefer_measured_spec: true   # rank configs backed by a published SPEC result (same CPU & socket count) first
 objective: min_tco      # min_tco | min_hosts | min_licensed_cores | min_power | max_headroom
 top_n: 5
 rack_unit_budget: null
