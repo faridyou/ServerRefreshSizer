@@ -1,0 +1,12 @@
+<div id="job" {% if job.status in ('queued', 'running') %}hx-get="/jobs/{{ job.id }}" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+{% if job.status == 'error' %}
+<p class="err">{{ t('ui_job_failed') }}: {{ job.error }}</p>
+{% if job.project %}<a class="btn sec" href="/p/{{ job.project }}/upload">{{ t('ui_continue') }}</a>{% endif %}
+{% elif job.status == 'done' %}
+<progress value="100" max="100"></progress><p class="okmsg">{{ job.message }}</p>
+{% if job.redirect %}<a class="btn" href="{{ job.redirect }}">{{ t('ui_continue') }}</a>{% endif %}
+{% else %}
+<progress value="{{ job.percent }}" max="100"></progress>
+<p>{{ t('ui_job_running') }} {{ job.percent }} % - {{ job.message }}</p>
+{% endif %}
+</div>

@@ -91,3 +91,47 @@ Each entry: **decision** – reason – how to change it.
     localhost only; sessions under `data/ui_sessions/`.
 36. **`refreshsizer ingest` exits with code 2 on blocking validation errors of the manual template** and writes
     `<out>.validation.txt`; other formats only warn.
+
+## Web UI as the primary interface (change request 1)
+
+37. **One shared entry-point module, `refreshsizer/workflow.py`** (ingest, size, reports, policy assembly). The CLI
+    was refactored onto it and the UI calls only it, so there is no duplicated logic; tests assert that golden A, B
+    and C give byte-identical cluster results (demand, candidates, Monte Carlo, explanations) through both paths.
+    – "UI must call the same functions as the CLI". – n/a.
+38. **Hooks added to existing functions, none changing a calculation**: optional `progress(fraction, message)`
+    callbacks on `ingest_files`, `size_project`/`size_cluster` and `write_reports`; `ingest_files(profiles_dir=...)`
+    passed through to universal ingest; `MappingEntry.proposed` (the field proposed before review);
+    `apply_user_edits` accepts `(target, unit)` so unit decisions are stored.
+39. **Policy precedence in the UI** = CLI: defaults < project Policy sheet < project `policy.yaml` < what-if
+    overrides. `policy.yaml` stores only differences from the defaults.
+40. **What-if "U_max" sets one value for every workload class**, so it applies whatever the cluster's dominant
+    class is. – Simple single knob. – Use the Policy page for per-class values.
+41. **Mapping decisions are per project** (`data/projects/<n>/mappings/`, same profile format as
+    `data/mapping_profiles/`). Matching global profiles are copied into the project before each ingest; *Save as
+    mapping profile* copies the project's profiles back to the global store. `mapping_review.json` keeps the
+    first-ingest proposals with their original confidence (re-ingests use the profiles and would otherwise show
+    1.0 everywhere) plus the user's decisions. The UI ingest uses the same review mode as `--yes` (≥ 0.6), then the
+    grid lets the user change anything.
+42. **Background jobs run on one worker thread, in submission order** (`ui/jobs.py`). Keeps matplotlib (not
+    thread-safe) and the shared SQLite connection safe; jobs are kept in memory (lost on restart – the results are
+    already written to the project folder). Progress is polled by HTMX every second; the finished job answers with
+    `HX-Redirect`. Without JavaScript the job page refreshes itself.
+43. **Runs**: the last 5 sizing runs per project are kept in `runs/` (each with its label, overrides and full
+    sizing). `project.json` always holds the latest run; reports can be generated for any kept run.
+44. **HTMX 1.9.12 is vendored** (`ui/static/vendor/htmx.min.js`, 0BSD licence copied next to it), fetched from the
+    npm registry because the CDN was blocked. Charts in the UI are the same matplotlib PNGs as in the reports.
+    Sorting/filtering/copy/drag-and-drop are ~60 lines of vanilla JS (`ui/static/app.js`); every page still works
+    with plain form posts.
+45. **Server**: `127.0.0.1` is hard-coded (`ui/server.py`, no `--host` option); port 8765 or the next free port in
+    8765–8814; the browser is opened 1.2 s after start (`--no-browser` to skip). FastAPI's /docs pages are disabled.
+46. **Launchers**: `run.bat` / `run.sh` without arguments start the UI; with arguments they run the CLI. They create
+    the venv if missing and re-install when `requirements.lock` differs from the copy stored in `.venv` at the last
+    install. FastAPI, uvicorn and python-multipart are now core dependencies (were the optional `ui` extra).
+47. **Project names** are slugs (`[a-z0-9._-]`, ≤ 64 chars) of the display name; duplicates get `-2`, `-copy`, ...
+    Upload accepts only xlsx/xls/xlsm/ods/csv/txt/tsv; file names are reduced to their base name; report downloads
+    are confined to the project's `reports/` folder.
+48. **User-provided benchmark values** are stored in the benchmark DB with `source=user` (suite cpu2017,
+    SPECrate2017_int_base) and take precedence over live and curated results for that CPU (existing SPC rule).
+    The CPU is matched to the catalog when possible, otherwise slugified.
+49. **UI help texts** are in `report/i18n.yaml` (`h_<field>` keys, EN/FR) next to the other UI strings (`ui_*`);
+    fields without a help key show only their default.

@@ -6,6 +6,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -55,9 +56,11 @@ def save(profile: MappingProfile, d: Path | None = None) -> Path:
     return p
 
 
-def apply_user_edits(files: list[Path], edits: dict[tuple[str, str, str], str | None],
+def apply_user_edits(files: list[Path], edits: dict[tuple[str, str, str], Any],
                      d: Path | None = None) -> int:
-    """Store user-edited mappings {(file, sheet, column): target} into the matching table profiles."""
+    """Store user-edited mappings into the matching table profiles.
+
+    edits: {(file, sheet, column): target} or {(file, sheet, column): (target, unit)}; target None = ignore."""
     from refreshsizer.ingest.universal.profile import profile_file
 
     n = 0
@@ -69,10 +72,13 @@ def apply_user_edits(files: list[Path], edits: dict[tuple[str, str, str], str | 
             prof = load(t, d) or MappingProfile(fingerprint=fingerprint(t), classification="physical_hosts",
                                                 headers=[c.name for c in t.columns], source=f"{t.file} / {t.sheet}")
             by = {m.column: m for m in prof.mappings}
-            for col, target in mine.items():
-                if col in {c.name for c in t.columns}:
+            units = {c.name: c.unit for c in t.columns}
+            for col, val in mine.items():
+                if col in units:
+                    target, unit = val if isinstance(val, tuple) else (val, None)
                     old = by.get(col)
-                    by[col] = SavedMapping(column=col, target=target or None, unit=old.unit if old else None)
+                    by[col] = SavedMapping(column=col, target=target or None,
+                                           unit=unit or (old.unit if old else units[col]))
                     n += 1
             prof.mappings = list(by.values())
             save(prof, d)

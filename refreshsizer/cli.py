@@ -11,6 +11,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from refreshsizer import workflow
+
 app = typer.Typer(add_completion=False, no_args_is_help=True,
                   help="RefreshSizer: performance-normalized server refresh sizing (Dell PowerEdge 17G).")
 bench_app = typer.Typer(no_args_is_help=True, help="Benchmark database (SPEC CPU, rPerf, curated).")
@@ -24,26 +26,12 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _policy(project_overrides: dict[str, Any] | None, policy_file: Path | None, cli: dict[str, Any]):  # type: ignore[no-untyped-def]
-    from refreshsizer.config.schema import load_policy, load_yaml
-
-    file_ov = load_yaml(policy_file) if policy_file else None
-    return load_policy(project_overrides, file_ov, cli)
+    return workflow.make_policy(project_overrides, policy_file, cli)
 
 
 def _cli_overrides(growth: float | None, years: int | None, objective: str | None, p95_estimate: bool,
                    lang: str | None = None) -> dict[str, Any]:
-    ov: dict[str, Any] = {}
-    if growth is not None:
-        ov["growth"] = {"cpu_pct": growth}
-    if years is not None:
-        ov["horizon_years"] = years
-    if objective:
-        ov["objective"] = objective
-    if p95_estimate:
-        ov["p95_estimate"] = True
-    if lang:
-        ov["report_lang"] = lang
-    return ov
+    return workflow.overrides_from_flags(growth, years, objective, p95_estimate, lang)
 
 
 def _review_mode(yes: bool, strict: bool) -> str:
@@ -53,15 +41,11 @@ def _review_mode(yes: bool, strict: bool) -> str:
 
 
 def _load_project(path: Path):  # type: ignore[no-untyped-def]
-    from refreshsizer.model.entities import Project
-
-    return Project.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    return workflow.load_project(path)
 
 
 def _save_project(project: Any, out: Path) -> None:
-    out = Path(out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(project.model_dump_json(indent=1), encoding="utf-8")
+    workflow.save_project(project, out)
 
 
 @app.command()
@@ -84,10 +68,10 @@ def ingest(files: list[Path] = typer.Argument(..., exists=True, help="Input file
     """Ingest inventory/utilization files into a project.json (prints the ingest summary)."""
     _setup_logging(verbose)
     from refreshsizer.ingest.manual_template import write_validation_report
-    from refreshsizer.ingest.pipeline import ingest_files
     from refreshsizer.ingest.universal.summary import render_ingest_summary
 
-    project = ingest_files(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto", name=name)
+    project = workflow.ingest(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto",
+                              name=name)
     render_ingest_summary(project, console, lang)
     if project.ingest.errors:
         from refreshsizer.ingest.base import ParseResult
@@ -103,9 +87,7 @@ def ingest(files: list[Path] = typer.Argument(..., exists=True, help="Input file
 
 
 def _do_size(project: Any, policy: Any) -> Any:
-    from refreshsizer.engine.sizing import size_project
-
-    return size_project(project, policy)
+    return workflow.size(project, policy)
 
 
 def _print_sizing(run: Any) -> None:
@@ -153,13 +135,11 @@ def report(project_file: Path = typer.Argument(..., exists=True),
            verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Write the HTML / PDF / Excel report for a sized project."""
     _setup_logging(verbose)
-    from refreshsizer.report.build import write_reports
-
     project = _load_project(project_file)
     if not project.sizing:
         console.print("[red]Project is not sized yet: run `refreshsizer size` first.[/red]")
         raise typer.Exit(code=1)
-    for p in write_reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
+    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
         console.print(f"[green]written[/green] {p}")
 
 
@@ -174,18 +154,17 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         name: str | None = typer.Option(None, "--name"), verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Ingest + size + report in one go."""
     _setup_logging(verbose)
-    from refreshsizer.ingest.pipeline import ingest_files
     from refreshsizer.ingest.universal.summary import render_ingest_summary
-    from refreshsizer.report.build import write_reports
 
-    project = ingest_files(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto", name=name)
+    project = workflow.ingest(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto",
+                              name=name)
     render_ingest_summary(project, console, lang)
     pol = _policy(project.policy_overrides, policy, _cli_overrides(growth, years, objective, p95_estimate, lang))
     sizing = _do_size(project, pol)
     _print_sizing(sizing)
     out.mkdir(parents=True, exist_ok=True)
     _save_project(project, out / "project.json")
-    for p in write_reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
+    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
         console.print(f"[green]written[/green] {p}")
 
 
@@ -242,20 +221,12 @@ def bench_show(query: str = typer.Argument(..., help='CPU name, e.g. "EPYC 9355"
 
 
 @app.command()
-def ui(host: str = typer.Option("127.0.0.1", "--host", help="localhost only"), port: int = 8765) -> None:
-    """Optional local web UI (FastAPI + HTMX), localhost only."""
-    if host not in ("127.0.0.1", "localhost", "::1"):
-        console.print("[red]The UI only binds to localhost.[/red]")
-        raise typer.Exit(code=1)
-    try:
-        import uvicorn
+def ui(port: int = typer.Option(8765, "--port", help="First port to try (next free port if taken)"),
+       no_browser: bool = typer.Option(False, "--no-browser", help="Do not open the default browser")) -> None:
+    """Start the local web UI (primary interface). Binds to 127.0.0.1 only."""
+    from refreshsizer.ui.server import serve
 
-        from refreshsizer.ui.app import create_app
-    except ImportError as e:
-        console.print(f"[red]UI dependencies missing ({e}). Install with: pip install -e .[ui][/red]")
-        raise typer.Exit(code=1) from e
-    console.print(f"RefreshSizer UI on http://{host}:{port}")
-    uvicorn.run(create_app(), host=host, port=port, log_level="warning")
+    serve(port=port, open_browser=not no_browser, echo=console.print)
 
 
 @app.command()

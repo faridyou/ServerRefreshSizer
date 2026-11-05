@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+{% set uentries = entries %}
+<div class="card"><p>{{ t('ui_mapping_intro') }}</p>
+{% if not uentries %}<p class="muted">{{ t('ui_no_mapping') if project else t('ui_not_ingested') }}</p>
+{% else %}
+<form method="post" action="/p/{{ name }}/mapping">
+<div class="row" style="margin-bottom:8px">
+<input type="text" data-filter="maptable" placeholder="{{ t('ui_filter') }}">
+<label>{{ t('ui_accept_threshold') }} <input type="number" name="threshold" value="0.6" step="0.05" min="0" max="1"></label>
+<button name="action" value="accept_threshold" class="sec">{{ t('ui_accept_threshold') }}</button>
+</div>
+<table id="maptable"><thead><tr><th class="sort">file</th><th class="sort">sheet</th><th class="sort">column</th><th>field</th><th>unit</th><th class="sort num">conf.</th><th>method</th><th>sample</th><th>transformed</th><th>{{ t('ui_ignore') }}</th></tr></thead><tbody>
+{% for e in uentries %}{% set i = loop.index0 %}
+<tr><td class="small">{{ e.file }}</td><td>{{ e.sheet }}</td><td><b>{{ e.column }}</b></td>
+<td><select name="t{{ i }}"><option value="">-</option>{% for f in fields %}<option value="{{ f }}" {{ 'selected' if f == e.target else '' }}>{{ f }}</option>{% endfor %}</select>
+{% if e.proposed and e.proposed != e.target %}<div class="small muted">{{ t('ui_proposed') }}: {{ e.proposed }}</div>{% endif %}</td>
+<td><select name="u{{ i }}">{% for u in units %}<option value="{{ u }}" {{ 'selected' if u == (e.unit or '') else '' }}>{{ u or '-' }}</option>{% endfor %}</select></td>
+<td class="num" data-v="{{ e.confidence }}"><span class="tag {{ 'hi' if e.confidence >= 0.9 else ('mid' if e.confidence >= 0.6 else 'lo') }}">{{ '%.2f' % e.confidence }}</span></td>
+<td class="small">{{ e.method }}</td><td class="small">{{ e.sample or '' }}</td><td class="small">{{ e.transformed or '' }}</td>
+<td><input type="checkbox" name="x{{ i }}" value="1" {{ 'checked' if not e.target else '' }}></td></tr>
+{% endfor %}</tbody></table>
+<div class="row" style="margin-top:10px"><button name="action" value="apply">{{ t('ui_apply_mapping') }}</button>
+<button name="action" value="save_profile" class="sec">{{ t('ui_save_profile') }}</button></div>
+</form>{% endif %}</div>
+{% if ignored %}<div class="card"><h3>{{ t('ui_ignored_sheets') }}</h3><table><tr><th>file</th><th>sheet</th><th>class</th><th>reason</th></tr>
+{% for s in ignored %}<tr><td>{{ s.file }}</td><td>{{ s.sheet }}</td><td>{{ s.classification }}</td><td>{{ s.reason }}</td></tr>{% endfor %}</table></div>{% endif %}
+{% if project %}<p><a class="btn" href="/p/{{ name }}/summary">{{ t('ui_tab_summary') }} →</a></p>{% endif %}
+{% endblock %}

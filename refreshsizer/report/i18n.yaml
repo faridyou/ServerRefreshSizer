@@ -85,3 +85,113 @@ mc_hist: {en: "Monte Carlo host count distribution", fr: "Distribution Monte Car
 host_demand: {en: "Demand per source host (SU)", fr: "Demande par hôte source (SU)"}
 naive_note: {en: "Naive methods ignore per-core performance differences between generations; they are shown for comparison only.",
   fr: "Les méthodes naïves ignorent les écarts de performance par cœur entre générations ; elles sont données à titre de comparaison."}
+# ---------------------------------------------------------------- web UI strings
+ui_local_notice: {en: "Local application: this page is served by RefreshSizer on your own computer (127.0.0.1 only). Customer data never leaves this machine, except redacted headers/samples sent to the LLM when an API key is configured.",
+  fr: "Application locale : cette page est servie par RefreshSizer sur votre ordinateur (127.0.0.1 uniquement). Les données client ne quittent jamais cette machine, sauf les en-têtes/échantillons anonymisés envoyés au LLM si une clé API est configurée."}
+ui_projects: {en: "Projects", fr: "Projets"}
+ui_benchmarks: {en: "Benchmarks", fr: "Benchmarks"}
+ui_new_project: {en: "New project", fr: "Nouveau projet"}
+ui_project_name: {en: "Project name", fr: "Nom du projet"}
+ui_create: {en: "Create", fr: "Créer"}
+ui_open: {en: "Open", fr: "Ouvrir"}
+ui_duplicate: {en: "Duplicate", fr: "Dupliquer"}
+ui_delete: {en: "Delete", fr: "Supprimer"}
+ui_confirm_delete: {en: "Delete this project and all its files? This cannot be undone.", fr: "Supprimer ce projet et tous ses fichiers ? Action irréversible."}
+ui_no_projects: {en: "No project yet. Create one to start.", fr: "Aucun projet. Créez-en un pour commencer."}
+ui_updated: {en: "Updated", fr: "Modifié"}
+ui_files: {en: "Files", fr: "Fichiers"}
+ui_runs: {en: "Runs", fr: "Exécutions"}
+ui_tab_upload: {en: "1 Upload", fr: "1 Import"}
+ui_tab_mapping: {en: "2 Mapping", fr: "2 Correspondances"}
+ui_tab_summary: {en: "3 Ingest summary", fr: "3 Synthèse import"}
+ui_tab_policy: {en: "4 Policy", fr: "4 Paramètres"}
+ui_tab_results: {en: "5 Results", fr: "5 Résultats"}
+ui_tab_whatif: {en: "6 What-if", fr: "6 Simulation"}
+ui_tab_reports: {en: "7 Reports", fr: "7 Rapports"}
+ui_drop: {en: "Drop files here (xlsx, xls, xlsm, ods, csv) or click to choose", fr: "Déposez les fichiers ici (xlsx, xls, xlsm, ods, csv) ou cliquez pour choisir"}
+ui_upload: {en: "Upload", fr: "Importer"}
+ui_detected: {en: "Detected format", fr: "Format détecté"}
+ui_remove: {en: "Remove", fr: "Retirer"}
+ui_template: {en: "Blank manual template", fr: "Modèle de saisie vierge"}
+ui_run_ingest: {en: "Run ingest", fr: "Lancer l'import"}
+ui_mapping_intro: {en: "Universal ingest: check how each source column maps to the canonical model. Change the field or unit, ignore columns, then apply (the files are re-ingested with your decisions).",
+  fr: "Import universel : vérifiez la correspondance de chaque colonne source avec le modèle canonique. Modifiez le champ ou l'unité, ignorez des colonnes, puis appliquez (les fichiers sont réimportés avec vos choix)."}
+ui_no_mapping: {en: "All files were recognised by dedicated parsers: no column mapping to review.", fr: "Tous les fichiers ont été reconnus par des analyseurs dédiés : aucune correspondance à vérifier."}
+ui_ignore: {en: "ignore", fr: "ignorer"}
+ui_proposed: {en: "proposed", fr: "proposé"}
+ui_accept_threshold: {en: "Accept all ≥ threshold", fr: "Accepter tout ≥ seuil"}
+ui_apply_mapping: {en: "Apply and re-ingest", fr: "Appliquer et réimporter"}
+ui_save_profile: {en: "Save as mapping profile (reused for the same template)", fr: "Enregistrer comme profil (réutilisé pour le même modèle)"}
+ui_ignored_sheets: {en: "Ignored sheets", fr: "Onglets ignorés"}
+ui_overall: {en: "Overall", fr: "Total"}
+ui_copy: {en: "Copy", fr: "Copier"}
+ui_copied: {en: "Copied", fr: "Copié"}
+ui_dq_flags: {en: "Data-quality flags", fr: "Indicateurs de qualité des données"}
+ui_policy_intro: {en: "Sizing policy for this project. Values differing from the defaults are highlighted and saved to policy.yaml.", fr: "Paramètres de dimensionnement du projet. Les valeurs différentes des défauts sont surlignées et enregistrées dans policy.yaml."}
+ui_save: {en: "Save", fr: "Enregistrer"}
+ui_reset: {en: "Reset to defaults", fr: "Rétablir les défauts"}
+ui_default: {en: "default", fr: "défaut"}
+ui_run_sizing: {en: "Run sizing", fr: "Lancer le dimensionnement"}
+ui_not_sized: {en: "Not sized yet.", fr: "Pas encore dimensionné."}
+ui_not_ingested: {en: "Upload files and run the ingest first.", fr: "Importez des fichiers et lancez l'import d'abord."}
+ui_show_calc: {en: "Show calculation", fr: "Voir le calcul"}
+ui_candidates: {en: "Candidate configurations", fr: "Configurations candidates"}
+ui_filter: {en: "Filter…", fr: "Filtrer…"}
+ui_whatif_intro: {en: "Change a few parameters and re-run the sizing in place. The last 5 runs are kept; pick two to compare.", fr: "Modifiez quelques paramètres et relancez le dimensionnement. Les 5 dernières exécutions sont conservées ; choisissez-en deux pour les comparer."}
+ui_compare: {en: "Compare", fr: "Comparer"}
+ui_label: {en: "Label", fr: "Libellé"}
+ui_view: {en: "View", fr: "Voir"}
+ui_generate: {en: "Generate reports", fr: "Générer les rapports"}
+ui_open_tab: {en: "open in new tab", fr: "ouvrir dans un nouvel onglet"}
+ui_download: {en: "download", fr: "télécharger"}
+ui_search: {en: "Search", fr: "Rechercher"}
+ui_bench_update: {en: "Update from spec.org", fr: "Mettre à jour depuis spec.org"}
+ui_bench_add: {en: "Add a user-provided benchmark value", fr: "Ajouter une valeur de benchmark fournie par l'utilisateur"}
+ui_add: {en: "Add", fr: "Ajouter"}
+ui_job_running: {en: "Working…", fr: "Traitement…"}
+ui_job_failed: {en: "The job failed", fr: "La tâche a échoué"}
+ui_continue: {en: "Continue", fr: "Continuer"}
+ui_run: {en: "Run", fr: "Exécution"}
+ui_pg_growth: {en: "Growth and horizon", fr: "Croissance et horizon"}
+ui_pg_headroom: {en: "Headroom (U_max per workload class)", fr: "Marge (U_max par classe de charge)"}
+ui_pg_ha: {en: "High availability", fr: "Haute disponibilité"}
+ui_pg_memory: {en: "Memory", fr: "Mémoire"}
+ui_pg_storage: {en: "Storage", fr: "Stockage"}
+ui_pg_vcpu: {en: "vCPU ratios and NUMA", fr: "Ratios vCPU et NUMA"}
+ui_pg_licensing: {en: "Licensing", fr: "Licences"}
+ui_pg_objective: {en: "Optimizer objective", fr: "Objectif de l'optimiseur"}
+ui_pg_util: {en: "Utilization handling", fr: "Traitement de l'utilisation"}
+ui_pg_inventory: {en: "Inventory-only mode", fr: "Mode inventaire seul"}
+ui_pg_risc: {en: "RISC / architecture factors", fr: "RISC / facteurs d'architecture"}
+ui_pg_mc: {en: "Monte Carlo", fr: "Monte Carlo"}
+h_growth: {en: "Annual growth in % per resource (compounded over the horizon).", fr: "Croissance annuelle en % par ressource (composée sur l'horizon)."}
+h_horizon_years: {en: "Planning horizon in years.", fr: "Horizon de planification en années."}
+h_u_max: {en: "Maximum target utilization (headroom): C_req = D_T / U_max.", fr: "Utilisation cible maximale (marge) : C_req = D_T / U_max."}
+h_ha_policy: {en: "auto = N+1, N+2 above the threshold host count.", fr: "auto = N+1, N+2 au-delà du seuil d'hôtes."}
+h_ha_n2_threshold_hosts: {en: "Above this many hosts, N+2 is used (auto).", fr: "Au-delà de ce nombre d'hôtes, N+2 est utilisé (auto)."}
+h_maintenance_reserve: {en: "Add one extra host for maintenance on top of HA.", fr: "Ajouter un hôte pour la maintenance en plus de la HA."}
+h_max_cluster_size: {en: "Maximum hosts per cluster.", fr: "Nombre maximal d'hôtes par cluster."}
+h_max_hosts_per_cluster_user: {en: "Optional cap; 3 switches vSAN RAID-5 4+1 to 2+1. Empty = none.", fr: "Plafond facultatif ; 3 bascule vSAN RAID-5 4+1 en 2+1. Vide = aucun."}
+h_stretched_cluster: {en: "Two sites + witness; each site carries the full load.", fr: "Deux sites + témoin ; chaque site porte toute la charge."}
+h_memory_basis: {en: "configured (default) / consumed / active x factor / overcommit.", fr: "configurée (défaut) / consommée / active x facteur / surallocation."}
+h_hypervisor_mem_overhead: {en: "Hypervisor memory overhead (fraction).", fr: "Surcoût mémoire de l'hyperviseur (fraction)."}
+h_mem_free_reserve: {en: "Free-memory reserve (fraction).", fr: "Réserve de mémoire libre (fraction)."}
+h_storage_architecture: {en: "auto: external SAN for RISC/bare-metal sources, vSAN ESA otherwise.", fr: "auto : SAN externe pour les sources RISC/physiques, vSAN ESA sinon."}
+h_protection: {en: "vSAN ESA protection policy (sets overhead and minimum hosts).", fr: "Politique de protection vSAN ESA (surcoût et nombre minimal d'hôtes)."}
+h_slack: {en: "Free-space slack kept on the datastore (fraction).", fr: "Espace libre conservé sur le datastore (fraction)."}
+h_drr: {en: "Data reduction ratio per workload class.", fr: "Ratio de réduction de données par classe de charge."}
+h_vcpu_ratio_max: {en: "Maximum vCPU:pCore by tier (performance-normalized check).", fr: "vCPU:cœur physique maximal par niveau (contrôle normalisé en performance)."}
+h_vmware_edition: {en: "VMware licensing: VCF, VVF or none.", fr: "Licences VMware : VCF, VVF ou aucune."}
+h_vmware_order_min_cores: {en: "Order minimum (a 72-core minimum was reported in 2025, disputed).", fr: "Minimum de commande (un minimum de 72 cœurs a été signalé en 2025, contesté)."}
+h_oracle_db_cluster_licensing: {en: "Dedicated DB cluster: license active nodes only (failover rule) or all nodes.", fr: "Cluster BDD dédié : licencier les nœuds actifs (règle de bascule) ou tous les nœuds."}
+h_split_clusters: {en: "auto: per-core-licensed databases sized as their own cluster.", fr: "auto : bases licenciées au cœur dimensionnées dans un cluster dédié."}
+h_objective: {en: "What the optimizer minimizes.", fr: "Ce que l'optimiseur minimise."}
+h_prefer_measured_spec: {en: "Rank configs backed by a published SPEC result first.", fr: "Classer d'abord les configurations appuyées par un résultat SPEC publié."}
+h_p95_estimate: {en: "Live Optics without time series: p95 ~= avg + 0.8 x (peak - avg).", fr: "Live Optics sans série temporelle : p95 ~= moy + 0,8 x (pic - moy)."}
+h_rvtools_burst_factor: {en: "Multiplier applied to point-in-time (RVTools) utilization.", fr: "Multiplicateur appliqué à l'utilisation instantanée (RVTools)."}
+h_vm_peak_coincidence: {en: "Factor applied when summing per-VM peaks.", fr: "Facteur appliqué à la somme des pics par VM."}
+h_inventory_assumed_util: {en: "Assumed utilization when no data exists (1.0 = 100 %).", fr: "Utilisation supposée sans données (1,0 = 100 %)."}
+h_inventory_apply_headroom: {en: "Apply U_max in inventory-only mode (both results are shown).", fr: "Appliquer U_max en mode inventaire seul (les deux résultats sont affichés)."}
+h_rperf_factor_mode: {en: "conservative = always 0.425; generation_matched uses IBM's own SPEC anchors.", fr: "conservative = toujours 0,425 ; generation_matched utilise les ancrages SPEC d'IBM."}
+h_k_arch: {en: "RISC -> x86 adjustment by class.", fr: "Ajustement RISC -> x86 par classe."}
+h_monte_carlo_runs: {en: "Number of Monte Carlo runs (fixed seed for reproducibility).", fr: "Nombre de tirages Monte Carlo (graine fixe pour la reproductibilité)."}

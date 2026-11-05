@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_macros.html" import calc, calcs %}
+{% block content %}
+{% if not project %}<div class="card"><p>{{ t('ui_not_ingested') }}</p></div>
+{% elif not r %}<div class="card"><p>{{ t('ui_not_sized') }}</p><form method="post" action="/p/{{ name }}/size"><button>{{ t('ui_run_sizing') }}</button></form></div>
+{% else %}
+<div class="card row"><span>{{ t('ui_run') }}:</span>
+<form method="get" class="row"><select name="run" onchange="this.form.submit()">{% for x in runs %}<option value="{{ x.id }}" {{ 'selected' if run and run.id == x.id else '' }}>{{ x.created }} - {{ x.label }}</option>{% endfor %}</select><noscript><button>{{ t('ui_view') }}</button></noscript></form>
+<a class="btn sec" href="/p/{{ name }}/whatif">{{ t('ui_tab_whatif') }}</a><a class="btn sec" href="/p/{{ name }}/reports">{{ t('ui_tab_reports') }}</a></div>
+{% for w in r.run.warnings %}<p class="lowbanner small">{{ w }}</p>{% endfor %}
+{% for c in r.clusters %}{% set cs = c.cs %}{% set d = c.d %}{% set rec = c.rec %}
+<h2>{{ d.cluster }} <span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(d.confidence.value, 'lo') }}">{{ d.mode.value }} / {{ d.confidence.value }}</span></h2>
+{% if c.banner %}<p class="{{ 'banner' if c.banner == 'very_low_banner' else 'lowbanner' }}">{{ t(c.banner) }}</p>{% endif %}
+{% if not rec %}<p class="err">no feasible configuration</p>{% else %}
+{% set ex = rec.explanations %}
+<div class="grid">
+<div class="kpi"><div class="l">{{ t('recommended') }}</div><div class="v" style="font-size:16px">{{ rec.label }}</div>{{ calc(ex | selectattr('step_id', 'equalto', 'target_su') | first, t) }}</div>
+<div class="kpi"><div class="l">{{ t('hosts') }} (N+{{ rec.k_ha }})</div><div class="v">{{ rec.n_total }}</div>{{ calc(ex | selectattr('step_id', 'equalto', 'ha') | first, t) }}</div>
+<div class="kpi"><div class="l">{{ t('cores') }}</div><div class="v">{{ rec.n_total * rec.config.cpu_count * rec.config.cores_per_cpu }}</div>
+<details class="calc"><summary>{{ t('ui_show_calc') }}</summary><div class="box formula">{{ rec.n_total }} hosts x {{ rec.config.cpu_count }} CPU x {{ rec.config.cores_per_cpu }} cores</div></details></div>
+<div class="kpi"><div class="l">SU ({{ t('target_side') }} / C_req)</div><div class="v">{{ (rec.n_total * rec.su_host) | fmt }}</div><div class="small muted">C_req {{ d.c_req | fmt }} SU</div>{{ calcs(d.explanations | selectattr('step_id', 'in', ['src_capacity', 'd0', 'adjust', 'growth']) | list, t) }}</div>
+<div class="kpi"><div class="l">{{ t('headroom') }} / {{ t('util_failed') }}</div><div class="v">{{ rec.util_failed | pct }}</div><div class="small muted">U_max {{ d.u_max | pct }} · {{ t('util_normal') }} {{ rec.util_normal | pct }}</div>{{ calc(d.explanations | selectattr('step_id', 'equalto', 'headroom') | first, t) }}</div>
+<div class="kpi"><div class="l">{{ t('licensing_delta') }}</div><div class="v">{{ c.license_delta | money }}</div>
+<details class="calc"><summary>{{ t('ui_show_calc') }}</summary><div class="box"><table class="small">{% for l in rec.licenses %}<tr><td>{{ l.product }}</td><td>{{ l.quantity | fmt }} {{ l.metric }}</td><td class="num">{{ l.horizon_usd | money }}</td></tr>{% endfor %}
+{% for l in cs.source_licensing %}<tr><td>{{ t('source_side') }}: {{ l.product }}</td><td>{{ l.quantity | fmt }}</td><td class="num">-{{ l.horizon_usd | money }}</td></tr>{% endfor %}</table></div></details></div>
+{% if cs.uncertainty %}<div class="kpi"><div class="l">P50 / P90 {{ t('hosts') }}</div><div class="v">{{ cs.uncertainty.p50_hosts }} / {{ cs.uncertainty.p90_hosts }}</div><div class="small muted">{{ cs.uncertainty.runs }} runs, seed {{ cs.uncertainty.seed }}</div></div>{% endif %}
+<div class="kpi"><div class="l">{{ t('tco') }}</div><div class="v">{{ rec.tco | money }}</div><div class="small muted">capex {{ rec.capex_total | money }} · lic. {{ rec.license_total | money }} · power {{ rec.power_opex | money }}</div></div>
+</div>
+<div class="cols2">
+<div class="card">{% if c.charts.hosts %}<img class="chart" src="{{ c.charts.hosts }}" alt="hosts comparison">{% endif %}
+{% if cs.naive %}<p class="small">{{ t('core_match') }}: <b>{{ cs.naive.core_match_hosts }}</b> · {{ t('ghz_match') }}: <b>{{ cs.naive.ghz_match_hosts }}</b> · {{ t('naive_note') }}</p>{{ calcs(cs.naive.explanations, t) }}{% endif %}</div>
+<div class="card">{% if c.charts.hist %}<img class="chart" src="{{ c.charts.hist }}" alt="Monte Carlo">{% endif %}</div>
+</div>
+{% if c.charts.pareto %}<div class="card"><img class="chart" src="{{ c.charts.pareto }}" alt="pareto" style="max-width:900px"></div>{% endif %}
+{% set labels = cs.candidates | map(attribute='label') | list %}
+{% set cands = cs.candidates + (cs.pareto | rejectattr('label', 'in', labels) | list) %}
+<div class="card"><h3>{{ t('ui_candidates') }} <input type="text" data-filter="cand{{ loop.index }}" placeholder="{{ t('ui_filter') }}"></h3>
+<table id="cand{{ loop.index }}"><thead><tr><th class="sort">config</th><th class="sort num">SPC</th><th class="sort num">SU/host</th><th class="sort num">{{ t('hosts') }}</th><th class="sort num">{{ t('util_failed') }}</th><th class="sort num">RAM/host</th><th>{{ t('drives') }}</th><th class="sort num">W</th><th class="sort num">RU</th><th class="sort num">capex</th><th class="sort num">licenses</th><th class="sort num">TCO</th></tr></thead><tbody>
+{% for x in cands %}<tr {% if x.label == rec.label %}style="background:#eef5fd"{% endif %}><td>{{ x.label }}{% if x.spc_flags %}<div class="small muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}{{ calcs(x.explanations, t) }}</td>
+<td class="num">{{ x.spc_target | fmt }}</td><td class="num" data-v="{{ x.su_host }}">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num" data-v="{{ x.util_failed }}">{{ x.util_failed | pct }}</td><td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td>
+<td class="num" data-v="{{ x.power_w_total }}">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num" data-v="{{ x.capex_total }}">{{ x.capex_total | money }}</td><td class="num" data-v="{{ x.license_total }}">{{ x.license_total | money }}</td><td class="num" data-v="{{ x.tco }}">{{ x.tco | money }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="cols2">
+<div class="card"><h3>{{ t('s8') }}</h3><table class="small">
+<tr><td>Platform</td><td>Dell PowerEdge {{ rec.config.platform }} ({{ c.platform.form_factor_u }}U) x {{ rec.n_total }}</td></tr>
+<tr><td>{{ t('cpu') }}</td><td>{{ rec.config.cpu_count }} x {{ rec.config.cpu_name }} ({{ rec.config.cores_per_cpu }} c, {{ c.cpu.base_ghz }} GHz, {{ c.cpu.tdp_w }} W)</td></tr>
+<tr><td>{{ t('memory') }}</td><td>{% if rec.dimm %}{{ rec.dimm.dimm_count }} x {{ rec.dimm.dimm_size_gb }} GB = {{ rec.dimm.total_gb }} GB, {{ rec.dimm.dpc }} DPC @ {{ rec.dimm.speed_mt_s }} MT/s, {{ rec.dimm.gbs_per_core }} GB/s/core{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'dimm') | first, t) }}{{ calc(d.explanations | selectattr('step_id', 'equalto', 'memory') | first, t) }}</td></tr>
+<tr><td>{{ t('drives') }}</td><td>{% if rec.drives %}{{ rec.drives.count }} x {{ rec.drives.drive_tb }} TB NVMe ({{ rec.drives.raw_tib }} TiB){% else %}external storage{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'drives') | first, t) }}{{ calcs(d.explanations | selectattr('step_id', 'in', ['storage', 'iops']) | list, t) }}</td></tr>
+<tr><td>{{ t('network') }}</td><td>{{ rec.nics }}{{ calc(ex | selectattr('step_id', 'equalto', 'network') | first, t) }}</td></tr>
+<tr><td>{{ t('psu') }}</td><td>2 x {{ rec.config.psu }}</td></tr></table>
+{% if c.dimm_diagram %}<h3>{{ t('dimm_diagram') }}</h3><pre>{% for l in c.dimm_diagram %}{{ l }}
+{% endfor %}</pre>{% endif %}</div>
+<div class="card"><h3>{{ t('s11') }}</h3><table class="small">{% for k in c.constraints %}<tr><td>{{ k.check }}</td><td>{{ k.detail }}</td><td><span class="tag {{ k.status }}">{{ k.status }}</span></td></tr>{% endfor %}</table>
+{{ calcs(ex | selectattr('step_id', 'in', ['numa', 'vcpu_ratio']) | list, t) }}</div>
+</div>
+<div class="card"><h3>{{ t('s12') }}</h3>
+{% if d.inventory_sensitivity %}<table class="small"><tr><th>{{ t('sensitivity') }}</th><th class="num">D0</th><th class="num">D_T</th><th class="num">C_req</th><th class="num">{{ t('hosts') }}</th></tr>
+{% for s in d.inventory_sensitivity %}<tr><td>{{ s.assumed_util | pct }}</td><td class="num">{{ s.d0 | fmt }}</td><td class="num">{{ s.d_t | fmt }}</td><td class="num">{{ s.c_req | fmt }}</td><td class="num">{{ s.hosts }}</td></tr>{% endfor %}</table>
+<p class="small">{{ t('hosts') }}: {{ rec.n_total }} ({{ t('with_headroom') if d.apply_headroom else t('without_headroom') }}) / {{ cs.inventory_no_headroom_hosts }} ({{ t('without_headroom') if d.apply_headroom else t('with_headroom') }})</p>{% endif %}
+{% if cs.uncertainty %}<p>P50 <b>{{ cs.uncertainty.p50_hosts }}</b> · P90 <b>{{ cs.uncertainty.p90_hosts }}</b> ({{ t('p90') }}) · {{ cs.uncertainty.parameters | fmt }}</p>
+{% if c.charts.tornado %}<img class="chart" src="{{ c.charts.tornado }}" alt="tornado" style="max-width:760px">{% endif %}{% endif %}
+<ul class="small">{% for x in cs.recommendations %}<li>{{ x }}</li>{% endfor %}</ul></div>
+<div class="card"><h3>{{ t('s4') }}</h3><table class="small"><tr><th>side</th><th>CPU</th><th>{{ t('value') }}</th><th>cores</th><th>SPC</th><th>{{ t('system') }}</th><th>URL</th><th>source</th></tr>
+{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.url | linkify }}</td><td>{{ b.source }}</td></tr>{% endfor %}</table></div>
+{% endif %}{% endfor %}
+{% endif %}
+{% endblock %}

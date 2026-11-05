@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card"><h2>{{ job.kind }}{% if job.project %} - {{ job.project }}{% endif %}</h2>
+{% include "_job.html" %}
+<noscript><meta http-equiv="refresh" content="2"></noscript>
+</div>
+{% endblock %}

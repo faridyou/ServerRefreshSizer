@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card"><h2>{{ t('ui_compare') }}</h2>
+{% if cols | length < 2 %}<p class="err">Select two runs.</p>{% else %}
+<table><thead><tr><th></th>{% for col in cols %}<th>{{ col.run.created }}<div class="small muted">{{ col.run.label }} {{ col.run.overrides | fmt }}</div></th>{% endfor %}</tr></thead><tbody>
+{% for cl in clusters %}<tr><th colspan="{{ cols | length + 1 }}">{{ cl }}</th></tr>
+{% for label, key in [('mode','mode'), ('CPU growth %','g'), ('horizon','years'), ('U_max','umax'), ('D0 SU','d0'), ('D_T SU','d_t'), ('C_req SU','c_req'), (t('recommended'),'label'), (t('hosts'),'hosts'), ('P50/P90','p'), (t('util_failed'),'uf'), (t('core_match') ~ ' / ' ~ t('ghz_match'),'naive'), ('TCO','tco'), (t('licensing_delta'),'lic')] %}
+<tr><td>{{ label }}</td>{% for col in cols %}{% set cs = (col.sizing.clusters | selectattr('demand.cluster', 'equalto', cl) | first) %}<td>{% if cs %}{% set d = cs.demand %}{% set r = cs.recommended %}
+{% if key == 'mode' %}{{ d.mode.value }}{% elif key == 'g' %}{{ d.growth_cpu_pct | fmt }}{% elif key == 'years' %}{{ d.years }}{% elif key == 'umax' %}{{ d.u_max | pct }}{% elif key == 'd0' %}{{ d.d0 | fmt }}{% elif key == 'd_t' %}{{ d.d_t | fmt }}{% elif key == 'c_req' %}{{ d.c_req | fmt }}
+{% elif r %}{% if key == 'label' %}{{ r.label }}{% elif key == 'hosts' %}<b>{{ r.n_total }}</b>{% elif key == 'p' %}{{ cs.uncertainty.p50_hosts if cs.uncertainty else '-' }} / {{ cs.uncertainty.p90_hosts if cs.uncertainty else '-' }}{% elif key == 'uf' %}{{ r.util_failed | pct }}{% elif key == 'naive' %}{{ cs.naive.core_match_hosts if cs.naive else '-' }} / {{ cs.naive.ghz_match_hosts if cs.naive else '-' }}{% elif key == 'tco' %}{{ r.tco | money }}{% elif key == 'lic' %}{{ (r.license_total - (cs.source_licensing | sum(attribute='horizon_usd'))) | money }}{% endif %}{% endif %}
+{% else %}-{% endif %}</td>{% endfor %}</tr>{% endfor %}{% endfor %}
+</tbody></table>{% endif %}</div>
+{% endblock %}

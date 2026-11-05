@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+<form method="post" action="/p/{{ name }}/files" enctype="multipart/form-data" hx-post="/p/{{ name }}/files" hx-encoding="multipart/form-data" hx-target="#files" hx-swap="outerHTML">
+<div id="drop" class="drop">{{ t('ui_drop') }}</div>
+<input id="fileinput" type="file" name="files" multiple accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,.tsv" style="margin-top:8px">
+<noscript><button>{{ t('ui_upload') }}</button></noscript>
+</form>
+</div>
+<div class="card">{% include "_files.html" %}</div>
+<div class="card"><h3>{{ t('ui_template') }}</h3>
+<a class="btn sec" href="/template?lang=en">template EN (.xlsx)</a> <a class="btn sec" href="/template?lang=fr">modèle FR (.xlsx)</a></div>
+{% endblock %}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -46,10 +47,14 @@ def split_cluster(c: Cluster, policy: Policy) -> list[tuple[str, list[SourceWork
     return [(f"{c.name}-db", lic, s_db, True), (c.name, rest, 1 - s_db, False)]
 
 
-def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str, Any]) -> list[ClusterSizing]:
+def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str, Any],
+                 progress: Callable[[float, str], None] | None = None) -> list[ClusterSizing]:
     mode, _, why = select_mode(c)
     out = []
-    for name, wls, share, is_db in split_cluster(c, policy):
+    parts = split_cluster(c, policy)
+    for k, (name, wls, share, is_db) in enumerate(parts):
+        if progress:
+            progress(k / len(parts), f"{name}: demand, optimizer")
         d: ClusterDemand = compute_demand(c, mode, policy, cache, name=name, workloads=wls, share=share,
                                           is_db_cluster=is_db)
         d.flags.insert(0, f"mode {d.mode.value}: {why}")
@@ -62,6 +67,8 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
             cs.recommended = rec
             cpu = load_cpus()[rec.config.cpu_id]
             cs.naive = naive(d, rec.config.total_cores, cpu.base_ghz, policy)
+            if progress:
+                progress((k + 0.6) / len(parts), f"{name}: Monte Carlo ({policy.monte_carlo_runs} runs)")
             cs.uncertainty = uncertainty.run(d, rec, policy)
             if d.mode == SizingMode.INVENTORY_ONLY:
                 from refreshsizer.engine.optimizer import evaluate_named
@@ -101,14 +108,16 @@ def validation_plan(d: ClusterDemand) -> list[str]:
 
 
 def size_project(project: Project, policy: Policy, cache: BenchCache | None = None,
-                 prices: dict[str, Any] | None = None) -> SizingRun:
+                 prices: dict[str, Any] | None = None,
+                 progress: Callable[[float, str], None] | None = None) -> SizingRun:
+    """progress(fraction, message) is an optional UI hook; it never affects results."""
     cache = cache or ensure_db()
     prices = prices or load_prices()
     clusters = []
-    for c in project.clusters:
-        if not c.hosts and not c.workloads:
-            continue
-        clusters += size_cluster(c, policy, cache, prices)
+    todo = [c for c in project.clusters if c.hosts or c.workloads]
+    for i, c in enumerate(todo):
+        sub = (lambda f, m, i=i: progress((i + f) / len(todo), m)) if progress else None
+        clusters += size_cluster(c, policy, cache, prices, sub)
     run = SizingRun(generated_at=datetime.now().isoformat(timespec="seconds"),
                     policy=policy.model_dump(mode="json"), clusters=clusters,
                     benchmark_db={"path": str(cache.path), "results": cache.count(),

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card"><p>{{ t('ui_policy_intro') }}</p>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}{% if saved %}<p class="okmsg">policy.yaml ✓</p>{% endif %}
+<form method="post" action="/p/{{ name }}/policy">
+{% for g in groups %}<h3>{{ g.title }}</h3>
+{% for f in g.fields %}<div class="field {{ 'changed' if f.changed else '' }}">
+<label for="f_{{ f.path }}"><code>{{ f.label }}</code></label>
+<div>{% if f.kind == 'choice' %}<select id="f_{{ f.path }}" name="{{ f.path }}">{% for c in f.choices %}<option {{ 'selected' if (c == f.value|string) or (c == 'false' and f.value is sameas false) else '' }}>{{ c }}</option>{% endfor %}</select>
+{% elif f.kind == 'bool' %}<select id="f_{{ f.path }}" name="{{ f.path }}"><option value="true" {{ 'selected' if f.value else '' }}>true</option><option value="false" {{ 'selected' if not f.value else '' }}>false</option></select>
+{% else %}<input id="f_{{ f.path }}" name="{{ f.path }}" value="{{ '' if f.value is none else f.value }}" {% if f.kind in ('int', 'float') %}type="number" step="{{ '1' if f.kind == 'int' else 'any' }}"{% endif %}>{% endif %}</div>
+<div class="small muted">{{ f.help }} <span>({{ t('ui_default') }}: {{ '-' if f.default is none else f.default }})</span></div></div>{% endfor %}
+{% endfor %}
+<div class="row" style="margin-top:12px"><button name="then" value="save">{{ t('ui_save') }}</button><button name="then" value="size" class="sec">{{ t('ui_save') }} + {{ t('ui_run_sizing') }}</button></div>
+</form>
+<form method="post" action="/p/{{ name }}/policy/reset" style="margin-top:8px"><button class="danger">{{ t('ui_reset') }}</button></form>
+{% if yaml %}<h3>policy.yaml</h3><pre>{{ yaml }}</pre>{% endif %}
+</div>
+{% endblock %}

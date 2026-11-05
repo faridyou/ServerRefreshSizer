@@ -1,0 +1,9 @@
+<div id="files">
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+{% if files %}<table><thead><tr><th>{{ t('files') }}</th><th>{{ t('ui_detected') }}</th><th class="num">kB</th><th></th></tr></thead><tbody>
+{% for f in files %}<tr><td>{{ f.name }}</td><td><span class="tag {{ 'mid' if f.format == 'universal' else 'hi' }}">{{ f.label }}</span></td><td class="num">{{ f.size_kb }}</td>
+<td><form method="post" action="/p/{{ name }}/files/remove"><input type="hidden" name="filename" value="{{ f.name }}"><button class="sec">{{ t('ui_remove') }}</button></form></td></tr>{% endfor %}
+</tbody></table>
+<form method="post" action="/p/{{ name }}/ingest" style="margin-top:10px"><button>{{ t('ui_run_ingest') }}</button></form>
+{% endif %}
+</div>

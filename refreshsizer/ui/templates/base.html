@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}RefreshSizer{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/vendor/htmx.min.js" defer></script>
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">RefreshSizer</a>
+  <a href="/">{{ t('ui_projects') }}</a>
+  <a href="/benchmarks">{{ t('ui_benchmarks') }}</a>
+  <span class="sp"></span>
+  {% for l in ['en', 'fr'] %}<form method="post" action="/lang/{{ l }}"><button class="lang {{ 'on' if l == lang else '' }}">{{ l | upper }}</button></form>{% endfor %}
+  <span class="small">v{{ version }}</span>
+</header>
+<div class="notice">{{ t('ui_local_notice') }}</div>
+<main>
+{% if name is defined %}
+<h1>{{ meta.display or name }}</h1>
+<nav class="tabs">
+{% for key, url in [('upload','upload'), ('mapping','mapping'), ('summary','summary'), ('policy','policy'), ('results','results'), ('whatif','whatif'), ('reports','reports')] %}
+<a class="{{ 'on' if tab == key else '' }}" href="/p/{{ name }}/{{ url }}">{{ t('ui_tab_' ~ key) }}</a>
+{% endfor %}
+</nav>
+{% endif %}
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

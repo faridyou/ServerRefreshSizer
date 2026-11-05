@@ -190,6 +190,7 @@ def universal_ingest(files: list[Path], *, policy: Policy, review_mode: str = "y
         fracs = {m.column for m in p["maps"] if m.target and m.target.endswith("_pct")
                  and is_fraction_column([r.get(m.column) for r in t.rows])}
         label = f"{t.file} / {t.sheet}" + (f" #{t.table_index + 1}" if t.table_index else "")
+        proposed = {m.column: m.target for m in p["maps"]}
         maps, notes = review(label, p["maps"], _samples(t, p["maps"], fracs), review_mode, policy, io)
         res.assumptions += [Assumption(text=n) for n in notes]
         used = p["cls"] not in ("irrelevant",)
@@ -201,7 +202,7 @@ def universal_ingest(files: list[Path], *, policy: Policy, review_mode: str = "y
             res.mappings.append(MappingEntry(file=t.file, sheet=t.sheet, column=m.column, target=m.target,
                                              unit=m.unit, confidence=m.confidence, method=m.method,
                                              sample=samples[m.column][0], transformed=samples[m.column][1],
-                                             accepted=m.target is not None))
+                                             accepted=m.target is not None, proposed=proposed.get(m.column)))
             if m.target is None and used:
                 res.unmapped.append(f"{t.sheet}/{m.column}")
         if fracs:

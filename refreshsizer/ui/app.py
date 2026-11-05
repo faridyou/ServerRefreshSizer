@@ -1,173 +1,393 @@
-"""Optional local web UI (FastAPI + HTMX). Binds to localhost only (see `refreshsizer ui`).
+"""RefreshSizer local web UI (primary interface): FastAPI + Jinja2 + HTMX (vendored, no CDN, no build step).
 
-Flow: upload files -> ingest (auto-accept >= 0.6) -> editable mapping grid + policy YAML -> size + reports ->
-download. Pages are plain HTML forms, so they also work if the HTMX script cannot be loaded (offline)."""
+All computations go through refreshsizer.workflow / existing modules - the same functions as the CLI."""
 
 from __future__ import annotations
 
-import html
 import re
-import uuid
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-import yaml
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from refreshsizer.paths import data_dir
+from refreshsizer import __version__
+from refreshsizer.report.build import translator
+from refreshsizer.report.explain import fmt, money, pct
+from refreshsizer.ui import services
+from refreshsizer.ui.jobs import JobManager
+from refreshsizer.ui.policy_form import form_groups, parse_form
+from refreshsizer.ui.projects import ProjectStore
 
-CSS = """body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f4f3ef;color:#0b0b0b}
-header{background:#1f4e79;color:#fff;padding:14px 16px}main{max-width:1100px;margin:0 auto;padding:16px}
-.card{background:#fcfcfb;border:1px solid #e4e3df;border-radius:8px;padding:12px 16px;margin:12px 0;overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid #e4e3df;padding:4px 6px;
-text-align:left}th{background:#eef2f7}button{background:#1f4e79;color:#fff;border:0;border-radius:6px;padding:8px 14px;
-cursor:pointer}textarea{width:100%;font-family:monospace}.lo{color:#8f1d1b}.mid{color:#7a5200}.hi{color:#0b5d2a}"""
-
-
-def page(body: str) -> HTMLResponse:
-    return HTMLResponse(
-        "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,"
-        "initial-scale=1'><title>RefreshSizer</title>"
-        "<script src='https://unpkg.com/htmx.org@1.9.12' defer></script>"
-        f"<style>{CSS}</style></head><body><header><b>RefreshSizer</b> - local UI (localhost only)</header>"
-        f"<main>{body}</main></body></html>")
+UI_DIR = Path(__file__).resolve().parent
+LANGS = ("en", "fr")
 
 
-def _sessions() -> Path:
-    d = data_dir() / "ui_sessions"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+def _linkify(s: Any) -> str:
+    from markupsafe import Markup, escape
+
+    txt = str(escape("" if s is None else s))
+    return Markup(re.sub(r"(https?://[^\s<]+)", r'<a href="\1" target="_blank" rel="noopener">\1</a>', txt))
 
 
-def _sid_dir(sid: str) -> Path:
-    if not re.fullmatch(r"[0-9a-f]{12}", sid):
-        raise HTTPException(404)
-    d = _sessions() / sid
-    if not d.is_dir():
-        raise HTTPException(404)
-    return d
+def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None) -> FastAPI:
+    app = FastAPI(title="RefreshSizer", version=__version__, docs_url=None, redoc_url=None)
+    app.state.store = store or ProjectStore()
+    app.state.jobs = jobs or JobManager()
+    app.mount("/static", StaticFiles(directory=str(UI_DIR / "static")), name="static")
+    templates = Jinja2Templates(directory=str(UI_DIR / "templates"))
+    env = templates.env
+    env.filters.update({"fmt": fmt, "money": money, "pct": pct, "linkify": _linkify})
 
+    def S() -> ProjectStore:
+        return app.state.store  # type: ignore[no-any-return]
 
-def _ingest(d: Path):  # type: ignore[no-untyped-def]
-    from refreshsizer.ingest.pipeline import ingest_files
+    def J() -> JobManager:
+        return app.state.jobs  # type: ignore[no-any-return]
 
-    files = sorted((d / "in").iterdir())
-    return ingest_files(files, review_mode="yes", llm="auto", name=d.name)
+    def lang_of(request: Request) -> str:
+        lang = request.cookies.get("rs_lang", "en")
+        return lang if lang in LANGS else "en"
 
+    def render(request: Request, name: str, ctx: dict[str, Any] | None = None, status: int = 200) -> HTMLResponse:
+        lang = lang_of(request)
+        base = {"request": request, "t": translator(lang), "lang": lang, "version": __version__}
+        base.update(ctx or {})
+        return templates.TemplateResponse(request, name, base, status_code=status)
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="RefreshSizer UI")
-
-    @app.get("/", response_class=HTMLResponse)
-    def index() -> HTMLResponse:
-        return page("""<div class=card><h2>1. Upload inventory / utilization files</h2>
-<form action='/upload' method='post' enctype='multipart/form-data'>
-<input type='file' name='files' multiple required> <button type='submit'>Ingest</button></form>
-<p>RVTools, Live Optics, manual template, nmon/AWR CSV or any customer xlsx/xls/ods/csv.
-Data stays on this machine (only redacted headers/samples go to the LLM, and only if an API key is set).</p></div>""")
-
-    @app.post("/upload", response_class=HTMLResponse)
-    async def upload(files: list[UploadFile] = File(...)) -> HTMLResponse:
-        sid = uuid.uuid4().hex[:12]
-        d = _sessions() / sid / "in"
-        d.mkdir(parents=True)
-        for f in files:
-            name = Path(f.filename or "upload.bin").name
-            (d / name).write_bytes(await f.read())
-        return _review_page(sid)
-
-    def _review_page(sid: str) -> HTMLResponse:
-        from refreshsizer.config.schema import default_policy_dict
-        from refreshsizer.ingest.universal.mapping_rules import ALL_FIELDS
-
-        d = _sid_dir(sid)
-        proj = _ingest(d)
-        (d / "project.json").write_text(proj.model_dump_json(), encoding="utf-8")
-        rows = []
-        for _i, m in enumerate(proj.ingest.mappings):
-            if m.method == "parser":
-                continue
-            cls = "hi" if m.confidence >= 0.9 else "mid" if m.confidence >= 0.6 else "lo"
-            opts = "".join(f"<option {'selected' if f == m.target else ''}>{f}</option>" for f in ALL_FIELDS)
-            key = html.escape(f"{m.file}|{m.sheet}|{m.column}")
-            rows.append(f"<tr><td>{html.escape(m.file)}</td><td>{html.escape(m.sheet)}</td><td>{html.escape(m.column)}"
-                        f"</td><td><select name='map::{key}'><option value=''>-</option>{opts}</select></td>"
-                        f"<td class={cls}>{m.confidence:.2f}</td><td>{m.method}</td>"
-                        f"<td>{html.escape(m.sample or '')}</td><td>{html.escape(m.transformed or '')}</td></tr>")
-        est = "".join(f"<li>{html.escape(c.name)}: {len(c.hosts)} hosts, {len(c.workloads)} workloads - "
-                      f"{dq.mode.value} ({dq.confidence.value})</li>"
-                      for c, dq in zip(proj.clusters, proj.data_quality, strict=False))
-        qs = "".join(f"<li>{html.escape(q)}</li>" for q in proj.customer_questions)
-        pol = html.escape(yaml.safe_dump({k: default_policy_dict()[k] for k in
-                                          ("growth", "horizon_years", "objective", "u_max", "ha_policy")},
-                                         sort_keys=False))
-        grid = ("<table><tr><th>file</th><th>sheet</th><th>column</th><th>field</th><th>conf.</th><th>method</th>"
-                "<th>sample</th><th>transformed</th></tr>" + "".join(rows) + "</table>") if rows else \
-            "<p>All files were recognised by dedicated parsers (no universal mapping needed).</p>"
-        return page(f"""<div class=card><h2>2. Review</h2><ul>{est}</ul><h3>Questions for the customer</h3><ol>{qs}</ol></div>
-<form action='/size/{sid}' method='post' hx-post='/size/{sid}' hx-target='#result' hx-swap='innerHTML'>
-<div class=card><h3>Column mappings (editable)</h3>{grid}</div>
-<div class=card><h3>Policy overrides (YAML)</h3><textarea name='policy' rows='14'>{pol}</textarea>
-<p><label><input type='checkbox' name='fr' value='1'> French report</label></p>
-<button type='submit'>3. Size and build reports</button></div></form><div id='result'></div>""")
-
-    @app.post("/size/{sid}", response_class=HTMLResponse)
-    async def size(sid: str, request: Request, policy: str = Form(""), fr: str = Form("")) -> HTMLResponse:
-        from refreshsizer.config.schema import load_policy
-        from refreshsizer.engine.sizing import size_project
-        from refreshsizer.ingest.universal.profiles_store import apply_user_edits
-        from refreshsizer.report.build import write_reports
-
-        d = _sid_dir(sid)
-        form = await request.form()
-        edits: dict[tuple[str, str, str], str | None] = {}
-        from refreshsizer.model.entities import Project
-
-        saved = Project.model_validate_json((d / "project.json").read_text(encoding="utf-8"))
-        old = {(m.file, m.sheet, m.column): m.target for m in saved.ingest.mappings}
-        for k, v in form.items():
-            if k.startswith("map::"):
-                f, s, c = k[5:].split("|", 2)
-                val = str(v) or None
-                if old.get((f, s, c)) != val:
-                    edits[(f, s, c)] = val
-        if edits:
-            apply_user_edits(sorted((d / "in").iterdir()), edits)
+    def proj(name: str) -> tuple[str, dict[str, Any]]:
         try:
-            ov = yaml.safe_load(policy) or {} if policy.strip() else {}
-            if not isinstance(ov, dict):
-                raise ValueError("policy must be a mapping")
-            proj = _ingest(d)
-            pol = load_policy(proj.policy_overrides, ov)
-        except (yaml.YAMLError, ValueError) as e:
-            return page(f"<div class='card lo'>Policy error: {html.escape(str(e))}</div>")
-        run = size_project(proj, pol)
-        lang = "fr" if fr else "en"
-        out = d / "reports"
-        files = write_reports(proj, out, ["html", "pdf", "xlsx"], lang)
-        (out / "project.json").write_text(proj.model_dump_json(indent=1), encoding="utf-8")
-        rows = "".join(
-            f"<tr><td>{html.escape(c.demand.cluster)}</td><td>{c.demand.mode.value}</td>"
-            f"<td>{html.escape(c.recommended.label) if c.recommended else 'none'}</td>"
-            f"<td>{c.recommended.n_total if c.recommended else '-'}</td>"
-            f"<td>{c.uncertainty.p90_hosts if c.uncertainty else '-'}</td>"
-            f"<td>{c.naive.core_match_hosts if c.naive else '-'} / {c.naive.ghz_match_hosts if c.naive else '-'}</td></tr>"
-            for c in run.clusters)
-        links = "".join(f"<li><a href='/download/{sid}/{p.name}'>{p.name}</a></li>"
-                        for p in files + [out / "project.json"])
-        body = (f"<div class=card><h2>Results</h2><p>{len(edits)} mapping edit(s) saved as mapping profiles.</p>"
-                "<table><tr><th>cluster</th><th>mode</th><th>recommended</th><th>hosts</th><th>P90</th>"
-                f"<th>core/GHz match</th></tr>{rows}</table><h3>Downloads</h3><ul>{links}</ul></div>")
-        if request.headers.get("HX-Request"):
-            return HTMLResponse(body)
-        return page(body)
+            S().path(name)
+        except KeyError as e:
+            raise HTTPException(404, "project not found") from e
+        return name, S().meta(name)
 
-    @app.get("/download/{sid}/{name}")
-    def download(sid: str, name: str) -> FileResponse:
-        d = _sid_dir(sid) / "reports"
-        p = (d / Path(name).name).resolve()
-        if not p.is_file() or p.parent != d.resolve():
+    def go(url: str) -> RedirectResponse:
+        return RedirectResponse(url, status_code=303)
+
+    def start(kind: str, name: str | None, fn: Any) -> RedirectResponse:
+        job = J().submit(kind, name, fn)
+        return go(f"/jobs/{job.id}")
+
+    # ---------------------------------------------------------------- language, jobs
+    @app.post("/lang/{lang}")
+    def set_lang(lang: str, request: Request) -> RedirectResponse:
+        r = go(request.headers.get("referer") or "/")
+        r.set_cookie("rs_lang", lang if lang in LANGS else "en", max_age=3600 * 24 * 365, samesite="lax")
+        return r
+
+    @app.get("/jobs/{job_id}", response_class=HTMLResponse)
+    def job_page(job_id: str, request: Request) -> Response:
+        job = J().get(job_id)
+        if job is None:
             raise HTTPException(404)
+        partial = request.headers.get("HX-Request") == "true"
+        if partial and job.status == "done" and job.redirect:
+            return Response(status_code=204, headers={"HX-Redirect": job.redirect})
+        return render(request, "_job.html" if partial else "job.html", {"job": job})
+
+    # ---------------------------------------------------------------- home / projects
+    @app.get("/", response_class=HTMLResponse)
+    def home(request: Request) -> HTMLResponse:
+        return render(request, "home.html", {"projects": S().list_projects()})
+
+    @app.post("/projects")
+    def new_project(display: str = Form(...)) -> RedirectResponse:
+        name = S().create(display or f"project {datetime.now():%Y-%m-%d %H%M}")
+        return go(f"/p/{name}/upload")
+
+    @app.post("/p/{name}/duplicate")
+    def duplicate(name: str) -> RedirectResponse:
+        proj(name)
+        return go(f"/p/{S().duplicate(name)}/upload")
+
+    @app.post("/p/{name}/delete")
+    def delete(name: str) -> RedirectResponse:
+        proj(name)
+        S().delete(name)
+        return go("/")
+
+    @app.get("/p/{name}")
+    def open_project(name: str) -> RedirectResponse:
+        proj(name)
+        stage = S().meta(name).get("stage")
+        return go(f"/p/{name}/" + {"sized": "results", "ingested": "summary"}.get(stage or "", "upload"))
+
+    # ---------------------------------------------------------------- 1 upload
+    @app.get("/p/{name}/upload", response_class=HTMLResponse)
+    def upload_page(name: str, request: Request, error: str = "") -> HTMLResponse:
+        n, meta = proj(name)
+        return render(request, "upload.html", {"name": n, "meta": meta, "tab": "upload", "error": error,
+                                               "files": services.file_formats(S(), n)})
+
+    @app.post("/p/{name}/files")
+    async def upload_files(name: str, request: Request, files: list[UploadFile] = File(...)) -> Response:
+        n, _ = proj(name)
+        errors = []
+        for f in files:
+            try:
+                S().add_file(n, f.filename or "upload", await f.read())
+            except ValueError as e:
+                errors.append(str(e))
+        if request.headers.get("HX-Request") == "true":
+            return render(request, "_files.html", {"name": n, "files": services.file_formats(S(), n),
+                                                   "error": "; ".join(errors)})
+        return go(f"/p/{n}/upload" + (f"?error={'; '.join(errors)}" if errors else ""))
+
+    @app.post("/p/{name}/files/remove")
+    def remove_file(name: str, filename: str = Form(...)) -> RedirectResponse:
+        n, _ = proj(name)
+        S().remove_file(n, filename)
+        return go(f"/p/{n}/upload")
+
+    @app.get("/template")
+    def template(lang: str = "en") -> FileResponse:
+        from refreshsizer.ingest.manual_template import generate_template
+        from refreshsizer.paths import data_dir
+
+        lg = lang if lang in LANGS else "en"
+        p = generate_template(data_dir() / "templates" / f"refreshsizer_template_{lg}.xlsx", lg)
         return FileResponse(p, filename=p.name)
 
+    @app.post("/p/{name}/ingest")
+    def ingest(name: str) -> RedirectResponse:
+        n, _ = proj(name)
+        return start("ingest", n, lambda progress, job: services.run_ingest(S(), n, progress))
+
+    # ---------------------------------------------------------------- 2 mapping review
+    @app.get("/p/{name}/mapping", response_class=HTMLResponse)
+    def mapping_page(name: str, request: Request, saved: int = -1) -> HTMLResponse:
+        from refreshsizer.ingest.universal.mapping_rules import ALL_FIELDS
+
+        n, meta = proj(name)
+        project = S().project(n)
+        entries = S().review(n)
+        sheets = project.ingest.sheets if project else []
+        return render(request, "mapping.html", {
+            "name": n, "meta": meta, "tab": "mapping", "entries": entries, "fields": ALL_FIELDS,
+            "units": ["", "GiB", "MiB", "TiB", "KiB", "GHz", "MHz", "pct"], "saved": saved,
+            "ignored": [s for s in sheets if not s.used], "project": project})
+
+    @app.post("/p/{name}/mapping")
+    async def mapping_save(name: str, request: Request) -> Response:
+        n, _ = proj(name)
+        form = await request.form()
+        action = str(form.get("action", "apply"))
+        entries = S().review(n)
+        decisions: dict[tuple[str, str, str], tuple[str | None, str | None]] = {}
+        if action == "accept_threshold":
+            thr = float(str(form.get("threshold", "0.6")).replace(",", "."))
+            for e in entries:
+                tgt = (e.proposed or e.target) if e.confidence >= thr else None
+                decisions[(e.file, e.sheet, e.column)] = (tgt, e.unit)
+        else:
+            for i, e in enumerate(entries):
+                tgt = str(form.get(f"t{i}", e.target or ""))
+                unit = str(form.get(f"u{i}", e.unit or ""))
+                if form.get(f"x{i}"):
+                    tgt = ""
+                decisions[(e.file, e.sheet, e.column)] = (tgt or None, unit or None)
+        services.apply_mapping(S(), n, decisions)
+        if action == "save_profile":
+            services.save_profiles_globally(S(), n)
+        return start("ingest", n, lambda progress, job: services.run_ingest(S(), n, progress))
+
+    # ---------------------------------------------------------------- 3 ingest summary
+    @app.get("/p/{name}/summary", response_class=HTMLResponse)
+    def summary_page(name: str, request: Request) -> HTMLResponse:
+        from refreshsizer.ingest.universal.summary import estate_summary
+
+        n, meta = proj(name)
+        project = S().project(n)
+        rows = estate_summary(project) if project else []
+        keys = ["hosts", "sockets", "cores", "ram_gb", "vms", "vcpu", "vram_gb", "storage_prov_tib",
+                "storage_used_tib", "iops"]
+        total = {k: round(sum(r[k] for r in rows), 2) for k in keys}
+        return render(request, "summary.html", {"name": n, "meta": meta, "tab": "summary", "project": project,
+                                                "rows": rows, "total": total})
+
+    # ---------------------------------------------------------------- 4 policy
+    @app.get("/p/{name}/policy", response_class=HTMLResponse)
+    def policy_page(name: str, request: Request, error: str = "", saved: int = 0) -> HTMLResponse:
+        n, meta = proj(name)
+        t = translator(lang_of(request))
+        return render(request, "policy.html", {"name": n, "meta": meta, "tab": "policy", "error": error,
+                                               "saved": saved, "groups": form_groups(S().policy_overrides(n), t),
+                                               "yaml": _policy_yaml(S(), n)})
+
+    @app.post("/p/{name}/policy")
+    async def policy_save(name: str, request: Request) -> Response:
+        n, _ = proj(name)
+        form = {k: str(v) for k, v in (await request.form()).items()}
+        try:
+            ov = parse_form(form)
+        except Exception as e:  # validation error -> show it on the form
+            return go(f"/p/{n}/policy?error={str(e)[:300]}")
+        S().save_policy(n, ov)
+        if form.get("then") == "size":
+            return start("sizing", n, lambda progress, job: services.run_size(S(), n, {}, "policy", progress))
+        return go(f"/p/{n}/policy?saved=1")
+
+    @app.post("/p/{name}/policy/reset")
+    def policy_reset(name: str) -> RedirectResponse:
+        n, _ = proj(name)
+        S().reset_policy(n)
+        return go(f"/p/{n}/policy?saved=1")
+
+    # ---------------------------------------------------------------- sizing / 5 results / 6 what-if
+    @app.post("/p/{name}/size")
+    async def size(name: str, request: Request) -> RedirectResponse:
+        n, _ = proj(name)
+        form = {k: str(v) for k, v in (await request.form()).items()}
+        from refreshsizer import workflow
+
+        def num(k: str) -> float | None:
+            v = form.get(k, "").strip().replace(",", ".")
+            return float(v) if v else None
+
+        years = num("years")
+        ov = workflow.overrides_from_flags(growth=num("growth"), years=int(years) if years else None,
+                                           objective=form.get("objective") or None, u_max=num("u_max"))
+        label = form.get("label", "").strip() or ("what-if" if ov else "baseline")
+        return start("sizing", n, lambda progress, job: services.run_size(S(), n, ov, label, progress))
+
+    @app.get("/p/{name}/results", response_class=HTMLResponse)
+    def results_page(name: str, request: Request, run: str = "") -> HTMLResponse:
+        n, meta = proj(name)
+        project, rec = services.project_for_run(S(), n, run or None)
+        ctx: dict[str, Any] = {"name": n, "meta": meta, "tab": "results", "project": project, "run": rec,
+                               "runs": S().runs(n)}
+        if project is not None and project.sizing:
+            from refreshsizer.report.build import build_context
+
+            ctx["r"] = build_context(project, lang_of(request))
+        return render(request, "results.html", ctx)
+
+    @app.get("/p/{name}/whatif", response_class=HTMLResponse)
+    def whatif_page(name: str, request: Request) -> HTMLResponse:
+        n, meta = proj(name)
+        project = S().project(n)
+        pol = None
+        if project is not None:
+            from refreshsizer import workflow
+
+            pol = workflow.make_policy(project.policy_overrides, S().policy_overrides(n))
+        return render(request, "whatif.html", {"name": n, "meta": meta, "tab": "whatif", "project": project,
+                                               "runs": S().runs(n), "policy": pol})
+
+    @app.get("/p/{name}/compare", response_class=HTMLResponse)
+    def compare_page(name: str, request: Request, a: str = "", b: str = "") -> HTMLResponse:
+        from refreshsizer.engine.results import SizingRun
+
+        n, meta = proj(name)
+        cols: list[dict[str, Any]] = []
+        for rid in (a, b):
+            r = S().run(n, rid) if rid else None
+            if r:
+                cols.append({"run": r, "sizing": SizingRun.model_validate(r["sizing"])})
+        clusters = sorted({c.demand.cluster for col in cols for c in col["sizing"].clusters})
+        return render(request, "compare.html", {"name": n, "meta": meta, "tab": "whatif", "cols": cols,
+                                                "clusters": clusters})
+
+    # ---------------------------------------------------------------- 7 reports
+    @app.get("/p/{name}/reports", response_class=HTMLResponse)
+    def reports_page(name: str, request: Request) -> HTMLResponse:
+        n, meta = proj(name)
+        d = S().reports_dir(n)
+        files = sorted((p for p in d.iterdir() if p.is_file()), key=lambda p: p.name)
+        return render(request, "reports.html", {"name": n, "meta": meta, "tab": "reports", "runs": S().runs(n),
+                                                "files": [{"name": p.name, "kb": f"{p.stat().st_size / 1024:,.0f}",
+                                                           "time": datetime.fromtimestamp(p.stat().st_mtime)
+                                                           .strftime("%Y-%m-%d %H:%M")} for p in files],
+                                                "sized": bool(S().runs(n))})
+
+    @app.post("/p/{name}/reports")
+    async def reports_make(name: str, request: Request) -> RedirectResponse:
+        n, _ = proj(name)
+        form = await request.form()
+        formats = [f for f in ("html", "xlsx", "pdf") if form.get(f)] or ["html", "xlsx", "pdf"]
+        lang = str(form.get("lang", "en"))
+        rid = str(form.get("run", "")) or None
+        return start("reports", n, lambda progress, job: services.run_reports(S(), n, rid, formats,
+                                                                              lang if lang in LANGS else "en",
+                                                                              progress))
+
+    def _report_file(n: str, filename: str) -> Path:
+        d = S().reports_dir(n).resolve()
+        p = (d / Path(filename).name).resolve()
+        if p.parent != d or not p.is_file():
+            raise HTTPException(404)
+        return p
+
+    @app.get("/p/{name}/reports/{filename}")
+    def report_download(name: str, filename: str) -> FileResponse:
+        n, _ = proj(name)
+        p = _report_file(n, filename)
+        return FileResponse(p, filename=p.name)
+
+    @app.get("/p/{name}/reports/{filename}/view")
+    def report_view(name: str, filename: str) -> FileResponse:
+        n, _ = proj(name)
+        p = _report_file(n, filename)
+        if p.suffix.lower() != ".html":
+            raise HTTPException(404)
+        return FileResponse(p, media_type="text/html")
+
+    # ---------------------------------------------------------------- 10 benchmarks
+    @app.get("/benchmarks", response_class=HTMLResponse)
+    def bench_page(request: Request, q: str = "", job: str = "", added: str = "") -> HTMLResponse:
+        from refreshsizer.benchmarks.cpu_matcher import match_cpu
+        from refreshsizer.benchmarks.curated_db import ensure_db
+        from refreshsizer.benchmarks.spc import resolve_spc
+
+        cache = ensure_db()
+        match = match_cpu(q) if q else None
+        if q:
+            rows = cache.query(match.cpu_id) if match else cache.search(q)
+            if not rows and match is None:
+                rows = cache.search(q)
+        else:
+            rows = cache.query(suite="cpu2017")
+        resolved = [resolve_spc(match.cpu_id, chips=c, cache=cache) for c in (1, 2)] if match else []
+        jb = J().get(job) if job else None
+        return render(request, "benchmarks.html", {
+            "q": q, "rows": sorted(rows, key=lambda r: (r.cpu_name or "", r.system_name or "")), "match": match,
+            "resolved": resolved, "job": jb, "added": added,
+            "counts": {s: cache.count(s) for s in ("curated", "live", "user")},
+            "last_update": cache.get_meta("last_update_cpu2017")})
+
+    @app.post("/benchmarks/update")
+    def bench_update() -> RedirectResponse:
+        return start("bench_update", None, services.run_bench_update)
+
+    @app.post("/benchmarks/user")
+    def bench_user(cpu: str = Form(...), value_base: float = Form(...), enabled_cores: int = Form(...),
+                   chips: int = Form(2), system: str = Form(""), url: str = Form(""),
+                   note: str = Form("")) -> RedirectResponse:
+        from refreshsizer.benchmarks.cpu_matcher import match_cpu
+        from refreshsizer.benchmarks.curated_db import ensure_db
+        from refreshsizer.catalog.loader import slugify
+        from refreshsizer.model.entities import BenchmarkResult
+
+        if value_base <= 0 or enabled_cores <= 0:
+            raise HTTPException(400, "value and cores must be positive")
+        m = match_cpu(cpu)
+        cid = m.cpu_id if m else slugify(cpu)
+        r = BenchmarkResult(id=f"user-{cid}-{datetime.now():%Y%m%d%H%M%S}", suite="cpu2017",
+                            metric="SPECrate2017_int_base", value_base=value_base, system_name=system or None,
+                            cpu_name=m.name if m else cpu, cpu_model_id=cid, chips=chips,
+                            enabled_cores=enabled_cores, result_url=url or "user-provided",
+                            retrieved_at=datetime.now().isoformat(timespec="seconds"), source="user",
+                            notes=note or None, sponsor="user")
+        ensure_db().upsert([r])
+        return go(f"/benchmarks?q={cpu}&added={r.id}")
+
     return app
+
+
+def _policy_yaml(store: ProjectStore, name: str) -> str:
+    f = store.path(name) / "policy.yaml"
+    return f.read_text(encoding="utf-8") if f.exists() else ""

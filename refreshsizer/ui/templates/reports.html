@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not sized %}<div class="card"><p>{{ t('ui_not_sized') }}</p></div>{% else %}
+<div class="card"><form method="post" action="/p/{{ name }}/reports" class="row">
+<select name="run">{% for x in runs %}<option value="{{ x.id }}">{{ x.created }} - {{ x.label }}</option>{% endfor %}</select>
+<label><input type="checkbox" name="html" value="1" checked> HTML</label><label><input type="checkbox" name="xlsx" value="1" checked> Excel</label><label><input type="checkbox" name="pdf" value="1" checked> PDF</label>
+<select name="lang"><option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option><option value="fr" {{ 'selected' if lang == 'fr' else '' }}>Français</option></select>
+<button>{{ t('ui_generate') }}</button></form></div>
+{% endif %}
+{% if files %}<div class="card"><table><thead><tr><th>{{ t('files') }}</th><th>kB</th><th></th><th></th></tr></thead><tbody>
+{% for f in files %}<tr><td>{{ f.name }}</td><td class="num">{{ f.kb }}</td><td class="small muted">{{ f.time }}</td><td><a href="/p/{{ name }}/reports/{{ f.name }}">{{ t('ui_download') }}</a>
+{% if f.name.endswith('.html') %} · <a href="/p/{{ name }}/reports/{{ f.name }}/view" target="_blank" rel="noopener">{{ t('ui_open_tab') }}</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% endblock %}

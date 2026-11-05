@@ -5,23 +5,77 @@ R7725) to replace legacy x86 or RISC (IBM POWER, SPARC) servers, from **performa
 published SPECrate2017_int_base results per core – never from raw core counts or GHz. Every number in the report
 shows its formula, inputs and source, next to the naive core-match and GHz-match results.
 
-## Install (Windows 10/11, no admin rights)
+## Install and start (Windows 10/11, no admin rights)
 
-Everything installs into a `.venv` folder inside the project. No system packages, services or registry changes.
+Everything installs into a `.venv` folder inside the project. No system packages, services, registry changes,
+Node.js or frontend build step.
 
-1. Install Python ≥ 3.11 for your user only (python.org installer, *"Install for me only"*; or the Microsoft
+1. Install Python ≥ 3.11 for your user only (python.org installer, *"Install for me only"*, or the Microsoft
    Store Python). No admin rights needed.
 2. Unzip/clone this folder anywhere in your profile (e.g. `C:\Users\you\RefreshSizer`).
-3. Double-click or run `run.bat` once: it creates `.venv`, installs the pinned `requirements.lock` and the tool.
-   Behind a corporate proxy, set `HTTPS_PROXY` / `HTTP_PROXY` first (`set HTTPS_PROXY=http://proxy:8080`).
-4. Use it: `run.bat run inventory.xlsx --out reports --yes`.
+3. **Double-click `run.bat`.** The first time it creates `.venv` and installs the pinned `requirements.lock`
+   (it re-installs automatically whenever `requirements.lock` changes). It then starts the web UI on
+   `http://127.0.0.1:8765` (or the next free port) and opens your default browser. Close the console window
+   (or press Ctrl+C) to stop it.
+   Behind a corporate proxy, set `HTTPS_PROXY` / `HTTP_PROXY` before the first run so pip can download packages.
 
-Linux/macOS: `./run.sh ...` (same behaviour). Manual alternative:
-`python -m venv .venv && .venv/Scripts/pip install -r requirements.lock && .venv/Scripts/pip install --no-deps -e .`
+Linux/macOS: `./run.sh` (same behaviour). From a terminal: `refreshsizer ui [--port 8765] [--no-browser]`.
+`run.bat <command>` / `./run.sh <command>` run the CLI instead (see below).
 
-Everything works **offline**: benchmarks come from the curated database shipped in the repo; the LLM is optional.
+Everything works **offline**: HTMX is vendored in `refreshsizer/ui/static/vendor/`, benchmarks come from the
+curated database shipped in the repo, and the LLM is optional. The UI binds to **127.0.0.1 only** and has no
+authentication; a banner on every page reminds you that it is a local application.
 
-## Quick start
+## Web UI (primary interface)
+
+Each sizing is a **project** stored in `data/projects/<name>/` (input files, `project.json`, `policy.yaml`,
+mapping decisions in `mappings/` and `mapping_review.json`, the last 5 sizing runs in `runs/`, and `reports/`).
+Projects persist between sessions. Long tasks (ingest, sizing with Monte Carlo, reports, benchmark update) run as
+background jobs with a progress bar. The EN/FR toggle (top right) switches every label; strings live in
+`refreshsizer/report/i18n.yaml`. The UI calls the same functions as the CLI (`refreshsizer/workflow.py`), so the
+numbers are identical.
+
+What you see, page by page:
+
+* **Projects (home)** – a table of projects (name, last update, number of files and runs) with *Open*,
+  *Duplicate* and *Delete* (with a confirmation dialog), and a *New project* box at the top.
+* **1 Upload** – a dashed drop zone: drag several xlsx/xls/xlsm/ods/csv files onto it (or click to choose). Each
+  file is listed with its detected format as a coloured tag (RVTools, Live Optics, RefreshSizer template, AIX nmon,
+  Oracle AWR, CPU time series, universal) and a *Remove* button. Buttons download the blank manual template in
+  English or French. *Run ingest* starts the ingest job.
+* **2 Mapping** (universal ingest) – an editable grid: file, sheet, source column, a dropdown for the canonical
+  field (with the originally proposed field shown underneath when you change it), a unit dropdown, the confidence
+  as a green/amber/red pill, the sample value and the transformed sample, and an *ignore* checkbox. A filter box and
+  sortable headers help on large files. *Accept all ≥ threshold* keeps every proposal at or above the threshold
+  and ignores the rest; *Apply and re-ingest* re-runs the ingest with your decisions; *Save as mapping profile* also
+  stores them globally so the same customer template is recognised automatically next time. Ignored sheets are
+  listed with the reason.
+* **3 Ingest summary** – estate totals per cluster and overall (hosts, sockets, cores, RAM, VMs, vCPU, vRAM,
+  provisioned/used storage, IOPS), each CPU model with its matched benchmark, sizing mode and confidence per
+  cluster, data-quality flags, assumptions, transformations, and the customer question list in English and French,
+  each with a *Copy* button.
+* **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
+  HA, memory, storage (protection, slack, DRR), vCPU ratios/NUMA, licensing, optimizer objective, utilization
+  handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
+  fields are highlighted. *Save* writes only the differences to `policy.yaml`; *Reset to defaults* removes it.
+* **5 Results** – summary cards (recommended configuration, hosts, cores, SU vs C_req, headroom / failure-mode
+  utilization, licensing delta, P50/P90, TCO), each with **Show calculation** expanders that reveal the formula,
+  inputs, output, sources with clickable URLs and assumptions. Below: the bar chart of performance-normalized vs
+  core-match vs GHz-match hosts, the Monte Carlo histogram, the Pareto chart, a sortable and filterable candidate
+  table (every candidate row also expands to its calculations), the per-host BoM with the DIMM channel diagram,
+  constraint checks with OK/WARN/FAIL tags, the uncertainty section (tornado, or the 100/70/50 % table in
+  inventory-only mode) and the benchmark basis.
+* **6 What-if** – change CPU growth, horizon, U_max (all classes) or the objective and re-run in place. The last
+  5 runs are kept with their label and overrides; pick two (A/B) to see them side by side (D0, D_T, C_req,
+  recommendation, hosts, P50/P90, naive counts, TCO, licensing delta).
+* **7 Reports** – generate HTML, Excel (live formulas) and PDF in English or French for any kept run; download
+  them, or open the HTML report in a new tab.
+* **Benchmarks** – search the benchmark DB (CPU, metric, base value, cores, chips, SPC, system, live/curated/user
+  source, URL) and see the resolved SPC with its method and confidence band; *Update from spec.org* runs in the
+  background and says clearly when spec.org is unreachable and the curated offline data is kept; a form adds a
+  user-provided SPECrate2017_int_base value, which then takes precedence for that CPU.
+
+## Command line (still fully supported)
 
 ```
 refreshsizer template --out template.xlsx [--lang fr]          # manual input template
@@ -31,7 +85,7 @@ refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang f
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]
 refreshsizer bench show "EPYC 9355"
-refreshsizer ui                                                # local web UI on http://127.0.0.1:8765
+refreshsizer ui [--port 8765] [--no-browser]                   # local web UI (127.0.0.1 only)
 ```
 
 Sample inputs: `python tests/fixtures_gen.py` writes them to `tests/fixtures/` (already committed).

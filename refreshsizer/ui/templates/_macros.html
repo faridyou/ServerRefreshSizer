@@ -1,0 +1,13 @@
+{% macro calc(e, t) -%}
+{% if e %}<details class="calc"><summary>{{ t('ui_show_calc') }}: {{ e.title }}</summary><div class="box">
+<b>{{ e.title }}</b> <span class="tag {{ 'hi' if e.confidence == 'HIGH' or e.confidence.value == 'HIGH' else 'mid' }}">{{ e.confidence.value if e.confidence.value else e.confidence }}</span>
+{% if e.formula_latex %}<div class="muted formula">{{ e.formula_latex }}</div>{% endif %}
+<div class="formula">{{ e.formula_text }}</div>
+{% if e.inputs %}<table class="small">{% for k, v in e.inputs.items() %}<tr><td>{{ k }}</td><td>{{ v | fmt }}</td></tr>{% endfor %}</table>{% endif %}
+<div>= <b>{{ e.output | fmt }}</b> {{ e.unit }}</div>
+{% for s in e.source_refs %}<div class="muted">{{ t('sources') }}: {{ s | linkify }}</div>{% endfor %}
+{% for a in e.assumptions %}<div class="muted">ASSUMPTION: {{ a }}</div>{% endfor %}
+</div></details>{% endif %}
+{%- endmacro %}
+{% macro calcs(list, t) -%}{% for e in list %}{{ calc(e, t) }}{% endfor %}{%- endmacro %}
+{% macro find(list, step) -%}{% for e in list if e.step_id == step %}{% if loop.first %}{{ e.step_id }}{% endif %}{% endfor %}{%- endmacro %}

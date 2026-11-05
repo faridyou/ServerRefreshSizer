@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t('ui_benchmarks') }}</h1>
+{% if job %}<p class="{{ 'okmsg' if job.status == 'done' else 'err' }}">{{ job.result or job.message or job.error }}</p>{% endif %}
+{% if added %}<p class="okmsg">{{ added }} ✓</p>{% endif %}
+<div class="card row"><form method="get" class="row"><input name="q" value="{{ q }}" placeholder="EPYC 9355, Gold 6230, E5-2680 v4…" size="34"><button>{{ t('ui_search') }}</button></form>
+<span class="muted small">curated {{ counts.curated }} · live {{ counts.live }} · user {{ counts.user }} · last spec.org update: {{ last_update or 'never' }}</span>
+<form method="post" action="/benchmarks/update"><button class="sec">{{ t('ui_bench_update') }}</button></form></div>
+{% if match %}<div class="card"><b>{{ match.name }}</b> <span class="muted">({{ match.cpu_id }}, {{ match.method }}, {{ match.confidence }})</span>
+{% for s in resolved %}<div class="small">{{ s.chips }}S: SPC <b>{{ '%.3f' % s.spc }}</b> [{{ s.method }}, {{ s.confidence.value }}] band {{ '%.2f' % s.spc_min }}-{{ '%.2f' % s.spc_max }} {% for f in s.flags %}<div class="muted">{{ f }}</div>{% endfor %}</div>{% endfor %}</div>{% endif %}
+<div class="card"><input type="text" data-filter="bench" placeholder="{{ t('ui_filter') }}">
+<table id="bench"><thead><tr><th class="sort">CPU</th><th class="sort">metric</th><th class="sort num">base</th><th class="sort num">cores</th><th class="sort num">chips</th><th class="sort num">SPC</th><th class="sort">{{ t('system') }}</th><th class="sort">source</th><th>URL</th></tr></thead><tbody>
+{% for b in rows %}<tr><td>{{ b.cpu_name }}</td><td class="small">{{ b.metric }}</td><td class="num">{{ b.value_base | fmt }}</td><td class="num">{{ b.enabled_cores or '' }}</td><td class="num">{{ b.chips or '' }}</td><td class="num">{{ '%.2f' % b.per_core if b.per_core else '' }}</td><td class="small">{{ b.system_name or '' }}</td>
+<td><span class="tag {{ {'live':'hi','user':'mid'}.get(b.source, '') }}">{{ b.source }}</span></td><td class="small">{{ b.result_url | linkify }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="card"><h3>{{ t('ui_bench_add') }}</h3>
+<form method="post" action="/benchmarks/user" class="row"><input name="cpu" placeholder="CPU (e.g. Intel Xeon Gold 6130)" required size="30">
+<label>SPECrate2017_int_base <input type="number" step="any" name="value_base" required></label><label>cores <input type="number" name="enabled_cores" required></label>
+<label>chips <input type="number" name="chips" value="2"></label><input name="system" placeholder="system"><input name="url" placeholder="URL"><input name="note" placeholder="note"><button>{{ t('ui_add') }}</button></form>
+<p class="small muted">User values take precedence over live and curated results for the same CPU (source = user).</p></div>
+{% endblock %}

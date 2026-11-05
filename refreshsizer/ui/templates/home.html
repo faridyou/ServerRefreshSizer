@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card"><h2>{{ t('ui_new_project') }}</h2>
+<form method="post" action="/projects" class="row"><input name="display" placeholder="{{ t('ui_project_name') }}" required size="40">
+<button>{{ t('ui_create') }}</button></form></div>
+<div class="card"><h2>{{ t('ui_projects') }}</h2>
+{% if not projects %}<p class="muted">{{ t('ui_no_projects') }}</p>{% else %}
+<table id="projects"><thead><tr><th class="sort">{{ t('ui_project_name') }}</th><th class="sort">{{ t('ui_updated') }}</th><th class="num">{{ t('ui_files') }}</th><th class="num">{{ t('ui_runs') }}</th><th></th></tr></thead><tbody>
+{% for p in projects %}<tr><td><a href="/p/{{ p.name }}">{{ p.display }}</a><div class="small muted">{{ p.name }}</div></td>
+<td>{{ p.updated }}</td><td class="num">{{ p.files }}</td><td class="num">{{ p.runs }}</td>
+<td class="row"><a class="btn sec" href="/p/{{ p.name }}">{{ t('ui_open') }}</a>
+<form method="post" action="/p/{{ p.name }}/duplicate"><button class="sec">{{ t('ui_duplicate') }}</button></form>
+<form method="post" action="/p/{{ p.name }}/delete" onsubmit="return confirm('{{ t('ui_confirm_delete') }}')"><button class="danger">{{ t('ui_delete') }}</button></form></td></tr>{% endfor %}
+</tbody></table>{% endif %}</div>
+{% endblock %}

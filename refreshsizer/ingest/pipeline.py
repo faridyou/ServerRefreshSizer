@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -16,8 +17,10 @@ log = logging.getLogger("refreshsizer.ingest")
 
 def ingest_files(paths: list[Path], *, review_mode: str = "yes", llm: str | bool = "auto",
                  policy_overrides: dict[str, Any] | None = None, name: str | None = None,
-                 llm_client: Any = None, interactive_io: Any = None) -> Project:
-    """review_mode: 'interactive' | 'yes' | 'strict'."""
+                 llm_client: Any = None, interactive_io: Any = None, profiles_dir: Path | None = None,
+                 progress: Callable[[float, str], None] | None = None) -> Project:
+    """review_mode: 'interactive' | 'yes' | 'strict'. profiles_dir: mapping-profile store (default
+    data/mapping_profiles). progress(fraction, message) is an optional UI hook; it never affects results."""
     from refreshsizer.config.schema import load_policy
 
     policy = load_policy(policy_overrides)
@@ -26,7 +29,9 @@ def ingest_files(paths: list[Path], *, review_mode: str = "yes", llm: str | bool
     ts_files = [p for p, f in formats.items() if f == "timeseries"]
     results: list[ParseResult] = []
     universal_files: list[Path] = []
-    for p, fmt in formats.items():
+    for i, (p, fmt) in enumerate(formats.items()):
+        if progress:
+            progress(0.8 * i / max(len(formats), 1), f"parsing {p.name} ({fmt})")
         log.info("%s: detected format %s", p.name, fmt)
         if fmt == "rvtools":
             results.append(rvtools.parse(p, policy.exclude_templates, policy.exclude_powered_off))
@@ -50,7 +55,9 @@ def ingest_files(paths: list[Path], *, review_mode: str = "yes", llm: str | bool
         from refreshsizer.ingest.universal.pipeline import universal_ingest
 
         results.extend(universal_ingest(universal_files, policy=policy, review_mode=review_mode, llm=llm,
-                                        llm_client=llm_client, io=interactive_io))
+                                        llm_client=llm_client, io=interactive_io, profiles_dir=profiles_dir))
+    if progress:
+        progress(0.9, "reconciliation and data-quality checks")
     project = assemble(results, name=name or (paths[0].stem if paths else "project"))
     if any(r.fmt.startswith("universal") and r.utilization_source for r in results):
         pass

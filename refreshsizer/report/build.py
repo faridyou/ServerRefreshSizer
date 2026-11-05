@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -158,9 +159,12 @@ def build_context(project: Project, lang: str = "en") -> dict[str, Any]:
             "policy": run.policy}
 
 
-def write_reports(project: Project, out: Path, formats: list[str], lang: str = "en") -> list[Path]:
+def write_reports(project: Project, out: Path, formats: list[str], lang: str = "en",
+                  progress: Callable[[float, str], None] | None = None) -> list[Path]:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
+    if progress:
+        progress(0.05, "charts and report context")
     ctx = build_context(project, lang)
     stem = "refreshsizer_report" + ("_fr" if lang == "fr" else "")
     written: list[Path] = []
@@ -173,10 +177,14 @@ def write_reports(project: Project, out: Path, formats: list[str], lang: str = "
     if "xlsx" in formats:
         from refreshsizer.report.excel import write_excel
 
+        if progress:
+            progress(0.4, "Excel workbook (live formulas)")
         written.append(write_excel(ctx, out / f"{stem}.xlsx"))
     if "pdf" in formats:
         from refreshsizer.report.pdf import write_pdf
 
+        if progress:
+            progress(0.6, "PDF")
         p2 = write_pdf(ctx, out / f"{stem}.pdf")
         if p2:
             written.append(p2)

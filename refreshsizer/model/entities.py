@@ -259,6 +259,7 @@ class MappingEntry(BaseModel):
     sample: str | None = None
     transformed: str | None = None
     accepted: bool = True
+    proposed: str | None = None  # field proposed by rules/LLM/profile before review
 
 
 class SheetUse(BaseModel):

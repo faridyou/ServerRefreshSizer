@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not project %}<div class="card"><p>{{ t('ui_not_ingested') }}</p></div>{% else %}
+<div class="card"><h2>{{ t('estate') }}</h2>
+<table><thead><tr><th>{{ t('cluster') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">sockets</th><th class="num">{{ t('cores') }}</th><th class="num">RAM GB</th><th class="num">VMs</th><th class="num">vCPU</th><th class="num">vRAM GB</th><th class="num">prov. TiB</th><th class="num">used TiB</th><th class="num">IOPS</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.cluster }}{% for k, v in r.cpu_models.items() %}<div class="small muted">{{ k }} -> {{ v }}</div>{% endfor %}</td>
+<td class="num">{{ r.hosts }}</td><td class="num">{{ r.sockets }}</td><td class="num">{{ r.cores }}</td><td class="num">{{ r.ram_gb | fmt }}</td><td class="num">{{ r.vms }}</td><td class="num">{{ r.vcpu | fmt }}</td><td class="num">{{ r.vram_gb | fmt }}</td><td class="num">{{ r.storage_prov_tib | fmt }}</td><td class="num">{{ r.storage_used_tib | fmt }}</td><td class="num">{{ r.iops | fmt }}</td>
+<td>{{ r.mode }}</td><td><span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(r.confidence, 'lo') }}">{{ r.confidence }}</span></td></tr>{% endfor %}
+<tr><th>{{ t('ui_overall') }}</th><th class="num">{{ total.hosts }}</th><th class="num">{{ total.sockets }}</th><th class="num">{{ total.cores }}</th><th class="num">{{ total.ram_gb | fmt }}</th><th class="num">{{ total.vms }}</th><th class="num">{{ total.vcpu | fmt }}</th><th class="num">{{ total.vram_gb | fmt }}</th><th class="num">{{ total.storage_prov_tib | fmt }}</th><th class="num">{{ total.storage_used_tib | fmt }}</th><th class="num">{{ total.iops | fmt }}</th><th></th><th></th></tr>
+</tbody></table></div>
+<div class="cols2">
+<div class="card"><h3>{{ t('questions') }} (EN) <button class="sec" data-copy="q_en" data-done="{{ t('ui_copied') }}">{{ t('ui_copy') }}</button></h3>
+<ol id="q_en">{% for q in project.customer_questions %}<li>{{ q }}</li>{% endfor %}</ol></div>
+<div class="card"><h3>{{ t('questions') }} (FR) <button class="sec" data-copy="q_fr" data-done="{{ t('ui_copied') }}">{{ t('ui_copy') }}</button></h3>
+<ol id="q_fr">{% for q in project.customer_questions_fr %}<li>{{ q }}</li>{% endfor %}</ol></div>
+</div>
+<div class="card"><h3>{{ t('ui_dq_flags') }}</h3><ul>
+{% for d in project.data_quality %}<li><b>{{ d.cluster }}</b>: {{ d.mode.value }} / {{ d.confidence.value }} - {{ d.flags | join('; ') }}</li>{% endfor %}
+{% for w in project.ingest.warnings + project.ingest.conflicts %}<li>{{ w }}</li>{% endfor %}</ul>
+<h3>{{ t('assumptions') }}</h3><ul>{% for a in project.ingest.assumptions %}<li>{{ a.category }}: {{ a.text }}</li>{% endfor %}</ul>
+<details><summary>Transformations ({{ project.ingest.transformations | length }})</summary><ul>{% for x in project.ingest.transformations %}<li class="small">{{ x }}</li>{% endfor %}</ul></details>
+</div>
+<div class="row"><a class="btn sec" href="/p/{{ name }}/policy">{{ t('ui_tab_policy') }}</a>
+<form method="post" action="/p/{{ name }}/size"><button>{{ t('ui_run_sizing') }}</button></form></div>
+{% endif %}
+{% endblock %}

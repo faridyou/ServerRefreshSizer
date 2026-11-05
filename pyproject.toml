@@ -26,11 +26,13 @@ dependencies = [
   "rich>=13.7",
   "numpy>=1.26",
   "xhtml2pdf>=0.2.11",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
 llm = ["anthropic>=0.40"]
-ui = ["fastapi>=0.110", "uvicorn>=0.29", "python-multipart>=0.0.9"]
 dev = ["pytest>=8", "hypothesis>=6.100", "ruff>=0.5", "mypy>=1.10", "types-PyYAML"]
 
 [project.scripts]
@@ -40,7 +42,8 @@ refreshsizer = "refreshsizer.cli:main"
 include = ["refreshsizer*"]
 
 [tool.setuptools.package-data]
-refreshsizer = ["**/*.yaml", "report/templates/*.j2", "report/templates/*.css"]
+refreshsizer = ["**/*.yaml", "report/templates/*.j2", "report/templates/*.css", "ui/templates/*.html",
+                "ui/static/*", "ui/static/vendor/*"]
 
 [tool.ruff]
 line-length = 110
