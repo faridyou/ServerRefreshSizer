@@ -112,10 +112,13 @@ Each entry: **decision** – reason – how to change it.
     first-ingest proposals with their original confidence (re-ingests use the profiles and would otherwise show
     1.0 everywhere) plus the user's decisions. The UI ingest uses the same review mode as `--yes` (≥ 0.6), then the
     grid lets the user change anything.
-42. **Background jobs run on one worker thread, in submission order** (`ui/jobs.py`). Keeps matplotlib (not
-    thread-safe) and the shared SQLite connection safe; jobs are kept in memory (lost on restart – the results are
-    already written to the project folder). Progress is polled by HTMX every second; the finished job answers with
-    `HX-Redirect`. Without JavaScript the job page refreshes itself.
+42. **Background jobs run in their own daemon thread** (`ui/jobs.py`); jobs of the same project are serialized
+    by a per-project lock and matplotlib rendering by a lock in `report/charts.py`. (The first version used a
+    single worker, so one stuck job blocked every later job – changed after a user report.) Jobs are kept in
+    memory (lost on restart – results are already written to the project folder). Progress is polled by HTMX
+    every second, shows elapsed time, and warns after 90 s without progress; the finished job answers with
+    `HX-Redirect`. Without JavaScript the job page refreshes itself. A running Python thread cannot be killed:
+    restarting the UI stops a stuck job. Jobs and errors are logged to `data/logs/ui.log`.
 43. **Runs**: the last 5 sizing runs per project are kept in `runs/` (each with its label, overrides and full
     sizing). `project.json` always holds the latest run; reports can be generated for any kept run.
 44. **HTMX 1.9.12 is vendored** (`ui/static/vendor/htmx.min.js`, 0BSD licence copied next to it), fetched from the
@@ -135,3 +138,8 @@ Each entry: **decision** – reason – how to change it.
     The CPU is matched to the catalog when possible, otherwise slugified.
 49. **UI help texts** are in `report/i18n.yaml` (`h_<field>` keys, EN/FR) next to the other UI strings (`ui_*`);
     fields without a help key show only their default.
+50. **Policy ranges are validated by the schema** (`config/schema.py`, `Policy._check_ranges`), so every source
+    (defaults, Policy sheet, policy.yaml, CLI, UI) is checked: U_max in (0, 1] (a value like 75 is rejected – it
+    is a fraction), growth > -100 %, horizon 1-30 years, slack/free reserve in [0, 1), DRR and vCPU ratios > 0,
+    Monte Carlo runs >= 1. A U_max <= 0 previously made the HA loop run for ever (job stuck at 2 % / 50 %); the
+    loop now also has a safety bound. Valid policies give exactly the same results as before.

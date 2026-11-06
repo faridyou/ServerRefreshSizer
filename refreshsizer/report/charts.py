@@ -6,7 +6,9 @@ recessive grid and axes; text in text ink, never the series color; direct labels
 from __future__ import annotations
 
 import base64
+import functools
 import io
+import threading
 from typing import Any
 
 import matplotlib
@@ -20,6 +22,17 @@ INK2 = "#52514e"
 GRID = "#e4e3df"
 S1, S2, S3 = "#2a78d6", "#eb6834", "#1baf7a"
 NEUTRAL = "#9a9890"
+
+
+_LOCK = threading.RLock()  # pyplot is not thread-safe: UI pages and report jobs may render at the same time
+
+
+def _locked(fn: Any) -> Any:
+    @functools.wraps(fn)
+    def wrapper(*a: Any, **k: Any) -> Any:
+        with _LOCK:
+            return fn(*a, **k)
+    return wrapper
 
 
 def _fig(w: float = 6.4, h: float = 3.2) -> tuple[Any, Any]:
@@ -48,6 +61,7 @@ def b64(png: bytes) -> str:
     return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
 
+@_locked
 def host_comparison(labels: list[str], values: list[int], title: str) -> bytes:
     fig, ax = _fig(5.6, 2.8)
     colors = [S1, S2, S3][: len(values)]
@@ -61,6 +75,7 @@ def host_comparison(labels: list[str], values: list[int], title: str) -> bytes:
     return _png(fig)
 
 
+@_locked
 def pareto(all_pts: list[tuple[int, float]], front: list[tuple[int, float, str]], rec: tuple[int, float] | None,
            title: str) -> bytes:
     fig, ax = _fig(7.6, 3.4)
@@ -86,6 +101,7 @@ def pareto(all_pts: list[tuple[int, float]], front: list[tuple[int, float, str]]
     return _png(fig)
 
 
+@_locked
 def histogram(hist: dict[int, int], p50: int, p90: int, title: str) -> bytes:
     fig, ax = _fig(5.6, 2.8)
     ks = sorted(hist)
@@ -100,6 +116,7 @@ def histogram(hist: dict[int, int], p50: int, p90: int, title: str) -> bytes:
     return _png(fig)
 
 
+@_locked
 def tornado(rows: list[dict[str, Any]], base: float, title: str) -> bytes:
     fig, ax = _fig(6.0, 0.6 + 0.45 * max(len(rows), 1))
     ax.grid(axis="y", visible=False)
@@ -118,6 +135,7 @@ def tornado(rows: list[dict[str, Any]], base: float, title: str) -> bytes:
     return _png(fig)
 
 
+@_locked
 def host_demand(names: list[str], cap: list[float], demand: list[float], title: str) -> bytes:
     n = len(names)
     fig, ax = _fig(max(5.0, min(10.0, 0.35 * n + 2)), 2.8)

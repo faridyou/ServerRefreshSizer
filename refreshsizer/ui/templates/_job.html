@@ -9,5 +9,6 @@
 <progress value="{{ job.percent }}" max="100"></progress>
 <p>{{ t('ui_job_running') }} {{ job.percent }} % - {{ job.message }}</p>
 <p class="small muted">{{ job.status }} · {{ job.elapsed }}</p>
+{% if job.stalled_s >= 90 %}<p class="lowbanner small">No progress for {{ job.stalled_s }} s at this step. The job may be stuck: details are in data/logs/ui.log. Other projects and pages keep working; restart RefreshSizer (close the window and run run.bat again) to stop this job.</p>{% endif %}
 {% endif %}
 </div>

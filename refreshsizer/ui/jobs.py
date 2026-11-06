@@ -1,14 +1,15 @@
 """Background jobs (ingest, sizing + Monte Carlo, reports, benchmark update) with progress for HTMX polling.
 
-One worker thread: jobs run one after another, which also keeps matplotlib (not thread-safe) safe."""
+Each job runs in its own daemon thread, so one slow or stuck job never blocks the others; jobs of the same
+project are serialized by a per-project lock, and chart rendering is serialized in report/charts.py."""
 
 from __future__ import annotations
 
 import logging
+import threading
 import traceback
 import uuid
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -30,13 +31,23 @@ class Job:
     log: list[str] = field(default_factory=list)
     started_at: float | None = None
     finished_at: float | None = None
+    last_update: float | None = None
+
+    @property
+    def stalled_s(self) -> int:
+        """Seconds since the last progress message while running (0 otherwise)."""
+        import time
+
+        if self.status != "running" or self.last_update is None:
+            return 0
+        return int(time.monotonic() - self.last_update)
 
     @property
     def elapsed(self) -> str:
         import time
 
         if self.started_at is None:
-            return "waiting for the previous job"
+            return "waiting for the previous job of this project"
         s = int((self.finished_at or time.monotonic()) - self.started_at)
         return f"{s // 60} min {s % 60:02d} s" if s >= 60 else f"{s} s"
 
@@ -62,13 +73,21 @@ JobFn = Callable[[Callable[[float, str], None], "Job"], str | None]
 class JobManager:
     def __init__(self) -> None:
         self.jobs: dict[str, Job] = {}
-        self.pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="refreshsizer-job")
+        self._locks: dict[str, threading.Lock] = {}
+        self._guard = threading.Lock()
+
+    def _lock_for(self, project: str | None) -> threading.Lock:
+        with self._guard:
+            return self._locks.setdefault(project or "<global>", threading.Lock())
 
     def submit(self, kind: str, project: str | None, fn: JobFn, redirect: str | None = None) -> Job:
         job = Job(id=uuid.uuid4().hex[:12], kind=kind, project=project, redirect=redirect)
         self.jobs[job.id] = job
 
         def progress(frac: float, msg: str) -> None:
+            import time
+
+            job.last_update = time.monotonic()
             job.progress = max(job.progress, min(0.99, frac))
             job.message = msg
             job.log.append(msg)
@@ -76,8 +95,10 @@ class JobManager:
         def run() -> None:
             import time
 
+            lock = self._lock_for(project)
+            lock.acquire()
             job.status = "running"
-            job.started_at = time.monotonic()
+            job.started_at = job.last_update = time.monotonic()
             log.info("job %s (%s, %s) started", job.id, kind, project)
             try:
                 r = fn(progress, job)
@@ -93,8 +114,9 @@ class JobManager:
                 log.error("job %s failed:\n%s", job.id, traceback.format_exc())
             finally:
                 job.finished_at = time.monotonic()
+                lock.release()
 
-        self.pool.submit(run)
+        threading.Thread(target=run, name=f"refreshsizer-job-{job.id}", daemon=True).start()
         return job
 
     def get(self, job_id: str) -> Job | None:

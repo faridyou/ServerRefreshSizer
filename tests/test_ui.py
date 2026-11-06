@@ -351,3 +351,18 @@ def test_sizing_progress_moves_during_optimizer(ui: UI, fixtures_dir: Path) -> N
     j = ui.size(name)
     steps = [m for m in j.log if "optimizer" in m]
     assert len(steps) >= 10 and j.elapsed.endswith("s")
+
+
+def test_stuck_job_does_not_block_other_projects(ui: UI) -> None:
+    import threading as th
+
+    gate = th.Event()
+    a = ui.jobs.submit("sizing", "proj-a", lambda progress, job: (gate.wait(10), None)[1])
+    b = ui.jobs.submit("sizing", "proj-b", lambda progress, job: "/done")
+    assert ui.jobs.wait(b.id, 5).status == "done"  # not queued behind the stuck job
+    assert ui.jobs.get(a.id).status == "running"  # type: ignore[union-attr]
+    c = ui.jobs.submit("reports", "proj-a", lambda progress, job: "/after")
+    time.sleep(0.2)
+    assert c.status == "queued"  # same project: waits for its own previous job
+    gate.set()
+    assert ui.jobs.wait(c.id, 5).status == "done"
