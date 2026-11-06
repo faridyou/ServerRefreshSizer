@@ -134,3 +134,25 @@ def test_dimm_always_balanced(need: float, plat: str, cpus: int) -> None:
     if d is not None:
         assert is_balanced(d, p, cpus)
         assert d.total_gb >= need and d.dimm_count == p.channels_per_socket * cpus * d.dpc
+
+
+@pytest.mark.parametrize("ov,msg", [
+    ({"u_max": {"default": -0.5}}, "u_max.default"),
+    ({"u_max": {"general_virt": 0}}, "u_max.general_virt"),
+    ({"u_max": {"general_virt": 75}}, "fraction"),
+    ({"growth": {"cpu_pct": -100}}, "growth.cpu_pct"),
+    ({"horizon_years": 0}, "horizon_years"),
+    ({"slack": 1.0}, "slack"),
+    ({"monte_carlo_runs": 0}, "monte_carlo_runs"),
+])
+def test_policy_rejects_meaningless_values(ov: dict, msg: str) -> None:  # type: ignore[type-arg]
+    with pytest.raises(ValueError, match=msg):
+        load_policy(ov)
+
+
+def test_ha_loop_always_terminates() -> None:
+    pol = load_policy()
+    with pytest.raises(ValueError):
+        ha.plan(1000, 1000, 100, pol, "external", u_check=-0.5)  # used to loop for ever
+    p = ha.plan(1e12, 1.0, 100, pol, "external", u_check=0.75)  # absurd input still returns
+    assert p.n_total > 0

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
 {% if not project %}<div class="card"><p>{{ t('ui_not_ingested') }}</p></div>{% else %}
 <div class="card"><h2>{{ t('estate') }}</h2>
 <table><thead><tr><th>{{ t('cluster') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">sockets</th><th class="num">{{ t('cores') }}</th><th class="num">RAM GB</th><th class="num">VMs</th><th class="num">vCPU</th><th class="num">vRAM GB</th><th class="num">prov. TiB</th><th class="num">used TiB</th><th class="num">IOPS</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th></tr></thead><tbody>

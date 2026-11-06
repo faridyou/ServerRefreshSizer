@@ -320,3 +320,34 @@ def test_project_folder_layout(ui: UI, fixtures_dir: Path) -> None:
         assert (d / item).exists(), item
     assert list((d / "mappings").glob("*.json")) and list((d / "runs").glob("*.json"))
     assert json.loads((d / "meta.json").read_text())["stage"] == "sized"
+
+
+def test_invalid_whatif_is_rejected_not_hung(ui: UI, fixtures_dir: Path) -> None:
+    """Regression: U_max <= 0 made the HA loop spin for ever (job stuck at 2 %)."""
+    name = ui.new("hang")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    before = len(ui.jobs.jobs)
+    for bad in ({"u_max": "-0.5"}, {"u_max": "0"}, {"u_max": "75"}, {"growth": "-100"}, {"years": "0.5"}):
+        r = ui.c.post(f"/p/{name}/size", data={"from": "whatif", **bad})
+        assert r.status_code == 200 and "/whatif" in str(r.url), bad
+        assert "class=\"err\"" in r.text, bad
+    assert len(ui.jobs.jobs) == before  # no job was started
+
+
+def test_invalid_policy_file_reports_error(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("badpolicy")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    (ui.store.path(name) / "policy.yaml").write_text("u_max: {default: -1}\n", encoding="utf-8")
+    r = ui.c.post(f"/p/{name}/size")
+    assert "/summary" in str(r.url) and "u_max.default" in r.text
+
+
+def test_sizing_progress_moves_during_optimizer(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("progress")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    j = ui.size(name)
+    steps = [m for m in j.log if "optimizer" in m]
+    assert len(steps) >= 10 and j.elapsed.endswith("s")

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from refreshsizer.paths import CONFIG_DIR
 
@@ -101,6 +101,41 @@ class Policy(BaseModel):
     exclude_templates: bool = True
     exclude_powered_off: bool = True
     report_lang: str = "en"
+
+    @model_validator(mode="after")
+    def _check_ranges(self) -> Policy:
+        """Reject values that make the sizing meaningless (or would never terminate)."""
+        bad: list[str] = []
+        for k, v in self.u_max.items():
+            if not 0 < float(v) <= 1:
+                bad.append(f"u_max.{k} = {v}: must be a fraction in (0, 1], e.g. 0.75 for 75 %")
+        for k in ("cpu_pct", "mem_pct", "storage_pct", "iops_pct"):
+            v = getattr(self.growth, k)
+            if v <= -100:
+                bad.append(f"growth.{k} = {v}: must be greater than -100 %")
+        if not 1 <= self.horizon_years <= 30:
+            bad.append(f"horizon_years = {self.horizon_years}: must be between 1 and 30")
+        for name in ("slack", "mem_free_reserve"):
+            v = getattr(self, name)
+            if not 0 <= v < 1:
+                bad.append(f"{name} = {v}: must be in [0, 1)")
+        if self.hypervisor_mem_overhead < 0:
+            bad.append("hypervisor_mem_overhead must be >= 0")
+        if not 0 < self.saturation_threshold <= 1:
+            bad.append(f"saturation_threshold = {self.saturation_threshold}: must be in (0, 1]")
+        if not 0 < self.inventory_assumed_util <= 1:
+            bad.append(f"inventory_assumed_util = {self.inventory_assumed_util}: must be in (0, 1]")
+        for name, d in (("drr", self.drr), ("vcpu_ratio_max", self.vcpu_ratio_max)):
+            for k, v in d.items():
+                if float(v) <= 0:
+                    bad.append(f"{name}.{k} = {v}: must be > 0")
+        if self.max_cluster_size < 2:
+            bad.append("max_cluster_size must be >= 2")
+        if self.monte_carlo_runs < 1:
+            bad.append("monte_carlo_runs must be >= 1")
+        if bad:
+            raise ValueError("invalid policy: " + "; ".join(bad))
+        return self
 
     # ---- helpers -------------------------------------------------------
     def umax(self, wl_class: str) -> float:

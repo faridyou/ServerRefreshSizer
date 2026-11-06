@@ -2,10 +2,11 @@
 {% block content %}
 {% if not project %}<div class="card"><p>{{ t('ui_not_ingested') }}</p></div>{% else %}
 <div class="card"><p>{{ t('ui_whatif_intro') }}</p>
-<form method="post" action="/p/{{ name }}/size" class="row">
-<label>CPU growth %/yr <input type="number" step="any" name="growth" placeholder="{{ policy.growth.cpu_pct }}"></label>
-<label>horizon (years) <input type="number" step="1" min="1" name="years" placeholder="{{ policy.horizon_years }}"></label>
-<label>U_max (all classes) <input type="number" step="0.01" min="0.05" max="1" name="u_max" placeholder="{{ policy.umax('default') }}"></label>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<form method="post" action="/p/{{ name }}/size" class="row"><input type="hidden" name="from" value="whatif">
+<label>CPU growth %/yr <input type="number" step="any" min="-99" name="growth" placeholder="{{ policy.growth.cpu_pct }}"></label>
+<label>horizon (years) <input type="number" step="1" min="1" max="30" name="years" placeholder="{{ policy.horizon_years }}"></label>
+<label>U_max (all classes, 0-1) <input type="number" step="0.01" min="0.05" max="1" name="u_max" placeholder="{{ policy.umax('default') }}"></label>
 <label>objective <select name="objective"><option value="">({{ policy.objective }})</option>{% for o in ['min_tco','min_hosts','min_licensed_cores','min_power','max_headroom'] %}<option>{{ o }}</option>{% endfor %}</select></label>
 <label>{{ t('ui_label') }} <input name="label" placeholder="what-if"></label>
 <button>{{ t('ui_run_sizing') }}</button></form></div>

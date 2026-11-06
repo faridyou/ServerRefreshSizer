@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from refreshsizer.config.schema import Policy, deep_merge, default_policy_dict, load_policy
+from refreshsizer.config.schema import deep_merge, default_policy_dict, load_policy
 
 GROUPS: list[tuple[str, list[str]]] = [
     ("ui_pg_growth", ["growth.*", "horizon_years"]),
@@ -123,7 +123,10 @@ def parse_form(form: dict[str, str]) -> dict[str, Any]:
             for p in parts[:-1]:
                 cur = cur.setdefault(p, {})
             cur[parts[-1]] = v
-    pol: Policy = load_policy(nested)  # validates
-    if pol.horizon_years < 1 or any(not (0 < u <= 1) for u in pol.u_max.values()):
-        raise ValueError("horizon must be >= 1 year and every U_max in (0, 1]")
+    try:
+        load_policy(nested)  # the Policy schema validates ranges
+    except ValueError as e:
+        from refreshsizer.ui.jobs import friendly_error
+
+        raise ValueError(friendly_error(e)) from e
     return nested

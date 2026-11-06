@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from refreshsizer.benchmarks.cache import BenchCache
@@ -219,10 +220,18 @@ def enumerate_configs(policy: Policy) -> list[tuple[TargetPlatform, CpuModel, in
     return out
 
 
-def optimize(d: ClusterDemand, policy: Policy, prices: dict[str, Any], cache: BenchCache
+def optimize(d: ClusterDemand, policy: Policy, prices: dict[str, Any], cache: BenchCache,
+             progress: Callable[[float, str], None] | None = None
              ) -> tuple[list[Candidate], list[Candidate], int, int, list[Candidate]]:
-    """Return (top N feasible, pareto front, evaluated, infeasible, all feasible)."""
-    allc = [evaluate(d, p, cpu, n, policy, prices, cache) for p, cpu, n in enumerate_configs(policy)]
+    """Return (top N feasible, pareto front, evaluated, infeasible, all feasible).
+
+    progress(fraction, message) is an optional UI hook; it never affects results."""
+    configs = enumerate_configs(policy)
+    allc = []
+    for i, (p, cpu, n) in enumerate(configs):
+        if progress and i % 5 == 0:
+            progress(i / max(len(configs), 1), f"{d.cluster}: optimizer {i}/{len(configs)} ({p.model} {cpu.model})")
+        allc.append(evaluate(d, p, cpu, n, policy, prices, cache))
     feas = [c for c in allc if c.feasible]
     obj = policy.objective
     pm = bool(getattr(policy, "prefer_measured_spec", True))

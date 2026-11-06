@@ -8,5 +8,6 @@
 {% else %}
 <progress value="{{ job.percent }}" max="100"></progress>
 <p>{{ t('ui_job_running') }} {{ job.percent }} % - {{ job.message }}</p>
+<p class="small muted">{{ job.status }} · {{ job.elapsed }}</p>
 {% endif %}
 </div>

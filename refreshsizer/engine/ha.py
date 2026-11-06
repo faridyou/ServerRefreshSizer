@@ -37,6 +37,8 @@ def min_hosts(protection: str, policy: Policy) -> tuple[int, str]:
 def plan(d_t: float, c_req: float, su_host: float, policy: Policy, protection: str, n_floor: int = 0,
          u_check: float | None = None) -> HaPlan:
     u_max_check = u_check if u_check is not None else (d_t / c_req if c_req else 0.75)
+    if not u_max_check > 0:
+        raise ValueError(f"U_max must be > 0 (got {u_max_check})")
     n_active = max(1, math.ceil(c_req / su_host - 1e-9)) if su_host > 0 else 9999
     k = k_ha_for(n_active, policy)
     maint = 1 if policy.maintenance_reserve else 0
@@ -45,7 +47,9 @@ def plan(d_t: float, c_req: float, su_host: float, policy: Policy, protection: s
     if policy.stretched_cluster:
         n_total = 2 * max(math.ceil(n_total / 2), n_active + k)
         reason += "; stretched cluster: each site carries full load (+ witness)"
-    while su_host > 0 and (n_total - k - maint) > 0 and d_t / ((n_total - k - maint) * su_host) > u_max_check + 1e-12:
+    limit = n_total + 10 * max(policy.max_cluster_size, 64)  # safety bound: the loop must always terminate
+    while su_host > 0 and (n_total - k - maint) > 0 and n_total < limit and \
+            d_t / ((n_total - k - maint) * su_host) > u_max_check + 1e-12:
         n_total += 1
     if n_total - k - maint > n_active:
         n_active = n_total - k - maint

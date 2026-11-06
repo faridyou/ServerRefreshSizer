@@ -36,11 +36,30 @@ def build_server(port: int) -> Any:
     return uvicorn.Server(config)
 
 
+def setup_log() -> str:
+    """Jobs and errors are logged to data/logs/ui.log (attach it when reporting a problem)."""
+    import logging
+
+    from refreshsizer.paths import data_dir
+
+    d = data_dir() / "logs"
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / "ui.log"
+    h = logging.FileHandler(f, encoding="utf-8")
+    h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    root = logging.getLogger("refreshsizer")
+    root.addHandler(h)
+    root.setLevel(logging.INFO)
+    return str(f)
+
+
 def serve(port: int = 8765, open_browser: bool = True, echo: Callable[[str], Any] = print) -> None:
+    logfile = setup_log()
     p = find_free_port(port)
     url = f"http://{HOST}:{p}/"
     server = build_server(p)
     echo(f"RefreshSizer UI: {url}  (local only - bound to {HOST}; press Ctrl+C to stop)")
+    echo(f"log file: {logfile}")
     if p != port:
         echo(f"port {port} was busy; using {p}")
     if open_browser:

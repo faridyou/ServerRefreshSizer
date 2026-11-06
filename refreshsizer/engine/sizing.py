@@ -58,7 +58,8 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
         d: ClusterDemand = compute_demand(c, mode, policy, cache, name=name, workloads=wls, share=share,
                                           is_db_cluster=is_db)
         d.flags.insert(0, f"mode {d.mode.value}: {why}")
-        top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache)
+        opt_progress = (lambda f, m, k=k: progress((k + 0.05 + 0.5 * f) / len(parts), m)) if progress else None
+        top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache, opt_progress)
         cs = ClusterSizing(demand=d, candidates=top, pareto=front, objective="db: min licensed cores, max SPC"
                            if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf,
                            all_points=[(c2.n_total, c2.tco) for c2 in feas])

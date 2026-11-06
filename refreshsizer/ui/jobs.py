@@ -28,10 +28,32 @@ class Job:
     result: str = ""
     created: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
     log: list[str] = field(default_factory=list)
+    started_at: float | None = None
+    finished_at: float | None = None
+
+    @property
+    def elapsed(self) -> str:
+        import time
+
+        if self.started_at is None:
+            return "waiting for the previous job"
+        s = int((self.finished_at or time.monotonic()) - self.started_at)
+        return f"{s // 60} min {s % 60:02d} s" if s >= 60 else f"{s} s"
 
     @property
     def percent(self) -> int:
         return int(round(100 * max(0.0, min(1.0, self.progress))))
+
+
+def friendly_error(e: Exception) -> str:
+    """pydantic validation errors -> their message only; others -> 'Type: message'."""
+    errs = getattr(e, "errors", None)
+    if callable(errs):
+        try:
+            return "; ".join(str(x.get("msg", x)).removeprefix("Value error, ") for x in errs())
+        except Exception:
+            pass
+    return f"{type(e).__name__}: {e}"
 
 
 JobFn = Callable[[Callable[[float, str], None], "Job"], str | None]
@@ -52,7 +74,11 @@ class JobManager:
             job.log.append(msg)
 
         def run() -> None:
+            import time
+
             job.status = "running"
+            job.started_at = time.monotonic()
+            log.info("job %s (%s, %s) started", job.id, kind, project)
             try:
                 r = fn(progress, job)
                 if r:
@@ -60,10 +86,13 @@ class JobManager:
                 job.progress = 1.0
                 job.status = "done"
                 job.message = job.message if job.result else "done"
+                log.info("job %s done in %s", job.id, job.elapsed)
             except Exception as e:  # report in the UI, never kill the server
                 job.status = "error"
-                job.error = f"{type(e).__name__}: {e}"
+                job.error = friendly_error(e)
                 log.error("job %s failed:\n%s", job.id, traceback.format_exc())
+            finally:
+                job.finished_at = time.monotonic()
 
         self.pool.submit(run)
         return job

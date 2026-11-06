@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -197,7 +198,7 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
 
     # ---------------------------------------------------------------- 3 ingest summary
     @app.get("/p/{name}/summary", response_class=HTMLResponse)
-    def summary_page(name: str, request: Request) -> HTMLResponse:
+    def summary_page(name: str, request: Request, error: str = "") -> HTMLResponse:
         from refreshsizer.ingest.universal.summary import estate_summary
 
         n, meta = proj(name)
@@ -207,7 +208,7 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
                 "storage_used_tib", "iops"]
         total = {k: round(sum(r[k] for r in rows), 2) for k in keys}
         return render(request, "summary.html", {"name": n, "meta": meta, "tab": "summary", "project": project,
-                                                "rows": rows, "total": total})
+                                                "rows": rows, "total": total, "error": error})
 
     # ---------------------------------------------------------------- 4 policy
     @app.get("/p/{name}/policy", response_class=HTMLResponse)
@@ -239,7 +240,7 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
 
     # ---------------------------------------------------------------- sizing / 5 results / 6 what-if
     @app.post("/p/{name}/size")
-    async def size(name: str, request: Request) -> RedirectResponse:
+    async def size(name: str, request: Request) -> RedirectResponse:  # also validates the policy
         n, _ = proj(name)
         form = {k: str(v) for k, v in (await request.form()).items()}
         from refreshsizer import workflow
@@ -248,9 +249,18 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
             v = form.get(k, "").strip().replace(",", ".")
             return float(v) if v else None
 
-        years = num("years")
-        ov = workflow.overrides_from_flags(growth=num("growth"), years=int(years) if years else None,
-                                           objective=form.get("objective") or None, u_max=num("u_max"))
+        try:
+            years = num("years")
+            ov = workflow.overrides_from_flags(growth=num("growth"), years=int(years) if years else None,
+                                               objective=form.get("objective") or None, u_max=num("u_max"))
+            project = S().project(n)
+            # validate the full policy now (defaults < Policy sheet < policy.yaml < what-if) instead of in the job
+            workflow.make_policy(project.policy_overrides if project else None, S().policy_overrides(n), ov)
+        except ValueError as e:
+            from refreshsizer.ui.jobs import friendly_error
+
+            back = "whatif" if form.get("from") == "whatif" else "summary"
+            return go(f"/p/{n}/{back}?error={quote(friendly_error(e))[:600]}")
         label = form.get("label", "").strip() or ("what-if" if ov else "baseline")
         return start("sizing", n, lambda progress, job: services.run_size(S(), n, ov, label, progress))
 
@@ -267,16 +277,21 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         return render(request, "results.html", ctx)
 
     @app.get("/p/{name}/whatif", response_class=HTMLResponse)
-    def whatif_page(name: str, request: Request) -> HTMLResponse:
+    def whatif_page(name: str, request: Request, error: str = "") -> HTMLResponse:
         n, meta = proj(name)
         project = S().project(n)
         pol = None
         if project is not None:
             from refreshsizer import workflow
+            from refreshsizer.ui.jobs import friendly_error
 
-            pol = workflow.make_policy(project.policy_overrides, S().policy_overrides(n))
+            try:
+                pol = workflow.make_policy(project.policy_overrides, S().policy_overrides(n))
+            except ValueError as e:
+                error = error or friendly_error(e)
+                pol = workflow.make_policy()
         return render(request, "whatif.html", {"name": n, "meta": meta, "tab": "whatif", "project": project,
-                                               "runs": S().runs(n), "policy": pol})
+                                               "runs": S().runs(n), "policy": pol, "error": error})
 
     @app.get("/p/{name}/compare", response_class=HTMLResponse)
     def compare_page(name: str, request: Request, a: str = "", b: str = "") -> HTMLResponse:
