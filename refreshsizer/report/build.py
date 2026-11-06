@@ -129,6 +129,10 @@ def cluster_context(cs: ClusterSizing, t: Any) -> dict[str, Any]:
                                                   [h.demand_su or 0 for h in hd], f"{d.cluster}: {t('host_demand')}")
     ctx["charts"] = {k: charts.b64(v) for k, v in ctx["png"].items()}
     ctx["benchmarks"] = benchmark_rows(cs)
+    from refreshsizer.engine.optimizer import scenario_tags, spec_basis
+
+    ctx["scenario_tags"] = scenario_tags(cs.scenarios, rec)
+    ctx["scenario_basis"] = {c.label: spec_basis(c) for c in cs.scenarios}
     ctx["constraints"] = constraint_rows(cs, t)
     if rec and rec.dimm:
         ctx["dimm_diagram"] = slot_diagram(rec.dimm, load_platforms()[rec.config.platform], rec.config.cpu_count)

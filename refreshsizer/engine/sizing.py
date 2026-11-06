@@ -16,7 +16,7 @@ from refreshsizer.engine.demand import LICENSED, compute_demand
 from refreshsizer.engine.licensing import VMWARE_ORDER_WARNING, source_licensing
 from refreshsizer.engine.modes import select_mode
 from refreshsizer.engine.naive import naive
-from refreshsizer.engine.optimizer import optimize
+from refreshsizer.engine.optimizer import cpu_scenarios, optimize, target_selection_text
 from refreshsizer.engine.results import ClusterDemand, ClusterSizing, SizingRun
 from refreshsizer.model.entities import Cluster, Project, SizingMode, SourceWorkload
 
@@ -62,7 +62,12 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
         top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache, opt_progress)
         cs = ClusterSizing(demand=d, candidates=top, pareto=front, objective="db: min licensed cores, max SPC"
                            if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf,
-                           all_points=[(c2.n_total, c2.tco) for c2 in feas])
+                           all_points=[(c2.n_total, c2.tco) for c2 in feas],
+                           scenarios=cpu_scenarios(feas, policy.objective, is_db, policy.prefer_measured_spec,
+                                                   policy.cpu_scenarios_max),
+                           target_selection=target_selection_text(policy))
+        if n_eval == 0:
+            cs.warnings.append(f"no target configuration matches the selection ({cs.target_selection})")
         if top:
             rec = top[0]
             cs.recommended = rec

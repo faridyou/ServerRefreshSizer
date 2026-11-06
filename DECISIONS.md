@@ -143,3 +143,23 @@ Each entry: **decision** – reason – how to change it.
     is a fraction), growth > -100 %, horizon 1-30 years, slack/free reserve in [0, 1), DRR and vCPU ratios > 0,
     Monte Carlo runs >= 1. A U_max <= 0 previously made the HA loop run for ever (job stuck at 2 % / 50 %); the
     loop now also has a safety bound. Valid policies give exactly the same results as before.
+
+## Target server selection and CPU scenarios (change request 2)
+
+51. **Target selection = three policy keys**: `target_platforms` (existing), `target_cpu_vendors` (Intel / AMD) and
+    `target_cpus` (catalog CPU ids); null = no restriction. They only filter the configurations the optimizer
+    enumerates – no calculation changes – and are validated against the catalog (unknown names are rejected).
+    Sources: Policy sheet, `policy.yaml`, CLI `--platforms / --cpu-vendor / --cpus`, UI selector.
+52. **Where the UI selector lives**: ingest summary (saved to `policy.yaml` when you run the sizing – it is the
+    customer's choice for the project), Policy page (saved), What-if (one-off override for that run only).
+    Picking a vendor ticks that vendor's platforms (every Dell 17G platform is single-vendor).
+53. **CPU scenarios** = the best feasible configuration per CPU model, ranked exactly like the recommendation
+    (objective, then `prefer_measured_spec`), at most `cpu_scenarios_max` (15) rows, but the best configuration
+    of each CPU vendor is always included even beyond the limit, so the "best Intel" and "best AMD" options are
+    always visible. Shown in the UI results, the CLI output, the HTML report (section 7) and Excel (sheet 7,
+    live TCO delta formulas).
+54. **"Use this scenario"** re-runs the sizing restricted to that platform and CPU (a new kept run labelled
+    `scenario: ...`), so the BoM, constraint checks, Monte Carlo and reports are produced for it; it does not change
+    the saved target selection.
+55. **A selection that matches no configuration** (e.g. AMD CPUs on an Intel-only platform) gives a clear warning
+    and no recommendation instead of an error; selecting no platform at all is rejected on the form.

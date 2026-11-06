@@ -29,9 +29,27 @@ def _policy(project_overrides: dict[str, Any] | None, policy_file: Path | None, 
     return workflow.make_policy(project_overrides, policy_file, cli)
 
 
+def _csv(v: str | None) -> list[str] | None:
+    return [x.strip() for x in v.split(",") if x.strip()] if v else None
+
+
 def _cli_overrides(growth: float | None, years: int | None, objective: str | None, p95_estimate: bool,
-                   lang: str | None = None) -> dict[str, Any]:
-    return workflow.overrides_from_flags(growth, years, objective, p95_estimate, lang)
+                   lang: str | None = None, platforms: str | None = None, cpu_vendor: str | None = None,
+                   cpus: str | None = None) -> dict[str, Any]:
+    cpu_ids = None
+    if cpus:
+        from refreshsizer.benchmarks.cpu_matcher import match_cpu
+
+        cpu_ids = []
+        for c in _csv(cpus) or []:
+            m = match_cpu(c)
+            cpu_ids.append(m.cpu_id if m else c)
+    return workflow.overrides_from_flags(growth, years, objective, p95_estimate, lang, platforms=_csv(platforms),
+                                         cpu_vendors=_csv(cpu_vendor), cpus=cpu_ids)
+
+
+TARGET_HELP = ("Target Dell platforms, comma list (e.g. R7725,R770). CPU vendor: intel, amd or intel,amd. "
+               "CPUs: comma list of names or ids (e.g. 'EPYC 9355,Xeon 6787P').")
 
 
 def _review_mode(yes: bool, strict: bool) -> str:
@@ -104,6 +122,20 @@ def _print_sizing(run: Any) -> None:
                   str(cs.naive.core_match_hosts) if cs.naive else "-",
                   str(cs.naive.ghz_match_hosts) if cs.naive else "-", f"{r.tco:,.0f}" if r else "-")
     console.print(t)
+    from refreshsizer.engine.optimizer import scenario_tags, spec_basis
+
+    for cs in run.clusters:
+        if not cs.scenarios:
+            continue
+        st = Table(title=f"{cs.demand.cluster}: CPU scenarios ({cs.target_selection})")
+        for h in ("CPU scenario", "SPEC basis", "hosts", "cores", "util failed", "TCO (USD)", "vs recommended", ""):
+            st.add_column(h)
+        tags = scenario_tags(cs.scenarios, cs.recommended)
+        base = cs.recommended.tco if cs.recommended else 0
+        for c in cs.scenarios:
+            st.add_row(c.label, spec_basis(c), str(c.n_total), str(c.n_total * c.config.total_cores), f"{c.util_failed:.0%}",
+                       f"{c.tco:,.0f}", f"{c.tco - base:+,.0f}", ", ".join(tags.get(c.label, [])))
+        console.print(st)
     for w in run.warnings:
         console.print(f"[yellow]WARNING:[/yellow] {w}")
 
@@ -116,12 +148,16 @@ def size(project_file: Path = typer.Argument(..., exists=True),
          objective: str | None = typer.Option(None, "--objective",
                                               help="min_tco|min_hosts|min_licensed_cores|min_power|max_headroom"),
          p95_estimate: bool = typer.Option(False, "--p95-estimate", help="Live Optics: p95 ~= avg+0.8(peak-avg)"),
+         platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
+         cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
+         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
          out: Path | None = typer.Option(None, "--out", help="Output project (default: overwrite input)"),
          verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Size a project (adds the 'sizing' section to project.json)."""
     _setup_logging(verbose)
     project = _load_project(project_file)
-    pol = _policy(project.policy_overrides, policy, _cli_overrides(growth, years, objective, p95_estimate))
+    pol = _policy(project.policy_overrides, policy,
+                  _cli_overrides(growth, years, objective, p95_estimate, None, platforms, cpu_vendor, cpus))
     run = _do_size(project, pol)
     _print_sizing(run)
     _save_project(project, out or project_file)
@@ -150,6 +186,9 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         growth: float | None = typer.Option(None, "--growth"), years: int | None = typer.Option(None, "--years"),
         objective: str | None = typer.Option(None, "--objective"),
         p95_estimate: bool = typer.Option(False, "--p95-estimate"),
+        platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
+        cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
+        cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
         format: str = typer.Option("html,pdf,xlsx", "--format"), lang: str = typer.Option("en", "--lang"),
         name: str | None = typer.Option(None, "--name"), verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Ingest + size + report in one go."""
@@ -159,7 +198,8 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     project = workflow.ingest(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto",
                               name=name)
     render_ingest_summary(project, console, lang)
-    pol = _policy(project.policy_overrides, policy, _cli_overrides(growth, years, objective, p95_estimate, lang))
+    pol = _policy(project.policy_overrides, policy,
+                  _cli_overrides(growth, years, objective, p95_estimate, lang, platforms, cpu_vendor, cpus))
     sizing = _do_size(project, pol)
     _print_sizing(sizing)
     out.mkdir(parents=True, exist_ok=True)

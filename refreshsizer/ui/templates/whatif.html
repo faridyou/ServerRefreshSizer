@@ -9,6 +9,7 @@
 <label>U_max (all classes, 0-1) <input type="number" step="0.01" min="0.05" max="1" name="u_max" placeholder="{{ policy.umax('default') }}"></label>
 <label>objective <select name="objective"><option value="">({{ policy.objective }})</option>{% for o in ['min_tco','min_hosts','min_licensed_cores','min_power','max_headroom'] %}<option>{{ o }}</option>{% endfor %}</select></label>
 <label>{{ t('ui_label') }} <input name="label" placeholder="what-if"></label>
+<div style="flex-basis:100%">{% include "_target.html" %}</div>
 <button>{{ t('ui_run_sizing') }}</button></form></div>
 <div class="card"><h3>{{ t('ui_runs') }} (max 5)</h3>
 <form method="get" action="/p/{{ name }}/compare"><table><thead><tr><th>A</th><th>B</th><th>{{ t('ui_run') }}</th><th>{{ t('ui_label') }}</th><th>overrides</th><th></th></tr></thead><tbody>

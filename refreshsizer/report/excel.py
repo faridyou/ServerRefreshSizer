@@ -389,6 +389,37 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             r += 1
         r += 2
 
+    # ---- 7b CPU scenarios (best configuration per CPU model) ------------------------------------------
+    for c in clusters:
+        cs = c["cs"]
+        if not cs.scenarios:
+            continue
+        ws7.write(r, 1, f"{c['d'].cluster}: {t('ui_scenarios')} ({cs.target_selection})", bk.b)
+        r += 1
+        bk.header(ws7, r, ["#", "CPU scenario", "SPEC basis", "SPC", "hosts", "util failed", "cores", "", "power W",
+                           "RU", "capex", "licenses", "TCO", "vs recommended", "tags"])
+        r += 1
+        first_row = r
+        rec_row = None
+        for i, x in enumerate(cs.scenarios, 1):
+            tags = c["scenario_tags"].get(x.label, [])
+            if "recommended" in tags:
+                rec_row = r
+            vals = [i, x.label, c["scenario_basis"][x.label], x.spc_target, x.n_total, x.util_failed,
+                    x.n_total * x.config.total_cores, "", x.power_w_total, x.rack_units, x.capex_total,
+                    x.license_total]
+            for j, v in enumerate(vals):
+                ws7.write(r, j, v)
+            ws7.write_formula(r, 12, f"=K{r + 1}+L{r + 1}+{x.power_opex}", bk.money, x.tco)
+            ws7.write(r, 14, ", ".join(tags))
+            r += 1
+        ref = rec_row if rec_row is not None else first_row
+        base = cs.recommended.tco if cs.recommended else 0
+        for idx, x in enumerate(cs.scenarios):
+            srow = first_row + idx
+            ws7.write_formula(srow, 13, f"=M{srow + 1}-$M${ref + 1}", bk.money, x.tco - base)
+        r += 2
+
     # ---- 8 BoM -------------------------------------------------------------------------------------------
     r = 3
     for c in clusters:

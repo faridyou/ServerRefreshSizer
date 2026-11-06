@@ -172,6 +172,8 @@ class ClusterSizing(BaseModel):
     demand: ClusterDemand
     candidates: list[Candidate] = Field(default_factory=list)
     pareto: list[Candidate] = Field(default_factory=list)
+    scenarios: list[Candidate] = Field(default_factory=list)  # best configuration per CPU model
+    target_selection: str = ""
     all_points: list[tuple[int, float]] = Field(default_factory=list)
     recommended: Candidate | None = None
     naive: NaiveResult | None = None

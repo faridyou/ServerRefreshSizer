@@ -66,6 +66,22 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
             raise HTTPException(404, "project not found") from e
         return name, S().meta(name)
 
+    def effective_policy(n: str, extra: dict[str, Any] | None = None) -> Any:
+        """Policy as the sizing will see it (defaults < Policy sheet < policy.yaml < extra); None if invalid."""
+        from refreshsizer import workflow
+
+        project = S().project(n)
+        try:
+            return workflow.make_policy(project.policy_overrides if project else None, S().policy_overrides(n),
+                                        extra)
+        except ValueError:
+            return None
+
+    def target_ctx(n: str) -> dict[str, Any]:
+        from refreshsizer.ui import target
+
+        return target.context(effective_policy(n))
+
     def go(url: str) -> RedirectResponse:
         return RedirectResponse(url, status_code=303)
 
@@ -208,7 +224,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
                 "storage_used_tib", "iops"]
         total = {k: round(sum(r[k] for r in rows), 2) for k in keys}
         return render(request, "summary.html", {"name": n, "meta": meta, "tab": "summary", "project": project,
-                                                "rows": rows, "total": total, "error": error})
+                                                "rows": rows, "total": total, "error": error, "tgt": target_ctx(n),
+                                                "open_target": True})
 
     # ---------------------------------------------------------------- 4 policy
     @app.get("/p/{name}/policy", response_class=HTMLResponse)
@@ -217,16 +234,31 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         t = translator(lang_of(request))
         return render(request, "policy.html", {"name": n, "meta": meta, "tab": "policy", "error": error,
                                                "saved": saved, "groups": form_groups(S().policy_overrides(n), t),
-                                               "yaml": _policy_yaml(S(), n)})
+                                               "yaml": _policy_yaml(S(), n), "tgt": target_ctx(n),
+                                               "open_target": False})
 
     @app.post("/p/{name}/policy")
     async def policy_save(name: str, request: Request) -> Response:
         n, _ = proj(name)
-        form = {k: str(v) for k, v in (await request.form()).items()}
+        raw = await request.form()
+        form = {k: str(v) for k, v in raw.items()}
+        from refreshsizer.ui import target
+
         try:
             ov = parse_form(form)
+            saved = S().policy_overrides(n)
+            if "vendor" in raw:  # the form carries the target selector
+                ov = target.merge_into_saved(ov, target.overrides_from_form(raw))
+            else:  # keep the saved target selection
+                ov.update({k: saved[k] for k in ("target_platforms", "target_cpu_vendors", "target_cpus")
+                           if k in saved})
+            from refreshsizer import workflow
+
+            workflow.make_policy(None, ov)
         except Exception as e:  # validation error -> show it on the form
-            return go(f"/p/{n}/policy?error={str(e)[:300]}")
+            from refreshsizer.ui.jobs import friendly_error
+
+            return go(f"/p/{n}/policy?error={quote(friendly_error(e))[:600]}")
         S().save_policy(n, ov)
         if form.get("then") == "size":
             return start("sizing", n, lambda progress, job: services.run_size(S(), n, {}, "policy", progress))
@@ -242,8 +274,10 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
     @app.post("/p/{name}/size")
     async def size(name: str, request: Request) -> RedirectResponse:  # also validates the policy
         n, _ = proj(name)
-        form = {k: str(v) for k, v in (await request.form()).items()}
+        raw = await request.form()
+        form = {k: str(v) for k, v in raw.items()}
         from refreshsizer import workflow
+        from refreshsizer.ui import target
 
         def num(k: str) -> float | None:
             v = form.get(k, "").strip().replace(",", ".")
@@ -253,23 +287,35 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
             years = num("years")
             ov = workflow.overrides_from_flags(growth=num("growth"), years=int(years) if years else None,
                                                objective=form.get("objective") or None, u_max=num("u_max"))
+            if "vendor" in raw or "plat" in raw:  # target selector / "use this scenario"
+                tgt = target.overrides_from_form(raw) if "vendor" in raw else {
+                    "target_platforms": raw.getlist("plat") or None, "target_cpu_vendors": None,
+                    "target_cpus": raw.getlist("cpu") or None}
+                if form.get("save_target"):  # summary page: remember the customer's choice in policy.yaml
+                    saved = target.merge_into_saved(S().policy_overrides(n), tgt)
+                    workflow.make_policy(None, saved)
+                    S().save_policy(n, saved)
+                else:
+                    ov.update(tgt)
             project = S().project(n)
             # validate the full policy now (defaults < Policy sheet < policy.yaml < what-if) instead of in the job
             workflow.make_policy(project.policy_overrides if project else None, S().policy_overrides(n), ov)
         except ValueError as e:
             from refreshsizer.ui.jobs import friendly_error
 
-            back = "whatif" if form.get("from") == "whatif" else "summary"
+            back = {"whatif": "whatif", "results": "results"}.get(form.get("from", ""), "summary")
             return go(f"/p/{n}/{back}?error={quote(friendly_error(e))[:600]}")
         label = form.get("label", "").strip() or ("what-if" if ov else "baseline")
+        if form.get("from") == "summary" and not form.get("label"):
+            label = "baseline"
         return start("sizing", n, lambda progress, job: services.run_size(S(), n, ov, label, progress))
 
     @app.get("/p/{name}/results", response_class=HTMLResponse)
-    def results_page(name: str, request: Request, run: str = "") -> HTMLResponse:
+    def results_page(name: str, request: Request, run: str = "", error: str = "") -> HTMLResponse:
         n, meta = proj(name)
         project, rec = services.project_for_run(S(), n, run or None)
         ctx: dict[str, Any] = {"name": n, "meta": meta, "tab": "results", "project": project, "run": rec,
-                               "runs": S().runs(n)}
+                               "runs": S().runs(n), "error": error}
         if project is not None and project.sizing:
             from refreshsizer.report.build import build_context
 
@@ -291,7 +337,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
                 error = error or friendly_error(e)
                 pol = workflow.make_policy()
         return render(request, "whatif.html", {"name": n, "meta": meta, "tab": "whatif", "project": project,
-                                               "runs": S().runs(n), "policy": pol, "error": error})
+                                               "runs": S().runs(n), "policy": pol, "error": error,
+                                               "tgt": target_ctx(n), "open_target": False})
 
     @app.get("/p/{name}/compare", response_class=HTMLResponse)
     def compare_page(name: str, request: Request, a: str = "", b: str = "") -> HTMLResponse:

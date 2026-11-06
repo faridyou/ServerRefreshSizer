@@ -150,6 +150,11 @@ details summary { cursor: pointer; color: var(--accent); }
 <table><tr><th>#</th><th>config</th><th>SPC</th><th>SU/host</th><th>{{ t('hosts') }}</th><th>{{ t('util_failed') }}</th><th>RAM/host</th><th>{{ t('drives') }}</th><th>{{ t('power') }}</th><th>RU</th><th>{{ t('capex') }}</th><th>licenses</th><th>TCO</th></tr>
 {% for x in c.cs.candidates %}<tr><td>{{ loop.index }}</td><td>{{ x.label }}{% if x.spc_flags %}<div class="muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.util_failed | pct }}</td>
 <td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num">{{ x.capex_total | money }}</td><td class="num">{{ x.license_total | money }}</td><td class="num">{{ x.tco | money }}</td></tr>{% endfor %}</table>
+{% if c.cs.scenarios %}<h3>{{ t('ui_scenarios') }}</h3>
+<p class="muted">{{ t('ui_target_used') }}: {{ c.cs.target_selection }}</p>
+<table><tr><th>CPU / platform</th><th>{{ t('ui_spec_basis') }}</th><th>SPC</th><th>{{ t('hosts') }}</th><th>{{ t('cores') }}</th><th>{{ t('util_failed') }}</th><th>{{ t('power') }}</th><th>TCO</th><th>{{ t('ui_vs_rec') }}</th><th></th></tr>
+{% for x in c.cs.scenarios %}<tr><td>{{ x.label }}</td><td>{{ c.scenario_basis[x.label] }}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.tco | money }}</td><td class="num">{{ (x.tco - c.rec.tco) | money if c.rec else '' }}</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}</table>
+<p class="muted">{{ t('ui_scenarios_note') }}</p>{% endif %}
 {% if c.charts.pareto %}<img class="chart" src="{{ c.charts.pareto }}" alt="{{ t('pareto') }}">{% endif %}
 </section>
 

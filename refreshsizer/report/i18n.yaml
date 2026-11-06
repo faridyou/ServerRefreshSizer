@@ -195,3 +195,16 @@ h_inventory_apply_headroom: {en: "Apply U_max in inventory-only mode (both resul
 h_rperf_factor_mode: {en: "conservative = always 0.425; generation_matched uses IBM's own SPEC anchors.", fr: "conservative = toujours 0,425 ; generation_matched utilise les ancrages SPEC d'IBM."}
 h_k_arch: {en: "RISC -> x86 adjustment by class.", fr: "Ajustement RISC -> x86 par classe."}
 h_monte_carlo_runs: {en: "Number of Monte Carlo runs (fixed seed for reproducibility).", fr: "Nombre de tirages Monte Carlo (graine fixe pour la reproductibilité)."}
+ui_target: {en: "Target servers", fr: "Serveurs cibles"}
+ui_target_hint: {en: "(Dell platforms and CPU vendor the customer accepts)", fr: "(plateformes Dell et fabricant de processeur acceptés par le client)"}
+ui_vendor_both: {en: "Intel and AMD", fr: "Intel et AMD"}
+ui_target_cpus: {en: "Restrict to specific CPUs", fr: "Limiter à certains processeurs"}
+ui_target_cpus_hint: {en: "No CPU ticked = every CPU supported by the selected platforms. The results always list the best configuration per CPU model (CPU scenarios).",
+  fr: "Aucun processeur coché = tous les processeurs pris en charge par les plateformes choisies. Les résultats listent toujours la meilleure configuration par modèle de processeur (scénarios CPU)."}
+ui_scenarios: {en: "CPU scenarios (best configuration per CPU model)", fr: "Scénarios CPU (meilleure configuration par modèle de processeur)"}
+ui_spec_basis: {en: "SPEC basis", fr: "Base SPEC"}
+ui_vs_rec: {en: "vs recommended", fr: "vs recommandé"}
+ui_use_scenario: {en: "Use this scenario", fr: "Utiliser ce scénario"}
+ui_scenarios_note: {en: "Ranking = the optimizer objective; configurations backed by a published SPEC result rank before estimated ones (prefer_measured_spec). 'Use this scenario' re-runs the sizing restricted to that platform and CPU, so its BoM and reports can be produced.",
+  fr: "Classement = objectif de l'optimiseur ; les configurations appuyées par un résultat SPEC publié passent avant les estimations (prefer_measured_spec). « Utiliser ce scénario » relance le dimensionnement limité à cette plateforme et ce processeur, pour en produire la nomenclature et les rapports."}
+ui_target_used: {en: "Target selection", fr: "Sélection cible"}

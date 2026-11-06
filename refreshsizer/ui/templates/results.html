@@ -7,10 +7,13 @@
 <div class="card row"><span>{{ t('ui_run') }}:</span>
 <form method="get" class="row"><select name="run" onchange="this.form.submit()">{% for x in runs %}<option value="{{ x.id }}" {{ 'selected' if run and run.id == x.id else '' }}>{{ x.created }} - {{ x.label }}</option>{% endfor %}</select><noscript><button>{{ t('ui_view') }}</button></noscript></form>
 <a class="btn sec" href="/p/{{ name }}/whatif">{{ t('ui_tab_whatif') }}</a><a class="btn sec" href="/p/{{ name }}/reports">{{ t('ui_tab_reports') }}</a></div>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
 {% for w in r.run.warnings %}<p class="lowbanner small">{{ w }}</p>{% endfor %}
 {% for c in r.clusters %}{% set cs = c.cs %}{% set d = c.d %}{% set rec = c.rec %}
 <h2>{{ d.cluster }} <span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(d.confidence.value, 'lo') }}">{{ d.mode.value }} / {{ d.confidence.value }}</span></h2>
 {% if c.banner %}<p class="{{ 'banner' if c.banner == 'very_low_banner' else 'lowbanner' }}">{{ t(c.banner) }}</p>{% endif %}
+<p class="small muted">{{ t('ui_target_used') }}: {{ cs.target_selection }}</p>
+{% for w in cs.warnings %}<p class="lowbanner small">{{ w }}</p>{% endfor %}
 {% if not rec %}<p class="err">no feasible configuration</p>{% else %}
 {% set ex = rec.explanations %}
 <div class="grid">
@@ -32,6 +35,20 @@
 <div class="card">{% if c.charts.hist %}<img class="chart" src="{{ c.charts.hist }}" alt="Monte Carlo">{% endif %}</div>
 </div>
 {% if c.charts.pareto %}<div class="card"><img class="chart" src="{{ c.charts.pareto }}" alt="pareto" style="max-width:900px"></div>{% endif %}
+{% if cs.scenarios %}<div class="card"><h3>{{ t('ui_scenarios') }}</h3>
+<table id="scen{{ loop.index }}"><thead><tr><th class="sort">CPU</th><th class="sort">platform</th><th class="sort">{{ t('ui_spec_basis') }}</th><th class="sort num">SPC</th><th class="sort num">{{ t('hosts') }}</th><th class="sort num">{{ t('cores') }}</th><th class="sort num" title="{{ t('util_failed') }}">U fail</th><th class="sort num">W</th><th class="sort num">TCO</th><th class="sort num">{{ t('ui_vs_rec') }}</th><th></th></tr></thead><tbody>
+{% for x in cs.scenarios %}{% set tags = c.scenario_tags.get(x.label, []) %}
+<tr {% if 'recommended' in tags %}style="background:#eef5fd"{% endif %}><td style="min-width:210px"><b>{{ x.config.cpu_count }}x {{ x.config.cpu_name }}</b>
+<details class="calc"><summary>{{ t('ui_show_calc') }}</summary>{{ calcs(x.explanations | selectattr('step_id', 'in', ['target_su', 'ha']) | list, t) }}</details></td>
+<td>{{ x.config.platform }}</td><td><span class="tag {{ 'hi' if c.scenario_basis[x.label] == 'published' else 'mid' }}">{{ c.scenario_basis[x.label] }}</span></td>
+<td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td>
+<td class="num" data-v="{{ x.util_failed }}">{{ x.util_failed | pct }}</td><td class="num" data-v="{{ x.power_w_total }}">{{ '{:,.0f}'.format(x.power_w_total) }}</td>
+<td class="num" data-v="{{ x.tco }}">{{ x.tco | money }}</td><td class="num" data-v="{{ x.tco - rec.tco }}">{{ (x.tco - rec.tco) | money }}</td>
+<td style="min-width:150px">{% for tg in tags %}<span class="tag {{ 'hi' if tg == 'recommended' else 'mid' }}">{{ tg }}</span> {% endfor %}
+{% if 'recommended' not in tags %}<form method="post" action="/p/{{ name }}/size"><input type="hidden" name="from" value="results">
+<input type="hidden" name="plat" value="{{ x.config.platform }}"><input type="hidden" name="cpu" value="{{ x.config.cpu_id }}">
+<input type="hidden" name="label" value="scenario: {{ x.label }}"><button class="sec small" style="margin-top:3px">{{ t('ui_use_scenario') }}</button></form>{% endif %}</td></tr>{% endfor %}
+</tbody></table><p class="small muted">{{ t('ui_scenarios_note') }}</p></div>{% endif %}
 {% set labels = cs.candidates | map(attribute='label') | list %}
 {% set cands = cs.candidates + (cs.pareto | rejectattr('label', 'in', labels) | list) %}
 <div class="card"><h3>{{ t('ui_candidates') }} <input type="text" data-filter="cand{{ loop.index }}" placeholder="{{ t('ui_filter') }}"></h3>

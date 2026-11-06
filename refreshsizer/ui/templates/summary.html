@@ -21,7 +21,8 @@
 <h3>{{ t('assumptions') }}</h3><ul>{% for a in project.ingest.assumptions %}<li>{{ a.category }}: {{ a.text }}</li>{% endfor %}</ul>
 <details><summary>Transformations ({{ project.ingest.transformations | length }})</summary><ul>{% for x in project.ingest.transformations %}<li class="small">{{ x }}</li>{% endfor %}</ul></details>
 </div>
-<div class="row"><a class="btn sec" href="/p/{{ name }}/policy">{{ t('ui_tab_policy') }}</a>
-<form method="post" action="/p/{{ name }}/size"><button>{{ t('ui_run_sizing') }}</button></form></div>
+<form method="post" action="/p/{{ name }}/size"><input type="hidden" name="from" value="summary"><input type="hidden" name="save_target" value="1">
+{% include "_target.html" %}
+<div class="row"><a class="btn sec" href="/p/{{ name }}/policy">{{ t('ui_tab_policy') }}</a><button>{{ t('ui_run_sizing') }}</button></div></form>
 {% endif %}
 {% endblock %}

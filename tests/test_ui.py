@@ -366,3 +366,57 @@ def test_stuck_job_does_not_block_other_projects(ui: UI) -> None:
     assert c.status == "queued"  # same project: waits for its own previous job
     gate.set()
     assert ui.jobs.wait(c.id, 5).status == "done"
+
+
+def _target_form(plats: list[str], vendor: str = "both", extra: dict[str, str] | None = None,
+                 cpus: list[str] | None = None) -> dict[str, Any]:
+    """httpx form data: repeated fields as lists."""
+    return {"vendor": vendor, "plat": plats, "cpu": cpus or [], **(extra or {})}
+
+
+INTEL = ["R670", "R770", "R770AP", "R470", "R570"]
+AMD = ["R6715", "R7715", "R6725", "R7725"]
+
+
+def test_target_selection_saved_and_scenarios(ui: UI, fixtures_dir: Path) -> None:
+    from refreshsizer.catalog.loader import load_cpus
+
+    name = ui.new("target")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary")
+    assert 'name="plat"' in page.text and "PowerEdge R7725" in page.text
+    form = _target_form(INTEL + AMD, "Intel", {"from": "summary", "save_target": "1"})
+    j = ui.job(ui.c.post(f"/p/{name}/size", data=form))
+    assert ui.store.policy_overrides(name) == {"target_platforms": INTEL, "target_cpu_vendors": ["Intel"]}
+    cs = ui.sizing(name).clusters[0]
+    assert cs.recommended and load_cpus()[cs.recommended.config.cpu_id].vendor == "Intel"
+    res = ui.c.get(j.redirect)
+    assert "CPU scenarios" in res.text and "best Intel" in res.text and "Use this scenario" in res.text
+    # 'use this scenario' re-runs restricted to that platform + CPU
+    alt = cs.scenarios[1]
+    form2 = {"from": "results", "plat": alt.config.platform, "cpu": alt.config.cpu_id,
+             "label": f"scenario: {alt.label}"}
+    ui.job(ui.c.post(f"/p/{name}/size", data=form2))
+    new = ui.sizing(name).clusters[0]
+    assert new.recommended and new.recommended.label == alt.label
+    assert ui.store.runs(name)[0]["label"] == f"scenario: {alt.label}"
+    assert ui.store.policy_overrides(name)["target_cpu_vendors"] == ["Intel"]  # saved choice untouched
+
+
+def test_whatif_target_is_one_off_and_policy_keeps_target(ui: UI, fixtures_dir: Path) -> None:
+    from refreshsizer.catalog.loader import load_cpus
+
+    name = ui.new("target2")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    ui.job(ui.c.post(f"/p/{name}/size", data=_target_form(AMD, "AMD", {"from": "whatif"})))
+    cs = ui.sizing(name).clusters[0]
+    assert cs.recommended and load_cpus()[cs.recommended.config.cpu_id].vendor == "AMD"
+    assert ui.store.policy_overrides(name) == {}  # what-if does not change the saved policy
+    ui.c.post(f"/p/{name}/policy", data=_target_form(["R7725"], "AMD", {"then": "save"}))
+    assert ui.store.policy_overrides(name)["target_platforms"] == ["R7725"]
+    ui.c.post(f"/p/{name}/policy", data={"slack": "0.25", "then": "save"})  # form without the selector
+    assert ui.store.policy_overrides(name)["target_platforms"] == ["R7725"]
+    bad = ui.c.post(f"/p/{name}/size", data={"vendor": "both", "from": "whatif"})
+    assert "select at least one target platform" in bad.text

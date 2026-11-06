@@ -1,0 +1,17 @@
+<details class="card target" {% if open_target %}open{% endif %}>
+<summary><b>{{ t('ui_target') }}</b>: {{ tgt.text }} <span class="muted small">{{ t('ui_target_hint') }}</span></summary>
+<div class="row" style="margin:8px 0">
+{% for v, label in [('both', t('ui_vendor_both')), ('Intel', 'Intel Xeon 6'), ('AMD', 'AMD EPYC 9005')] %}
+<label><input type="radio" name="vendor" value="{{ v }}" data-vendor-pick="{{ v }}" {{ 'checked' if tgt.vendor == v else '' }}> {{ label }}</label>
+{% endfor %}
+</div>
+<div class="cols2">
+{% for g in tgt.groups %}<div data-vendor-group="{{ g.vendor }}"><h3>{{ g.vendor }}</h3>
+{% for p in g.platforms %}<label style="display:block"><input type="checkbox" name="plat" value="{{ p.model }}" data-vendor="{{ g.vendor }}" {{ 'checked' if p.checked else '' }}>
+<b>PowerEdge {{ p.model }}</b> <span class="small muted">{{ p.u }}U · {{ p.sockets }} socket{{ 's' if p.sockets > 1 else '' }} · {{ p.ncpu }} CPUs</span></label>{% endfor %}
+<details style="margin-top:6px"><summary class="small">{{ t('ui_target_cpus') }} ({{ g.vendor }})</summary>
+{% for c in g.cpus %}<label class="small" style="display:inline-block;min-width:230px"><input type="checkbox" name="cpu" value="{{ c.id }}" data-vendor="{{ g.vendor }}" {{ 'checked' if c.checked else '' }}> {{ c.model }} <span class="muted">({{ c.cores }}c)</span></label>{% endfor %}
+</details></div>{% endfor %}
+</div>
+<p class="small muted">{{ t('ui_target_cpus_hint') }}</p>
+</details>

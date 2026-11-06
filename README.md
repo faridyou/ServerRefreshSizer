@@ -53,7 +53,10 @@ What you see, page by page:
 * **3 Ingest summary** – estate totals per cluster and overall (hosts, sockets, cores, RAM, VMs, vCPU, vRAM,
   provisioned/used storage, IOPS), each CPU model with its matched benchmark, sizing mode and confidence per
   cluster, data-quality flags, assumptions, transformations, and the customer question list in English and French,
-  each with a *Copy* button.
+  each with a *Copy* button. Below it, the **Target servers** selector: pick *Intel and AMD*, *Intel Xeon 6* or
+  *AMD EPYC 9005*, tick the Dell platforms the customer accepts (grouped by CPU vendor, with height in U, sockets
+  and number of supported CPUs), and optionally restrict to specific CPU models. *Run sizing* saves this choice in
+  the project's `policy.yaml`.
 * **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
   HA, memory, storage (protection, slack, DRR), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
@@ -62,10 +65,15 @@ What you see, page by page:
   utilization, licensing delta, P50/P90, TCO), each with **Show calculation** expanders that reveal the formula,
   inputs, output, sources with clickable URLs and assumptions. Below: the bar chart of performance-normalized vs
   core-match vs GHz-match hosts, the Monte Carlo histogram, the Pareto chart, a sortable and filterable candidate
-  table (every candidate row also expands to its calculations), the per-host BoM with the DIMM channel diagram,
+  table (every candidate row also expands to its calculations), the **CPU scenarios** table – the best
+  configuration for every CPU model allowed by the target selection, tagged *recommended*, *best Intel* and *best
+  AMD*, with SPEC basis (published or estimated), hosts, cores, failure-mode utilization, power, TCO and the
+  difference to the recommendation; *Use this scenario* re-runs the sizing on that platform and CPU so its BoM and
+  reports can be produced for a customer who will not consider the other vendor – the per-host BoM with the DIMM channel diagram,
   constraint checks with OK/WARN/FAIL tags, the uncertainty section (tornado, or the 100/70/50 % table in
   inventory-only mode) and the benchmark basis.
-* **6 What-if** – change CPU growth, horizon, U_max (all classes) or the objective and re-run in place. The last
+* **6 What-if** – change CPU growth, horizon, U_max (all classes), the objective or the target servers (one-off,
+  the saved selection is not changed) and re-run in place. The last
   5 runs are kept with their label and overrides; pick two (A/B) to see them side by side (D0, D_T, C_req,
   recommendation, hosts, P50/P90, naive counts, TCO, licensing delta).
 * **7 Reports** – generate HTML, Excel (live formulas) and PDF in English or French for any kept run; download
@@ -81,6 +89,7 @@ What you see, page by page:
 refreshsizer template --out template.xlsx [--lang fr]          # manual input template
 refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
+                  [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
 refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang fr]
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]

@@ -207,7 +207,10 @@ def pareto(cands: list[Candidate]) -> list[Candidate]:
 
 
 def enumerate_configs(policy: Policy) -> list[tuple[TargetPlatform, CpuModel, int]]:
+    """Every (platform, CPU, CPU count) allowed by the target selection (platforms, CPU vendors, CPUs)."""
     cpus = load_cpus()
+    vendors = {v.lower() for v in policy.target_cpu_vendors} if policy.target_cpu_vendors else None
+    wanted = set(policy.target_cpus) if policy.target_cpus else None
     out = []
     for p in load_platforms().values():
         if policy.target_platforms and p.model not in policy.target_platforms:
@@ -216,8 +219,65 @@ def enumerate_configs(policy: Policy) -> list[tuple[TargetPlatform, CpuModel, in
             cpu = cpus.get(cid)
             if cpu is None or cpu.max_sockets < p.sockets:
                 continue
+            if vendors is not None and cpu.vendor.lower() not in vendors:
+                continue
+            if wanted is not None and cid not in wanted:
+                continue
             out.append((p, cpu, p.sockets))
     return out
+
+
+def target_selection_text(policy: Policy) -> str:
+    parts = []
+    if policy.target_platforms:
+        parts.append("platforms " + ", ".join(policy.target_platforms))
+    if policy.target_cpu_vendors:
+        parts.append("CPU vendor " + " / ".join(policy.target_cpu_vendors))
+    if policy.target_cpus:
+        parts.append(f"{len(policy.target_cpus)} selected CPU(s)")
+    return "; ".join(parts) or "all Dell 17G platforms and CPUs"
+
+
+def cpu_scenarios(feas: list[Candidate], objective: str, db: bool, prefer_measured: bool,
+                  limit: int = 15) -> list[Candidate]:
+    """Best feasible configuration per CPU model (same ranking as the recommendation).
+
+    The best configuration of every CPU vendor is always kept, even beyond `limit`."""
+    cpus = load_cpus()
+    best: dict[str, Candidate] = {}
+    for c in sorted(feas, key=lambda c: sort_key(c, objective, db, prefer_measured)):
+        best.setdefault(c.config.cpu_id, c)
+    ranked = list(best.values())
+    keep = ranked[:limit]
+    seen = {cpus[c.config.cpu_id].vendor for c in keep}
+    for c in ranked[limit:]:
+        v = cpus[c.config.cpu_id].vendor
+        if v not in seen:
+            keep.append(c)
+            seen.add(v)
+    return keep
+
+
+def spec_basis(c: Candidate) -> str:
+    """'published' when the SPC comes from a SPEC result for that CPU and socket count, else 'estimated'."""
+    return "published" if c.spc_confidence.value == "HIGH" else "estimated"
+
+
+def scenario_tags(scenarios: list[Candidate], recommended: Candidate | None) -> dict[str, list[str]]:
+    """label -> tags: 'recommended', 'best Intel', 'best AMD'."""
+    cpus = load_cpus()
+    tags: dict[str, list[str]] = {}
+    seen: set[str] = set()
+    for c in scenarios:
+        t = []
+        if recommended is not None and c.label == recommended.label:
+            t.append("recommended")
+        v = cpus[c.config.cpu_id].vendor
+        if v not in seen:
+            t.append(f"best {v}")
+            seen.add(v)
+        tags[c.label] = t
+    return tags
 
 
 def optimize(d: ClusterDemand, policy: Policy, prices: dict[str, Any], cache: BenchCache,

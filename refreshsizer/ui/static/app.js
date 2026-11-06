@@ -47,3 +47,14 @@
   document.addEventListener("DOMContentLoaded", initDrop);
   document.addEventListener("htmx:afterSwap", initDrop);
 })();
+// Target selector: picking a vendor ticks that vendor's platforms and unticks the other vendor's
+document.addEventListener("change", function (e) {
+  var r = e.target.closest("[data-vendor-pick]"); if (!r) return;
+  var v = r.getAttribute("data-vendor-pick"), box = r.closest(".target");
+  Array.prototype.forEach.call(box.querySelectorAll("input[name=plat]"), function (cb) {
+    cb.checked = (v === "both") || cb.getAttribute("data-vendor") === v;
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("input[name=cpu]"), function (cb) {
+    if (v !== "both" && cb.getAttribute("data-vendor") !== v) cb.checked = false;
+  });
+});

@@ -24,8 +24,16 @@ def make_policy(project_overrides: dict[str, Any] | None = None, policy_file: Pa
 
 def overrides_from_flags(growth: float | None = None, years: int | None = None, objective: str | None = None,
                          p95_estimate: bool = False, lang: str | None = None,
-                         u_max: float | None = None) -> dict[str, Any]:
+                         u_max: float | None = None, platforms: list[str] | None = None,
+                         cpu_vendors: list[str] | None = None, cpus: list[str] | None = None) -> dict[str, Any]:
+    """Explicit overrides. platforms / cpu_vendors / cpus: target selection (None or [] = no restriction)."""
     ov: dict[str, Any] = {}
+    if platforms:
+        ov["target_platforms"] = list(platforms)
+    if cpu_vendors:
+        ov["target_cpu_vendors"] = [canonical_vendor(v) for v in cpu_vendors]
+    if cpus:
+        ov["target_cpus"] = list(cpus)
     if growth is not None:
         ov["growth"] = {"cpu_pct": growth}
     if years is not None:
@@ -41,6 +49,10 @@ def overrides_from_flags(growth: float | None = None, years: int | None = None, 
 
         ov["u_max"] = {k: u_max for k in default_policy_dict().get("u_max", {"default": 0.75})}
     return ov
+
+
+def canonical_vendor(v: str) -> str:
+    return {"intel": "Intel", "amd": "AMD"}.get(v.strip().lower(), v.strip())
 
 
 def ingest(files: list[Path], *, review_mode: str = "yes", llm: str | bool = "auto", name: str | None = None,

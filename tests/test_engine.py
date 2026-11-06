@@ -156,3 +156,50 @@ def test_ha_loop_always_terminates() -> None:
         ha.plan(1000, 1000, 100, pol, "external", u_check=-0.5)  # used to loop for ever
     p = ha.plan(1e12, 1.0, 100, pol, "external", u_check=0.75)  # absurd input still returns
     assert p.n_total > 0
+
+
+def _vendor(cpu_id: str) -> str:
+    from refreshsizer.catalog.loader import load_cpus
+
+    return load_cpus()[cpu_id].vendor
+
+
+@pytest.mark.parametrize("vendor", ["Intel", "AMD"])
+def test_cpu_vendor_filter(fixtures_dir: Path, vendor: str) -> None:
+    run = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]),
+                       load_policy({"target_cpu_vendors": [vendor]}))
+    cs = run.clusters[0]
+    assert cs.recommended and _vendor(cs.recommended.config.cpu_id) == vendor
+    assert {_vendor(c.config.cpu_id) for c in cs.candidates + cs.scenarios + cs.pareto} == {vendor}
+    assert vendor in cs.target_selection
+
+
+def test_cpu_scenarios_best_per_cpu_and_vendor(lo_run) -> None:  # type: ignore[no-untyped-def]
+    from refreshsizer.engine.optimizer import scenario_tags
+
+    cs = lo_run.clusters[0]
+    ids = [c.config.cpu_id for c in cs.scenarios]
+    assert len(ids) == len(set(ids))  # one row per CPU model
+    assert cs.scenarios[0].label == cs.recommended.label
+    assert {_vendor(i) for i in ids} == {"Intel", "AMD"}  # best of each vendor always listed
+    tags = scenario_tags(cs.scenarios, cs.recommended)
+    assert sum("best Intel" in v for v in tags.values()) == 1 and sum("best AMD" in v for v in tags.values()) == 1
+
+
+def test_target_platform_and_cpu_filter(fixtures_dir: Path) -> None:
+    pol = load_policy({"target_platforms": ["R770"], "target_cpus": ["intel-xeon-6787p", "intel-xeon-6760p"]})
+    cs = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), pol).clusters[0]
+    assert cs.evaluated == 2 and {c.config.platform for c in cs.scenarios} == {"R770"}
+    none = load_policy({"target_platforms": ["R770"], "target_cpu_vendors": ["AMD"]})
+    cs2 = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), none).clusters[0]
+    assert cs2.recommended is None and any("no target configuration" in w for w in cs2.warnings)
+
+
+def test_target_validation() -> None:
+    for ov in ({"target_platforms": ["R750"]}, {"target_cpu_vendors": ["Ampere"]}, {"target_cpus": ["nope"]}):
+        with pytest.raises(ValueError, match="target_"):
+            load_policy(ov)
+
+
+def test_golden_unchanged_without_target(lo_run) -> None:  # type: ignore[no-untyped-def]
+    assert lo_run.clusters[0].target_selection == "all Dell 17G platforms and CPUs"

@@ -3,6 +3,7 @@
 <div class="card"><p>{{ t('ui_policy_intro') }}</p>
 {% if error %}<p class="err">{{ error }}</p>{% endif %}{% if saved %}<p class="okmsg">policy.yaml ✓</p>{% endif %}
 <form method="post" action="/p/{{ name }}/policy">
+{% include "_target.html" %}
 {% for g in groups %}<h3>{{ g.title }}</h3>
 {% for f in g.fields %}<div class="field {{ 'changed' if f.changed else '' }}">
 <label for="f_{{ f.path }}"><code>{{ f.label }}</code></label>

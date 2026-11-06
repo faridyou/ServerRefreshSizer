@@ -91,6 +91,9 @@ class Policy(BaseModel):
     rack_unit_budget: int | None = None
     power_budget_w: float | None = None
     target_platforms: list[str] | None = None
+    target_cpu_vendors: list[str] | None = None
+    target_cpus: list[str] | None = None
+    cpu_scenarios_max: int = 15
     monte_carlo_runs: int = 5000
     monte_carlo_seed: int = 42
     llm_enabled: str | bool = "auto"
@@ -133,9 +136,30 @@ class Policy(BaseModel):
             bad.append("max_cluster_size must be >= 2")
         if self.monte_carlo_runs < 1:
             bad.append("monte_carlo_runs must be >= 1")
+        bad += self._check_targets()
         if bad:
             raise ValueError("invalid policy: " + "; ".join(bad))
         return self
+
+    def _check_targets(self) -> list[str]:
+        from refreshsizer.catalog.loader import load_cpus, load_platforms
+
+        bad: list[str] = []
+        plats, cpus = load_platforms(), load_cpus()
+        if self.target_platforms is not None:
+            unknown = [p for p in self.target_platforms if p not in plats]
+            if unknown:
+                bad.append(f"target_platforms: unknown {unknown} (known: {sorted(plats)})")
+        if self.target_cpu_vendors is not None:
+            vendors = {c.vendor.lower() for c in cpus.values()}
+            unknown = [v for v in self.target_cpu_vendors if v.lower() not in vendors]
+            if unknown:
+                bad.append(f"target_cpu_vendors: unknown {unknown} (use Intel and/or AMD)")
+        if self.target_cpus is not None:
+            unknown = [c for c in self.target_cpus if c not in cpus]
+            if unknown:
+                bad.append(f"target_cpus: unknown CPU ids {unknown}")
+        return bad
 
     # ---- helpers -------------------------------------------------------
     def umax(self, wl_class: str) -> float:

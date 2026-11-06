@@ -59,7 +59,10 @@ objective: min_tco      # min_tco | min_hosts | min_licensed_cores | min_power |
 top_n: 5
 rack_unit_budget: null
 power_budget_w: null
-target_platforms: null   # e.g. [R7725, R770] to restrict the optimizer
+target_platforms: null   # e.g. [R7725, R770] to restrict the optimizer (null = every Dell 17G platform)
+target_cpu_vendors: null # e.g. [Intel] or [AMD] (null = both)
+target_cpus: null        # e.g. [amd-epyc-9355, intel-xeon-6787p] (null = every supported CPU)
+cpu_scenarios_max: 15    # CPU scenarios shown per cluster (best configuration per CPU model)
 monte_carlo_runs: 5000
 monte_carlo_seed: 42
 llm_enabled: auto
