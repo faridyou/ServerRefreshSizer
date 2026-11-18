@@ -19,5 +19,11 @@ def env() -> Environment:
     return e
 
 
+TEMPLATES = {"customer": "report_customer.html.j2", "presales": "report_presales.html.j2",
+             "full": "report.html.j2"}
+
+
 def render_html(ctx: dict[str, Any], pdf: bool = False) -> str:
-    return env().get_template("report.html.j2").render(**ctx, pdf=pdf)
+    """Render the report at ctx['level']: customer (simple), presales (concise) or full (every calculation)."""
+    name = TEMPLATES.get(str(ctx.get("level", "full")), "report.html.j2")
+    return env().get_template(name).render(**ctx, pdf=pdf)

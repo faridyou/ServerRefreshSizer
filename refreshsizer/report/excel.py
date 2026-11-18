@@ -29,11 +29,12 @@ class Book:
         self.wrap = self.wb.add_format({"text_wrap": True, "valign": "top"})
         self.muted = self.wb.add_format({"font_color": "#52514E", "italic": True})
 
-    def sheet(self, name: str, title: str, widths: dict[int, int] | None = None) -> Any:
+    def sheet(self, name: str, title: str, widths: dict[int, int] | None = None, legend: bool = True) -> Any:
         ws = self.wb.add_worksheet(name[:31])
         ws.write(0, 0, title, self.title)
-        ws.write(1, 0, "Yellow = editable input; green = live formula (cached value = RefreshSizer result).",
-                 self.muted)
+        if legend:
+            ws.write(1, 0, "Yellow = editable input; green = live formula (cached value = RefreshSizer result).",
+                     self.muted)
         for c, w in (widths or {0: 38, 1: 16, 2: 70}).items():
             ws.set_column(c, c, w)
         return ws
@@ -526,3 +527,111 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
 def ctx_cpu_ghz(c: dict[str, Any]) -> float:
     cpu = c.get("cpu")
     return float(cpu.base_ghz) if cpu else 0.0
+
+
+def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
+    """Customer-level workbook: current environment, benchmarks and the proposal. Values only - no formulas,
+    no internal prices or licensing costs."""
+    bk = Book(Path(out))
+    t = ctx["t"]
+    clusters: list[dict[str, Any]] = ctx["clusters"]
+    ws1 = bk.sheet(t("c_title")[:31], t("c_title"), {0: 28, 1: 34, 2: 14, 3: 14, 4: 14, 5: 18, 6: 18}, legend=False)
+    ws1.write(1, 0, ctx["project"].name, bk.muted)
+    bk.header(ws1, 3, [t("cluster"), t("recommended"), t("c_servers"), t("cores"), t("c_util_after_failure"),
+                       t("hosts") + " " + t("c_vs"), t("cores") + " " + t("c_vs")])
+    r = 4
+    for c in clusters:
+        rec, s = c["rec"], c["src"]
+        ws1.write_row(r, 0, [c["d"].cluster, rec.label if rec else "-", rec.n_total if rec else "-",
+                             rec.n_total * rec.config.total_cores if rec else "-"])
+        if rec:
+            ws1.write_number(r, 4, rec.util_failed, bk.pct)
+        ws1.write_row(r, 5, [s["hosts"], s["cores"]])
+        r += 1
+    r += 1
+    for c in clusters:
+        png = c["png"].get("hosts")
+        if png:
+            ws1.insert_image(r, 0, "hosts.png", {"image_data": io.BytesIO(png), "x_scale": 0.6, "y_scale": 0.6})
+            r += 18
+
+    ws2 = bk.sheet(t("c_current")[:31], t("c_current"), {0: 46, 1: 10, 2: 10, 3: 10, 4: 10, 5: 14}, legend=False)
+    r = 3
+    for c in clusters:
+        s = c["src"]
+        ws2.write(r, 0, c["d"].cluster, bk.b)
+        r += 1
+        bk.header(ws2, r, [t("cpu"), t("hosts"), t("c_sockets"), t("cores"), "GHz"])
+        r += 1
+        for m in s["models"]:
+            ws2.write_row(r, 0, [m["cpu"], m["hosts"], m["sockets"] or "", m["cores"], m["ghz"] or ""])
+            r += 1
+        for label, val in ((t("ui_overall") + " " + t("cores"), s["cores"]), ("GHz " + t("c_total"), s["ghz_total"]),
+                           (t("memory") + " (GB)", s["ram_gb"]), (t("c_vms"), s["vms"]), ("vCPU", s["vcpu"]),
+                           (t("c_storage_used") + " (TiB)", round(s["storage_used_tib"], 1)),
+                           (t("c_cpu_util") + " (%)", s["util_pct"] if s["util_pct"] is not None else t("c_no_util")),
+                           (t("c_collection") + " (" + t("c_days") + ")", s["collection_days"] or "")):
+            ws2.write(r, 0, label)
+            ws2.write(r, 1, val)
+            r += 1
+        r += 2
+
+    ws3 = bk.sheet(t("c_benchmarks")[:31], t("c_benchmarks"), {0: 12, 1: 30, 2: 22, 3: 12, 4: 34, 5: 60},
+                   legend=False)
+    ws3.write(2, 0, t("c_bench_intro"), bk.muted)
+    r = 3
+    bk.header(ws3, r, ["", t("cpu"), "SPECrate2017_int_base", t("c_per_core"), t("system"), t("sources")])
+    r += 1
+    for c in clusters:
+        for b in c["benchmarks"]:
+            if b.get("metric") == "rPerf":
+                continue
+            ws3.write_row(r, 0, [t("c_side_" + b["side"]), b["cpu"], b.get("value") or "", b.get("spc") or "",
+                                 b.get("system") or "", b.get("url") or ""])
+            r += 1
+        if c["src"]["perf_ratio"]:
+            ws3.write(r, 0, t("c_perf_ratio").replace("{x}", str(c["src"]["perf_ratio"])), bk.muted)
+            r += 1
+        r += 1
+    ws3.write(r + 1, 0, t("c_disclaimer"), bk.muted)
+
+    ws4 = bk.sheet(t("c_result")[:31], t("c_result"), {0: 34, 1: 70, 2: 12, 3: 12, 4: 14, 5: 12}, legend=False)
+    r = 3
+    for c in clusters:
+        rec, d = c["rec"], c["d"]
+        ws4.write(r, 0, c["d"].cluster, bk.b)
+        r += 1
+        if not rec:
+            ws4.write(r, 0, "no feasible configuration")
+            r += 2
+            continue
+        rows = [(t("c_platform"), f"Dell PowerEdge {rec.config.platform} x {rec.n_total}"),
+                (t("c_per_server"), f"{rec.config.cpu_count} x {rec.config.cpu_name}"),
+                (t("memory"), f"{rec.dimm.total_gb} GB ({rec.dimm.dimm_count} x {rec.dimm.dimm_size_gb} GB)"
+                 if rec.dimm else ""),
+                (t("drives"), f"{rec.drives.count} x {rec.drives.drive_tb} TB NVMe" if rec.drives else t("c_external")),
+                (t("network"), rec.nics),
+                (t("c_util_after_failure"), f"{rec.util_failed:.0%}"),
+                ("", t("c_assumptions").replace("{g}", f"{d.growth_cpu_pct:g}").replace("{y}", str(d.years))
+                 .replace("{u}", str(round(d.u_max * 100))).replace("{k}", str(rec.k_ha)))]
+        for k, v in rows:
+            ws4.write(r, 0, k)
+            ws4.write(r, 1, v)
+            r += 1
+        sc = c["cs"].scenarios
+        if len(sc) > 1:
+            r += 1
+            ws4.write(r, 0, t("c_alternatives"), bk.b)
+            r += 1
+            bk.header(ws4, r, [t("cpu"), t("c_platform"), t("c_servers"), t("cores"), t("c_util_after_failure"),
+                               t("power") + " W"])
+            r += 1
+            for x in sc[:8]:
+                ws4.write_row(r, 0, [f"{x.config.cpu_count} x {x.config.cpu_name}", f"PowerEdge {x.config.platform}",
+                                     x.n_total, x.n_total * x.config.total_cores])
+                ws4.write_number(r, 4, x.util_failed, bk.pct)
+                ws4.write_number(r, 5, x.power_w_total)
+                r += 1
+        r += 2
+    bk.wb.close()
+    return Path(out)

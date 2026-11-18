@@ -108,3 +108,42 @@ def test_cli_stack_flag(tmp_path: Path, fixtures_dir: Path) -> None:
     out = tmp_path / "rep"
     assert runner.invoke(app, ["report", str(pj), "--format", "html,xlsx", "--out", str(out)]).exit_code == 0
     assert "Nutanix CVM" in (out / "refreshsizer_report.html").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("level", ["customer", "presales", "full"])
+def test_report_levels(fixtures_dir: Path, tmp_path: Path, level: str) -> None:
+    proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
+    size_project(proj, load_policy())
+    out = write_reports(proj, tmp_path, ["html", "xlsx", "pdf"], level=level)
+    assert len(out) == 3 and all(p.exists() for p in out)
+    html = next(p for p in out if p.suffix == ".html").read_text(encoding="utf-8")
+    wb = openpyxl.load_workbook(next(p for p in out if p.suffix == ".xlsx"))
+    formulas = sum(1 for ws in wb.worksheets for row in ws.iter_rows() for c in row
+                   if isinstance(c.value, str) and c.value.startswith("="))
+    if level == "customer":
+        assert "Your current environment" in html and "672 GHz in total" in html and "SPECrate2017_int_base" in html
+        assert "Show calculation" not in html and "TCO" not in html and "$" not in html  # no internal prices
+        assert "Monte Carlo" not in html and "C_req" not in html
+        assert len(wb.worksheets) == 4 and formulas == 0
+    elif level == "presales":
+        assert "Sizing chain" in html and "CPU scenarios" in html and "TCO" in html
+        assert "\\(" not in html and "Parsed raw data" not in html  # no formula dumps, no appendix
+        assert formulas > 20
+    else:
+        assert "14. Appendix" in html and len(wb.worksheets) == 14
+    assert out[0].name.startswith("refreshsizer_report" + ("" if level == "full" else f"_{level}"))
+
+
+def test_report_level_cli_and_validation(fixtures_dir: Path, tmp_path: Path) -> None:
+    pj = tmp_path / "p.json"
+    runner.invoke(app, ["ingest", str(fixtures_dir / "rvtools_estate.xlsx"), "--yes", "--out", str(pj)])
+    runner.invoke(app, ["size", str(pj)])
+    r = runner.invoke(app, ["report", str(pj), "--level", "customer", "--lang", "fr", "--format", "html",
+                            "--out", str(tmp_path / "o")])
+    assert r.exit_code == 0, r.output
+    txt = (tmp_path / "o" / "refreshsizer_report_customer_fr.html").read_text(encoding="utf-8")
+    assert "Votre environnement actuel" in txt and "Prochaines étapes" in txt
+    proj = ingest_files([fixtures_dir / "rvtools_estate.xlsx"])
+    size_project(proj, load_policy())
+    with pytest.raises(ValueError, match="report level"):
+        write_reports(proj, tmp_path, ["html"], level="ceo")

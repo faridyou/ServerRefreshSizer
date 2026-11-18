@@ -208,3 +208,20 @@ Each entry: **decision** – reason – how to change it.
     VCF/VVF per core **and** NCI, without the vSAN capacity entitlement check.
 67. **Platforms**: the Dell 17G catalog is reused as-is; confirm each node model and CPU on the Nutanix
     hardware compatibility list (or Dell XC) before quoting.
+
+## Report levels (change request 4)
+
+68. **Three levels** - `customer`, `presales`, `full` - for HTML and PDF (separate templates sharing one style
+    file); `full` is the original report and stays the CLI default (`--level`), `presales` is the UI default.
+    File names: `refreshsizer_report[_customer|_presales][_fr].{html,pdf,xlsx}`.
+69. **Customer level shows no internal prices**: no TCO, capex or licence costs (all placeholders from
+    prices.yaml) and no formulas, Monte Carlo or policy jargon. It shows the current environment in cores and
+    GHz, the SPEC per-core comparison with sources, the proposed configuration with its sizing assumptions in one
+    sentence, alternative CPU options (servers, cores, load, power) and plain-language next steps plus the
+    customer questions. The "servers needed" chart is relabelled (this proposal / same core count / same GHz).
+70. **Excel by level**: customer -> a 4-sheet values-only workbook (summary, current environment, benchmarks,
+    proposal); presales and full -> the live-formula workbook (it is the audit trail, already one sheet per
+    section).
+71. **Presales level** keeps every decision-relevant number but one line per step: the sizing chain
+    (SU capacity -> D0 -> D0' -> D_T -> C_req -> SU per host -> hosts, memory, storage), constraint checks only
+    when not OK, P50/P90 in one sentence, at most 8 warnings (the rest in the full report).

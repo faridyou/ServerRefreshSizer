@@ -80,8 +80,16 @@ What you see, page by page:
   the saved selection is not changed) and re-run in place. The last
   5 runs are kept with their label and overrides; pick two (A/B) to see them side by side (D0, D_T, C_req,
   recommendation, hosts, P50/P90, naive counts, TCO, licensing delta).
-* **7 Reports** – generate HTML, Excel (live formulas) and PDF in English or French for any kept run; download
-  them, or open the HTML report in a new tab.
+* **7 Reports** – generate HTML, Excel and PDF in English or French for any kept run, at one of three
+  **levels**, then download them or open the HTML report in a new tab:
+  * **Customer** – simple, no calculations or internal prices: current environment (CPU models, cores, GHz,
+    memory, VMs, storage, measured utilization), the SPEC CPU comparison (per-core performance of current vs
+    proposed CPU), the proposed configuration with the "servers needed" chart against like-for-like core/GHz
+    replacement, alternative processor options and next steps. Excel = 4 plain sheets, no formulas.
+  * **Presales** (UI default) – concise: summary table, source estate, the sizing chain on one line per step,
+    BoM, CPU scenarios with TCO, licensing totals, only the checks that need attention, P50/P90, questions.
+    Excel = the full live-formula workbook.
+  * **Full** – every calculation with formulas, inputs and sources (the original report, 14 sections).
 * **Benchmarks** – search the benchmark DB (CPU, metric, base value, cores, chips, SPC, system, live/curated/user
   source, URL) and see the resolved SPC with its method and confidence band; *Update from spec.org* runs in the
   background and says clearly when spec.org is unreachable and the curated offline data is kept; a form adds a
@@ -95,7 +103,7 @@ refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
                   [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
                   [--stack vmware_vsan|nutanix_ahv|nutanix_esxi]
-refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang fr]
+refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang fr] [--level customer|presales|full]
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]
 refreshsizer bench show "EPYC 9355"

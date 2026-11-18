@@ -138,11 +138,11 @@ def project_for_run(store: ProjectStore, name: str, rid: str | None):  # type: i
 
 
 def run_reports(store: ProjectStore, name: str, rid: str | None, formats: list[str], lang: str,
-                progress: Progress) -> str:
+                progress: Progress, level: str = "presales") -> str:
     project, _ = project_for_run(store, name, rid)
     if project is None or not project.sizing:
         raise ValueError("project not sized yet")
-    paths = workflow.reports(project, store.reports_dir(name), formats, lang, progress=progress)
+    paths = workflow.reports(project, store.reports_dir(name), formats, lang, progress=progress, level=level)
     workflow.save_project(project, store.reports_dir(name) / "project.json")
     store.touch(name, last_reports=[p.name for p in paths])
     return f"/p/{name}/reports"

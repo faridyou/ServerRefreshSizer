@@ -220,3 +220,69 @@ h_nutanix_cvm_vcpu: {en: "CVM vCPUs per node, reserved as physical cores (Nutani
 h_nutanix_cvm_memory_gb: {en: "CVM memory per node in GB (Nutanix minimum 32; more with dedup/compression or large drives).", fr: "Mémoire de la CVM par nœud en Go (minimum Nutanix 32 ; plus avec déduplication/compression ou gros disques)."}
 h_nutanix_edition: {en: "Nutanix Cloud Infrastructure edition (price per core/yr in prices.yaml).", fr: "Édition Nutanix Cloud Infrastructure (prix par cœur/an dans prices.yaml)."}
 h_nutanix_min_cores_per_cpu: {en: "Licensing minimum cores per CPU (0 = none; verify with Nutanix).", fr: "Minimum de cœurs licenciés par processeur (0 = aucun ; à vérifier avec Nutanix)."}
+# ---------------------------------------------------------------- report levels
+c_title: {en: "Server refresh proposal", fr: "Proposition de renouvellement des serveurs"}
+c_intro: {en: "This document summarises your current server environment, how its performance compares with current-generation Dell PowerEdge servers, and the configuration we propose. The comparison is based on published, independent SPEC CPU benchmark results rather than on core counts or clock speeds.",
+  fr: "Ce document résume votre environnement serveurs actuel, compare ses performances aux serveurs Dell PowerEdge de dernière génération et présente la configuration proposée. La comparaison repose sur des résultats publiés et indépendants du benchmark SPEC CPU, et non sur le nombre de cœurs ou la fréquence."}
+c_current: {en: "Your current environment", fr: "Votre environnement actuel"}
+c_sockets: {en: "Sockets", fr: "Sockets"}
+c_total: {en: "in total", fr: "au total"}
+c_vms: {en: "Virtual machines", fr: "Machines virtuelles"}
+c_storage_used: {en: "Storage used", fr: "Stockage utilisé"}
+c_cpu_util: {en: "Measured CPU utilization", fr: "Utilisation CPU mesurée"}
+c_no_util: {en: "not measured (estimated)", fr: "non mesurée (estimée)"}
+c_collection: {en: "Measurement period", fr: "Période de mesure"}
+c_days: {en: "day(s)", fr: "jour(s)"}
+c_benchmarks: {en: "Performance comparison (SPEC CPU 2017)", fr: "Comparaison des performances (SPEC CPU 2017)"}
+c_bench_intro: {en: "SPECrate2017_int_base measures the throughput of a whole server; dividing by the number of cores gives the performance per core used for the comparison.",
+  fr: "SPECrate2017_int_base mesure le débit d'un serveur complet ; divisé par le nombre de cœurs, il donne la performance par cœur utilisée pour la comparaison."}
+c_per_core: {en: "Per core", fr: "Par cœur"}
+c_side_source: {en: "Current", fr: "Actuel"}
+c_side_target: {en: "Proposed", fr: "Proposé"}
+c_perf_ratio: {en: "Each core of the proposed processor delivers about {x} times the throughput of a current core.", fr: "Chaque cœur du processeur proposé offre environ {x} fois le débit d'un cœur actuel."}
+c_result: {en: "Proposed configuration", fr: "Configuration proposée"}
+c_servers: {en: "servers", fr: "serveurs"}
+c_vs: {en: "today", fr: "aujourd'hui"}
+c_util_after_failure: {en: "Load with one server down", fr: "Charge avec un serveur en panne"}
+c_per_server: {en: "Processors per server", fr: "Processeurs par serveur"}
+c_external: {en: "existing external storage", fr: "stockage externe existant"}
+c_platform: {en: "Platform", fr: "Plateforme"}
+c_assumptions: {en: "Sized for {g} % CPU growth per year over {y} years, keeping the servers below {u} % CPU load, with {k} server(s) of spare capacity for failures and maintenance.",
+  fr: "Dimensionné pour une croissance CPU de {g} % par an sur {y} ans, avec une charge CPU maintenue sous {u} % et {k} serveur(s) de réserve pour les pannes et la maintenance."}
+c_chart_title: {en: "Servers needed", fr: "Serveurs nécessaires"}
+c_lbl_proposal: {en: "this proposal", fr: "cette proposition"}
+c_lbl_cores: {en: "same core count", fr: "même nombre de cœurs"}
+c_lbl_ghz: {en: "same GHz", fr: "mêmes GHz"}
+c_naive_note: {en: "Replacing servers like-for-like on core count or GHz ignores the per-core performance gain of current processors and over-sizes the new platform.",
+  fr: "Un remplacement à l'identique sur le nombre de cœurs ou les GHz ignore le gain de performance par cœur des processeurs actuels et surdimensionne la nouvelle plateforme."}
+c_alternatives: {en: "Alternative processor options", fr: "Options de processeurs alternatives"}
+c_next: {en: "Next steps", fr: "Prochaines étapes"}
+c_questions: {en: "Information we still need from you", fr: "Informations dont nous avons encore besoin"}
+c_disclaimer: {en: "SPEC, SPECrate and SPEC CPU are trademarks of the Standard Performance Evaluation Corporation. The comparisons are estimates by RefreshSizer based on published base results, not statements of SPEC. Final configurations are subject to validation with Dell.",
+  fr: "SPEC, SPECrate et SPEC CPU sont des marques de la Standard Performance Evaluation Corporation. Les comparaisons sont des estimations de RefreshSizer fondées sur des résultats base publiés, et non des déclarations du SPEC. Les configurations finales sont soumises à validation avec Dell."}
+p_title: {en: "Sizing summary (presales)", fr: "Synthèse de dimensionnement (avant-vente)"}
+p_prices_note: {en: "prices are placeholders from prices.yaml", fr: "prix indicatifs issus de prices.yaml"}
+p_source: {en: "Source estate", fr: "Parc source"}
+p_chain: {en: "Sizing chain", fr: "Chaîne de dimensionnement"}
+p_step_cap: {en: "Source capacity", fr: "Capacité source"}
+p_step_d0: {en: "Measured demand D0", fr: "Demande mesurée D0"}
+p_step_adj: {en: "Adjusted demand D0'", fr: "Demande ajustée D0'"}
+p_step_growth: {en: "Demand at horizon D_T", fr: "Demande à l'horizon D_T"}
+p_step_headroom: {en: "Required capacity C_req", fr: "Capacité requise C_req"}
+p_step_host: {en: "Capacity per target host", fr: "Capacité par hôte cible"}
+p_after_reserve: {en: "after reserve, of", fr: "après réserve, sur"}
+p_step_hosts: {en: "Hosts", fr: "Hôtes"}
+p_step_storage: {en: "Storage", fr: "Stockage"}
+p_horizon_cost: {en: "Cost over horizon", fr: "Coût sur l'horizon"}
+p_checks: {en: "Checks and uncertainty", fr: "Contrôles et incertitude"}
+p_all_ok: {en: "All constraint checks passed", fr: "Tous les contrôles de contraintes sont satisfaits"}
+p_quality: {en: "Data quality, open questions, validation", fr: "Qualité des données, questions ouvertes, validation"}
+p_more_in_full: {en: "more warnings in the full report", fr: "autres avertissements dans le rapport complet"}
+ui_level: {en: "Report level", fr: "Niveau de rapport"}
+ui_level_customer: {en: "Customer - simple, no calculations", fr: "Client - simple, sans calculs"}
+ui_level_presales: {en: "Presales - concise, key figures", fr: "Avant-vente - concis, chiffres clés"}
+ui_level_full: {en: "Full - every calculation", fr: "Complet - tous les calculs"}
+c_next_measure: {en: "Run a 7 to 30 day performance collection (Dell Live Optics) to confirm the measured load.", fr: "Réaliser une collecte de performances de 7 à 30 jours (Dell Live Optics) pour confirmer la charge mesurée."}
+c_next_pilot: {en: "Validate the proposal with a pilot on a representative set of workloads.", fr: "Valider la proposition par un pilote sur un ensemble représentatif de charges."}
+c_next_info: {en: "Provide the information listed below so that the sizing can be finalised.", fr: "Fournir les informations listées ci-dessous afin de finaliser le dimensionnement."}
+c_next_quote: {en: "Final configuration and quotation with Dell.", fr: "Configuration finale et devis avec Dell."}

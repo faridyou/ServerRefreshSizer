@@ -102,7 +102,8 @@ def test_every_fixture_end_to_end(ui: UI, fixtures_dir: Path, fixture: str) -> N
     res = ui.c.get(j.redirect)
     assert res.status_code == 200 and "Show calculation" in res.text and "data:image/png;base64," in res.text
     rid = ui.store.runs(name)[0]["id"]
-    ui.job(ui.c.post(f"/p/{name}/reports", data={"run": rid, "html": "1", "xlsx": "1", "pdf": "1", "lang": "en"}))
+    ui.job(ui.c.post(f"/p/{name}/reports", data={"run": rid, "html": "1", "xlsx": "1", "pdf": "1", "lang": "en",
+                                                 "level": "full"}))
     files = {p.name for p in ui.store.reports_dir(name).iterdir()}
     assert {"refreshsizer_report.html", "refreshsizer_report.xlsx", "refreshsizer_report.pdf"} <= files
     for f in ("refreshsizer_report.html", "refreshsizer_report.xlsx", "refreshsizer_report.pdf"):
@@ -439,3 +440,18 @@ def test_nutanix_stack_from_selector(ui: UI, fixtures_dir: Path) -> None:
                                                          {"from": "summary", "save_target": "1",
                                                           "stack": "vmware_vsan"})))
     assert "target_stack" not in ui.store.policy_overrides(name)
+
+
+def test_report_level_selector(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("levels")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    ui.size(name)
+    page = ui.c.get(f"/p/{name}/reports")
+    assert 'name="level"' in page.text and "Customer - simple" in page.text
+    for level in ("customer", "presales"):
+        ui.job(ui.c.post(f"/p/{name}/reports", data={"html": "1", "lang": "en", "level": level}))
+    files = {p.name for p in ui.store.reports_dir(name).iterdir()}
+    assert {"refreshsizer_report_customer.html", "refreshsizer_report_presales.html"} <= files
+    view = ui.c.get(f"/p/{name}/reports/refreshsizer_report_customer.html/view")
+    assert "Server refresh proposal" in view.text

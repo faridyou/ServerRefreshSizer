@@ -152,25 +152,63 @@ def cluster_context(cs: ClusterSizing, t: Any) -> dict[str, Any]:
     return ctx
 
 
-def build_context(project: Project, lang: str = "en") -> dict[str, Any]:
+LEVELS = ("customer", "presales", "full")
+
+
+def source_view(project: Project, cs: ClusterSizing) -> dict[str, Any]:
+    """Existing environment of one sized cluster, in customer terms (cores, GHz, CPU models, utilization)."""
+    d = cs.demand
+    src = next((c for c in project.clusters if c.name == d.source_cluster), None)
+    hosts = src.hosts if src else []
+    models: dict[str, dict[str, Any]] = {}
+    for h in hosts:
+        key = h.cpu_model or h.model or "unknown"
+        m = models.setdefault(key, {"cpu": key, "hosts": 0, "sockets": h.sockets, "cores": 0, "ghz": h.nominal_ghz})
+        m["hosts"] += 1
+        m["cores"] += h.cores or 0
+    util = [(hc.util_used_pct, hc.su_cap) for hc in d.hosts if hc.util_used_pct is not None]
+    w = sum(s for _, s in util)
+    return {
+        "hosts": len(hosts), "sockets": sum(h.sockets or 0 for h in hosts), "cores": sum(h.cores or 0 for h in hosts),
+        "ghz_total": round(sum((h.cores or 0) * (h.nominal_ghz or 0) for h in hosts), 1),
+        "ram_gb": round(sum(h.ram_gb or 0 for h in hosts)), "models": list(models.values()),
+        "vms": d.vm_count, "vcpu": d.total_vcpu, "storage_used_tib": d.storage_used0_tib,
+        "util_pct": round(sum(u * s for u, s in util) / w, 1) if w else None,
+        "util_basis": next((hc.util_basis for hc in d.hosts if hc.util_basis), None),
+        "collection_days": src.collection_days if src else None,
+        "perf_ratio": round(cs.recommended.spc_target / d.spc_source, 2)
+        if cs.recommended and d.spc_source else None}
+
+
+def build_context(project: Project, lang: str = "en", level: str = "full") -> dict[str, Any]:
     assert project.sizing is not None
     run = SizingRun.model_validate(project.sizing)
     t = translator(lang)
     clusters = [cluster_context(cs, t) for cs in run.clusters]
+    for c in clusters:
+        c["src"] = source_view(project, c["cs"])
+        if level == "customer" and c["rec"] and c["cs"].naive:
+            c["charts"]["hosts"] = charts.b64(charts.host_comparison(
+                [t("c_lbl_proposal"), t("c_lbl_cores"), t("c_lbl_ghz")],
+                [c["rec"].n_total, c["cs"].naive.core_match_hosts, c["cs"].naive.ghz_match_hosts],
+                f"{c['d'].cluster}: {t('c_chart_title')}"))
     return {"project": project, "run": run, "t": t, "lang": lang, "clusters": clusters,
-            "estate": estate_summary(project), "version": __version__,
+            "estate": estate_summary(project), "version": __version__, "level": level,
             "questions": project.customer_questions_fr if lang == "fr" else project.customer_questions,
             "policy": run.policy}
 
 
 def write_reports(project: Project, out: Path, formats: list[str], lang: str = "en",
-                  progress: Callable[[float, str], None] | None = None) -> list[Path]:
+                  progress: Callable[[float, str], None] | None = None, level: str = "full") -> list[Path]:
+    """level: customer (simple, no calculations) | presales (concise) | full (every calculation)."""
+    if level not in LEVELS:
+        raise ValueError(f"report level must be one of {LEVELS}")
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     if progress:
         progress(0.05, "charts and report context")
-    ctx = build_context(project, lang)
-    stem = "refreshsizer_report" + ("_fr" if lang == "fr" else "")
+    ctx = build_context(project, lang, level)
+    stem = "refreshsizer_report" + ("" if level == "full" else f"_{level}") + ("_fr" if lang == "fr" else "")
     written: list[Path] = []
     if "html" in formats:
         from refreshsizer.report.html import render_html
@@ -183,7 +221,12 @@ def write_reports(project: Project, out: Path, formats: list[str], lang: str = "
 
         if progress:
             progress(0.4, "Excel workbook (live formulas)")
-        written.append(write_excel(ctx, out / f"{stem}.xlsx"))
+        if level == "customer":
+            from refreshsizer.report.excel import write_excel_customer
+
+            written.append(write_excel_customer(ctx, out / f"{stem}.xlsx"))
+        else:
+            written.append(write_excel(ctx, out / f"{stem}.xlsx"))
     if "pdf" in formats:
         from refreshsizer.report.pdf import write_pdf
 

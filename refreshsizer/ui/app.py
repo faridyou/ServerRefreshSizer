@@ -373,9 +373,11 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         formats = [f for f in ("html", "xlsx", "pdf") if form.get(f)] or ["html", "xlsx", "pdf"]
         lang = str(form.get("lang", "en"))
         rid = str(form.get("run", "")) or None
+        level = str(form.get("level", "presales"))
+        level = level if level in ("customer", "presales", "full") else "presales"
         return start("reports", n, lambda progress, job: services.run_reports(S(), n, rid, formats,
                                                                               lang if lang in LANGS else "en",
-                                                                              progress))
+                                                                              progress, level))
 
     def _report_file(n: str, filename: str) -> Path:
         d = S().reports_dir(n).resolve()

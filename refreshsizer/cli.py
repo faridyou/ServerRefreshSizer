@@ -171,14 +171,16 @@ def size(project_file: Path = typer.Argument(..., exists=True),
 def report(project_file: Path = typer.Argument(..., exists=True),
            format: str = typer.Option("html,pdf,xlsx", "--format", help="Comma list: html,pdf,xlsx"),
            out: Path = typer.Option(Path("reports"), "--out"), lang: str = typer.Option("en", "--lang"),
+           level: str = typer.Option("full", "--level", help="customer | presales | full"),
            verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
-    """Write the HTML / PDF / Excel report for a sized project."""
+    """Write the HTML / PDF / Excel report for a sized project (level: customer, presales or full)."""
     _setup_logging(verbose)
     project = _load_project(project_file)
     if not project.sizing:
         console.print("[red]Project is not sized yet: run `refreshsizer size` first.[/red]")
         raise typer.Exit(code=1)
-    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
+    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang,
+                              level=level):
         console.print(f"[green]written[/green] {p}")
 
 
@@ -194,6 +196,7 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
         stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
         format: str = typer.Option("html,pdf,xlsx", "--format"), lang: str = typer.Option("en", "--lang"),
+        level: str = typer.Option("full", "--level", help="customer | presales | full"),
         name: str | None = typer.Option(None, "--name"), verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Ingest + size + report in one go."""
     _setup_logging(verbose)
@@ -210,7 +213,8 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     _print_sizing(sizing)
     out.mkdir(parents=True, exist_ok=True)
     _save_project(project, out / "project.json")
-    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang):
+    for p in workflow.reports(project, out, [f.strip() for f in format.split(",") if f.strip()], lang,
+                              level=level):
         console.print(f"[green]written[/green] {p}")
 
 

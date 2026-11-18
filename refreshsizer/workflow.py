@@ -70,10 +70,11 @@ def size(project: Project, policy: Policy, progress: Progress | None = None) -> 
 
 
 def reports(project: Project, out: Path, formats: list[str], lang: str = "en",
-            progress: Progress | None = None) -> list[Path]:
+            progress: Progress | None = None, level: str = "full") -> list[Path]:
+    """level: customer (simple, no calculations) | presales (concise) | full (every calculation)."""
     from refreshsizer.report.build import write_reports
 
-    return write_reports(project, out, formats, lang, progress=progress)
+    return write_reports(project, out, formats, lang, progress=progress, level=level)
 
 
 def load_project(path: Path) -> Project:
