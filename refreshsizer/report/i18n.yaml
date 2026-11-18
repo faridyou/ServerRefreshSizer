@@ -208,3 +208,5 @@ ui_use_scenario: {en: "Use this scenario", fr: "Utiliser ce scénario"}
 ui_scenarios_note: {en: "Ranking = the optimizer objective; configurations backed by a published SPEC result rank before estimated ones (prefer_measured_spec). 'Use this scenario' re-runs the sizing restricted to that platform and CPU, so its BoM and reports can be produced.",
   fr: "Classement = objectif de l'optimiseur ; les configurations appuyées par un résultat SPEC publié passent avant les estimations (prefer_measured_spec). « Utiliser ce scénario » relance le dimensionnement limité à cette plateforme et ce processeur, pour en produire la nomenclature et les rapports."}
 ui_target_used: {en: "Target selection", fr: "Sélection cible"}
+h_exclude_powered_off: {en: "Ignore powered-off VMs (set to false if they will be migrated and restarted on the new platform).", fr: "Ignorer les VM éteintes (mettre false si elles seront migrées et redémarrées sur la nouvelle plateforme)."}
+h_exclude_templates: {en: "Ignore VM templates.", fr: "Ignorer les modèles de VM."}

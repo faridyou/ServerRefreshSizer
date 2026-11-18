@@ -206,6 +206,7 @@ class Cluster(BaseModel):
     storage: list[StorageArray] = Field(default_factory=list)
     timeseries: list[TimeSeriesPoint] = Field(default_factory=list)
     utilization_source: str | None = None  # rvtools | liveoptics | manual | nmon | awr | universal
+    collection_days: float | None = None  # length of the performance collection (Live Optics)
     is_db_split: bool = False
 
     @property

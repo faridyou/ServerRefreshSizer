@@ -78,7 +78,12 @@ def _grids(path: Path) -> dict[str, list[list[Any]]]:
     if ext in (".xlsx", ".xlsm"):
         from openpyxl import load_workbook
 
-        wb = load_workbook(path, data_only=True)
+        try:
+            wb = load_workbook(path, data_only=True)
+        except Exception:  # stylesheet openpyxl rejects: read the values from the raw XML
+            from refreshsizer.ingest import xlsx_raw
+
+            return {k: [[_cell(v) for v in row] for row in g] for k, g in xlsx_raw.read_xlsx_grids(path).items()}
         out: dict[str, list[list[Any]]] = {}
         for ws in wb.worksheets:
             grid = [[_cell(c) for c in row] for row in ws.iter_rows(values_only=True)]

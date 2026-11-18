@@ -94,7 +94,13 @@ def read_workbook(path: Path, header: int | None = 0) -> dict[str, pd.DataFrame]
         engine = "odf"
     elif ext in (".xlsx", ".xlsm"):
         engine = "openpyxl"
-    sheets = pd.read_excel(path, sheet_name=None, header=header, dtype=object, engine=engine)
+    try:
+        sheets = pd.read_excel(path, sheet_name=None, header=header, dtype=object, engine=engine)
+    except Exception as e:
+        if ext not in (".xlsx", ".xlsm"):
+            raise
+        log.info("%s: openpyxl cannot open it (%s); using the raw XML reader", path.name, e)
+        sheets = _raw_frames(path, header)
     out: dict[str, pd.DataFrame] = {}
     for name, df in sheets.items():
         df = df.dropna(how="all")
@@ -117,11 +123,29 @@ def sheet_names(path: Path) -> list[str]:
     if ext in (".xlsx", ".xlsm"):
         from openpyxl import load_workbook
 
-        wb = load_workbook(path, read_only=True)
+        try:
+            wb = load_workbook(path, read_only=True)
+        except Exception:
+            from refreshsizer.ingest import xlsx_raw
+
+            return xlsx_raw.sheet_names(path)
         names = list(wb.sheetnames)
         wb.close()
         return names
     return list(read_workbook(path).keys())
+
+
+def _raw_frames(path: Path, header: int | None) -> dict[str, pd.DataFrame]:
+    from refreshsizer.ingest import xlsx_raw
+
+    out: dict[str, pd.DataFrame] = {}
+    for name, grid in xlsx_raw.read_xlsx_grids(path).items():
+        if header is None or not grid:
+            out[name] = pd.DataFrame(grid, dtype=object)
+            continue
+        cols = [c if c is not None else f"Unnamed: {i}" for i, c in enumerate(grid[0])]
+        out[name] = pd.DataFrame(grid[1:], columns=cols, dtype=object)
+    return out
 
 
 _NUM_RE = re.compile(

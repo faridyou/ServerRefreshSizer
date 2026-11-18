@@ -35,6 +35,7 @@ class ParseResult:
     unmapped: list[str] = field(default_factory=list)
     policy: dict[str, Any] = field(default_factory=dict)
     utilization_source: str | None = None
+    collection_days: float | None = None  # Live Optics collection duration (Summary sheet)
 
     def assume(self, text: str, field_name: str | None = None, entity: str | None = None,
                category: str = "ASSUMPTION") -> None:
@@ -73,6 +74,8 @@ def assemble(results: list[ParseResult], name: str = "RefreshSizer project") -> 
                 continue
             host_index[key] = h
             proj.cluster(h.cluster).hosts.append(h)
+            if r.collection_days is not None:
+                proj.cluster(h.cluster).collection_days = r.collection_days
             if r.utilization_source:
                 c = proj.cluster(h.cluster)
                 c.utilization_source = c.utilization_source or r.utilization_source

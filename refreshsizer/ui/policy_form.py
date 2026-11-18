@@ -18,7 +18,7 @@ GROUPS: list[tuple[str, list[str]]] = [
     ("ui_pg_licensing", ["vmware_edition", "vmware_min_cores_per_cpu", "vmware_order_min_cores",
                          "oracle_db_cluster_licensing", "split_clusters", "target_virtualized"]),
     ("ui_pg_objective", ["objective", "prefer_measured_spec", "top_n"]),
-    ("ui_pg_util", ["percentile", "p95_estimate", "rvtools_burst_factor", "vm_peak_coincidence",
+    ("ui_pg_util", ["exclude_powered_off", "exclude_templates", "percentile", "p95_estimate", "rvtools_burst_factor", "vm_peak_coincidence",
                     "saturation_threshold", "saturation_uplift"]),
     ("ui_pg_inventory", ["inventory_assumed_util", "inventory_vcpu_ratio_assumed", "inventory_apply_headroom"]),
     ("ui_pg_risc", ["rperf_factor_mode", "rperf_to_spec_default", "k_arch.*", "k_virt_baremetal_to_virtual"]),

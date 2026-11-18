@@ -27,6 +27,11 @@ Q: dict[str, dict[str, str]] = {
               "host, cpu %) so a true time-aligned p95 can be computed?",
         "fr": "[{c}] Live Optics ne donne que le pic et la moyenne : pouvez-vous exporter la série temporelle CPU par "
               "hôte (horodatage, hôte, cpu %) pour calculer un vrai p95 aligné dans le temps ?"},
+    "short": {
+        "en": "[{c}] The Live Optics collection lasted only {d:.1f} day(s). Can you run it again for at least 7 "
+              "days (ideally 30, including a month end) so that weekly and month-end peaks are captured?",
+        "fr": "[{c}] La collecte Live Optics n'a duré que {d:.1f} jour(s). Pouvez-vous la relancer sur au moins "
+              "7 jours (idéalement 30, fin de mois incluse) afin de capter les pics hebdomadaires et de fin de mois ?"},
     "cpu": {"en": "[{c}] Exact CPU model of host '{h}'?", "fr": "[{c}] Modèle exact de processeur de l'hôte '{h}' ?"},
     "cpu_assumed": {
         "en": "[{c}] Host '{h}' ({m}): please confirm the installed CPU model (currently assumed from the server "
@@ -59,6 +64,8 @@ def cluster_questions(c: Cluster, mode: SizingMode) -> list[tuple[str, str]]:
     if mode == SizingMode.SUMMARY and c.utilization_source == "liveoptics" and not any(
             h.cpu_util_p95_pct for h in c.hosts):
         qs.append(_q("lo_ts", c=c.name))
+    if c.collection_days is not None and c.collection_days < 7:
+        qs.insert(0, _q("short", c=c.name, d=c.collection_days))
     for h in c.hosts:
         if any("server model" in a for a in h.assumptions):
             qs.append(_q("cpu_assumed", c=c.name, h=h.host_id, m=h.model))
@@ -84,6 +91,9 @@ def finalize_project(project: Project, policy: Policy) -> Project:
     for c in project.clusters:
         mode, conf, why = select_mode(c)
         dq = DataQuality(cluster=c.name, mode=mode, confidence=conf, flags=[why])
+        if c.collection_days is not None:
+            dq.flags.append(f"performance collection {c.collection_days:.1f} day(s)"
+                            + (" - shorter than the recommended 7 days" if c.collection_days < 7 else ""))
         qs = cluster_questions(c, mode)
         dq.customer_questions = [q[0] for q in qs]
         project.data_quality.append(dq)

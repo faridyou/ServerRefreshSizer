@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -24,28 +26,31 @@ KIB_PER_GIB = 1024.0 * 1024.0
 MIB_PER_GIB = 1024.0
 
 ESX_HOSTS = {
-    "host": ("Host-Name", "Host Name", "Hostname"), "datacenter": ("Datacenter",), "vcenter": ("vCenter",),
+    "host": ("Host-Name", "Host Name", "Hostname", "Host", "Server Name"), "datacenter": ("Datacenter",),
+    "vcenter": ("vCenter",),
     "cluster": ("Cluster",), "vendor": ("Manufacturer",), "model": ("Model",),
     "sockets": ("CPU Sockets",), "cores": ("CPU Cores",), "cpu_desc": ("CPU Description",),
     "ghz": ("CPU Clock Speed (GHz)", "CPU Clock Speed"), "threads": ("CPU Threads",),
     "mem_kib": ("Memory (KiB)",), "vm_count": ("Guest VM Count",),
 }
 ESX_PERF = {
-    "host": ("Host-Name", "Host Name"), "peak_pct": ("Peak CPU %", "Peak CPU Percentage"),
+    "host": ("Host-Name", "Host Name", "Host", "Hostname", "Server Name"),
+    "peak_pct": ("Peak CPU %", "Peak CPU Percentage"),
     "peak_ghz": ("Peak CPU (GHz)",), "avg_pct": ("Average CPU %", "Average CPU Percentage"),
     "avg_ghz": ("Average CPU (GHz)",), "p95_pct": ("95% CPU %", "95th Percentile CPU %", "CPU 95%"),
     "peak_mem_pct": ("Peak Memory %",), "peak_mem_mib": ("Peak Memory (MiB)",),
-    "avg_mem_pct": ("Average Memory %",), "peak_iops": ("Peak IOPS",), "avg_iops": ("Average IOPS",),
+    "avg_mem_pct": ("Average Memory %",), "peak_iops": ("Peak IOPS",), "avg_iops": ("Average IOPS", "Avg IOPS"),
     "p95_iops": ("95% IOPS",), "rw": ("Average Read/Write Ratio",), "peak_mbps": ("Peak Throughput MB/s",),
     "avg_mbps": ("Avg. Throughput MB/s", "Average Throughput MB/s"),
 }
 VM_INV = {
-    "vm": ("VM Name",), "running": ("IsRunning",), "power": ("PowerState",), "vcpu": ("Virtual CPU",),
+    "vm": ("VM Name",), "running": ("IsRunning", "Is Running"), "power": ("PowerState", "Power State"),
+    "vcpu": ("Virtual CPU",),
     "prov_mem": ("Provisioned Memory (MiB)",), "active_mem": ("Used Memory (active) (MiB)",),
     "consumed_mem": ("Consumed Memory (MiB)",), "guest_cap": ("Guest VM Disk Capacity (MiB)",),
     "guest_used": ("Guest VM Disk Used (MiB)",), "vdisk_size": ("Virtual Disk Size (MiB)",),
     "vdisk_used": ("Virtual Disk Used (MiB)",), "template": ("Template",), "cluster": ("Cluster",),
-    "host": ("Host",), "datastore": ("Datastore",), "os": ("Guest OS", "OS"),
+    "host": ("Host",), "datastore": ("Datastore",), "os": ("Guest OS", "VM OS", "OS"),
 }
 VM_PERF = {
     "vm": ("VM Name",), "peak_pct": ("Peak vCPU %",), "peak_ghz": ("Peak vCPU (GHz)",),
@@ -97,12 +102,76 @@ def parse_timeseries_csv(path: Path) -> list[TimeSeriesPoint]:
     return out
 
 
+DURATION_RE = re.compile(r"^\s*(?:(\d+)\.)?(\d+):(\d+):(\d+)")
+MIN_COLLECTION_DAYS = 7.0
+
+
+def collection_days(sheets: dict[str, pd.DataFrame]) -> float | None:
+    """Collection length from the Summary sheet ('Duration' = d.hh:mm:ss, else End Time - Start Time)."""
+    found = _find_sheet(sheets, "Summary")
+    if found is None:
+        return None
+    _, df = found
+    kv: dict[str, Any] = {}
+    frame = df.copy()
+    rows = [list(frame.columns)] + frame.values.tolist()  # the first key/value pair may be the header row
+    for r in rows:
+        if len(r) >= 2 and r[0] is not None:
+            kv[str(r[0]).strip().lower()] = r[1]
+    dur = kv.get("duration")
+    if dur is not None:
+        m = DURATION_RE.match(str(dur))
+        if m:
+            d, hh, mm, ss = (int(x) if x else 0 for x in m.groups())
+            return d + (hh + mm / 60 + ss / 3600) / 24
+    try:
+        start, end = pd.to_datetime(str(kv["start time"])), pd.to_datetime(str(kv["end time"]))
+        return float((end - start).total_seconds() / 86400)
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def parse_air(path: Path) -> ParseResult:
+    """Live Optics Aging Infrastructure Report: end-of-support findings, not used for sizing."""
+    path = Path(path)
+    res = ParseResult(fmt="liveoptics_air", file=path.name)
+    sheets = read_workbook(path)
+    n = 0
+    for name, df in sheets.items():
+        rule = find_col(df.columns, "Rule Name")
+        what = find_col(df.columns, "Server Name(s)", "Guest VM Name", "Server Name", "VM Name")
+        detail = find_col(df.columns, "Rule Details")
+        used = bool(rule and what)
+        if used:
+            for _, row in df.iterrows():
+                obj, r = to_str(row.get(what)), to_str(row.get(rule))
+                if obj and r:
+                    d = to_str(row.get(detail)) if detail else None
+                    res.warnings.append(f"Live Optics AIR ({name}): {obj}: {r}" + (f" - {d}" if d else ""))
+                    n += 1
+        res.sheets.append(SheetUse(file=path.name, sheet=name, used=used,
+                                   classification="aging_infrastructure" if used else "irrelevant",
+                                   reason="end-of-support / aging findings (informational, not used for sizing)"
+                                   if used else "report header", rows=len(df)))
+    res.transformations.append(f"{path.name}: Live Optics Aging Infrastructure Report - {n} finding(s) listed "
+                               "as warnings; no capacity or utilization data in this file")
+    return res
+
+
 def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = True,
           exclude_powered_off: bool = True) -> ParseResult:
     path = Path(path)
     res = ParseResult(fmt="liveoptics", file=path.name, utilization_source="liveoptics")
     sheets = read_workbook(path)
     used: set[str] = set()
+    days = collection_days(sheets)
+    if days is not None:
+        res.collection_days = round(days, 2)
+        res.transformations.append(f"{path.name}: performance collection length {days:.1f} day(s)")
+        if days < MIN_COLLECTION_DAYS:
+            res.warnings.append(
+                f"{path.name}: the Live Optics collection lasted only {days:.1f} day(s); peaks may miss weekly or "
+                f"month-end load - Dell recommends at least {MIN_COLLECTION_DAYS:.0f} days (ideally 30)")
     hosts: dict[str, SourceHost] = {}
 
     hs = _find_sheet(sheets, "ESX Hosts", "Hypervisors")
@@ -166,6 +235,12 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
         name, df = ps
         used.add(name)
         m = ColumnMapper(df, ESX_PERF, name, str(path))
+        if not m.has("host"):
+            res.warnings.append(f"{name}: no host column found (columns: {', '.join(map(str, df.columns))}); "
+                                "host utilization could NOT be used - sizing falls back to inventory-only")
+        if not (m.has("peak_pct") or m.has("avg_pct") or m.has("p95_pct")):
+            res.warnings.append(f"{name}: no CPU % column found; host utilization could NOT be used")
+        matched = 0
         res.add_mappings(m.mapping_entries())
         res.unmapped += [f"{name}/{c}" for c in m.unmapped]
         for _, row in df.iterrows():
@@ -176,6 +251,7 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
             if h is None:
                 res.warnings.append(f"ESX Performance: host '{hid}' not in ESX Hosts (orphan)")
                 continue
+            matched += 1
             h.cpu_util_peak_pct = pct_value(m.get(row, "peak_pct"))
             h.cpu_util_avg_pct = pct_value(m.get(row, "avg_pct"))
             p95 = pct_value(m.get(row, "p95_pct"))
@@ -188,6 +264,9 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
             h.iops_avg = to_float(m.get(row, "avg_iops"))
             h.iops_p95 = to_float(m.get(row, "p95_iops"))
             h.throughput_mbps_peak = to_float(m.get(row, "peak_mbps"))
+        if len(df) and not matched:
+            res.warnings.append(f"{name}: {len(df)} row(s) but none matched a host of ESX Hosts; "
+                                "host utilization NOT used")
         res.assume("Live Optics VMware Excel has no p95 CPU column: host PEAK CPU % is used (conservative) "
                    "unless a time series or --p95-estimate is supplied", field_name="cpu_util_peak_pct",
                    category="WARNING")

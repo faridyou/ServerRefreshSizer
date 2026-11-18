@@ -38,6 +38,8 @@ def ingest_files(paths: list[Path], *, review_mode: str = "yes", llm: str | bool
         elif fmt == "liveoptics":
             results.append(liveoptics.parse(p, ts_files[0] if ts_files else None,
                                             policy.exclude_templates, policy.exclude_powered_off))
+        elif fmt == "liveoptics_air":
+            results.append(liveoptics.parse_air(p))
         elif fmt == "manual_template":
             results.append(manual_template.parse(p))
         elif fmt == "nmon":

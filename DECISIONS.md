@@ -163,3 +163,24 @@ Each entry: **decision** – reason – how to change it.
     the saved target selection.
 55. **A selection that matches no configuration** (e.g. AMD CPUs on an Intel-only platform) gives a clear warning
     and no recommendation instead of an error; selecting no platform at all is rejected on the form.
+
+## Real Live Optics exports (bug report, Nov 2026)
+
+56. **Live Optics column aliases widened from a real export**: ESX Performance names its host column `Host`
+    (ESX Hosts uses `Host Name`), VMs use `Power State` and `VM OS`, `Avg Throughput MB/s` / `Avg IOPS`. The host
+    column was not recognised, every utilization row was dropped silently and clusters were sized INVENTORY_ONLY.
+    The parser now also warns loudly when the performance sheet has no host or CPU column, or when none of its
+    rows matches a host. (The customer workbook is not committed; tests use a synthetic workbook with the same
+    headers.)
+57. **Collection length**: read from the Summary sheet (`Duration` d.hh:mm:ss, else End - Start). Shorter than
+    7 days -> ingest warning, data-quality flag and a customer question (EN/FR) asking for a 7-30 day
+    collection. Confidence and numbers are not changed (the sizing still uses the peaks it has).
+58. **Raw .xlsx fallback reader** (`ingest/xlsx_raw.py`, stdlib only) for files openpyxl refuses (Live Optics
+    AIR writes a stylesheet openpyxl rejects). Values only - no styles, merged cells or formulas; used only
+    when openpyxl/pandas fail.
+59. **Live Optics AIR (Aging Infrastructure Report)** is detected (`Servers` sheet with `Rule Name` /
+    `Rule Details`) and its end-of-support findings are listed as ingest warnings ("Live Optics AIR: <server>:
+    <rule> - <details>"); it carries no capacity or utilization data and is not used for sizing.
+60. **Powered-off VMs and templates**: the existing `exclude_powered_off` / `exclude_templates` switches are now
+    on the Policy page (Utilization handling) - set exclude_powered_off to false when powered-off VMs will be
+    migrated and restarted on the new platform.

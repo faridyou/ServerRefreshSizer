@@ -8,7 +8,7 @@ from refreshsizer.ingest.common import CSV_EXT, find_col, read_csv_any, read_wor
 
 
 def detect_format(path: Path) -> str:
-    """Return one of: rvtools, liveoptics, liveoptics_general, manual_template, nmon, awr, timeseries, universal."""
+    """Return one of: rvtools, liveoptics, liveoptics_air, manual_template, nmon, awr, timeseries, universal."""
     path = Path(path)
     ext = path.suffix.lower()
     if ext in CSV_EXT:
@@ -37,6 +37,11 @@ def detect_format(path: Path) -> str:
         return "rvtools"
     if "esx hosts" in low or "esx performance" in low:
         return "liveoptics"
+    if "servers" in low and "details" in low:
+        sheets = read_workbook(path)
+        for k, df in sheets.items():
+            if k.lower() == "servers" and find_col(df.columns, "Rule Name") and find_col(df.columns, "Rule Details"):
+                return "liveoptics_air"
     if "servers" in low and ("hypervisors" in low or "server disks" in low or "vms" in low):
         # General Excel has these tab names; verify Live Optics-specific column
         sheets = read_workbook(path)

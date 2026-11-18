@@ -15,7 +15,7 @@ from refreshsizer.paths import mapping_profiles_dir
 from refreshsizer.ui.projects import ProjectStore
 
 Progress = Callable[[float, str], None]
-FORMAT_LABEL = {"rvtools": "RVTools", "liveoptics": "Live Optics", "manual_template": "RefreshSizer template",
+FORMAT_LABEL = {"rvtools": "RVTools", "liveoptics": "Live Optics", "liveoptics_air": "Live Optics AIR (aging report, informational)", "manual_template": "RefreshSizer template",
                 "nmon": "AIX nmon", "awr": "Oracle AWR", "timeseries": "CPU time series",
                 "universal": "universal (any format)"}
 
