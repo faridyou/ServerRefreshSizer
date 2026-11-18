@@ -43,10 +43,29 @@ def vmware_lines(n_hosts: int, cpus: int, cores: int, years: int, policy: Policy
     return lines, lic_order
 
 
+def nutanix_line(n_hosts: int, cpus: int, cores: int, years: int, policy: Policy,
+                 prices: dict[str, Any]) -> LicenseLine:
+    """Nutanix Cloud Infrastructure (NCI) per physical core per year (all cores of every node)."""
+    q = n_hosts * cpus * max(cores, policy.nutanix_min_cores_per_cpu)
+    ed = policy.nutanix_edition.lower()
+    p = _lp(prices, f"nutanix_{ed}_usd_per_core_year", 200)
+    return LicenseLine(product=f"Nutanix {ed.upper().replace('_', ' ')}", metric="cores/yr", quantity=q,
+                       unit_price=p, annual_usd=q * p, horizon_usd=q * p * years,
+                       note="placeholder price, negotiable; " + ("AHV included" if policy.target_stack ==
+                                                                 "nutanix_ahv" else "on VMware ESXi"))
+
+
 def target_licensing(d: ClusterDemand, n_total: int, k_ha: int, cpus: int, cores: int, cpu_name: str,
                      years: int, policy: Policy, prices: dict[str, Any], raw_tib_installed: float,
                      vsan: bool) -> tuple[list[LicenseLine], dict[str, float]]:
-    lines, vmw = vmware_lines(n_total, cpus, cores, years, policy, prices, raw_tib_installed, vsan)
+    lines: list[LicenseLine]
+    if policy.target_stack == "nutanix_ahv":  # AHV is included with Nutanix: no VMware licensing
+        lines, vmw = [], 0
+    else:  # vmware_vsan, or nutanix_esxi (vSphere licences, no vSAN capacity entitlement check)
+        lines, vmw = vmware_lines(n_total, cpus, cores, years, policy, prices, raw_tib_installed,
+                                  vsan and not policy.nutanix)
+    if policy.nutanix:
+        lines.append(nutanix_line(n_total, cpus, cores, years, policy, prices))
     info: dict[str, float] = {"vmware_cores": vmw, "oracle_active": 0.0, "oracle_all": 0.0, "db_cores": 0.0}
     lic = d.licensing
     host_cores = cpus * cores

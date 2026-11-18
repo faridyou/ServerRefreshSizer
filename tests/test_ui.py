@@ -420,3 +420,22 @@ def test_whatif_target_is_one_off_and_policy_keeps_target(ui: UI, fixtures_dir: 
     assert ui.store.policy_overrides(name)["target_platforms"] == ["R7725"]
     bad = ui.c.post(f"/p/{name}/size", data={"vendor": "both", "from": "whatif"})
     assert "select at least one target platform" in bad.text
+
+
+def test_nutanix_stack_from_selector(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("nutanix")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    assert 'name="stack"' in ui.c.get(f"/p/{name}/summary").text
+    form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "stack": "nutanix_ahv"})
+    j = ui.job(ui.c.post(f"/p/{name}/size", data=form))
+    assert ui.store.policy_overrides(name)["target_stack"] == "nutanix_ahv"
+    cs = ui.sizing(name).clusters[0]
+    assert cs.demand.protection == "nutanix_rf2" and "Nutanix AHV" in cs.target_selection
+    page = ui.c.get(j.redirect)
+    assert "Nutanix CVM" in page.text and "Nutanix CVM reservation per node" in page.text
+    # back to VMware clears the saved stack
+    ui.job(ui.c.post(f"/p/{name}/size", data=_target_form(INTEL + AMD, "both",
+                                                         {"from": "summary", "save_target": "1",
+                                                          "stack": "vmware_vsan"})))
+    assert "target_stack" not in ui.store.policy_overrides(name)

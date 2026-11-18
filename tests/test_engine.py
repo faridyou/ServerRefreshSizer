@@ -202,4 +202,37 @@ def test_target_validation() -> None:
 
 
 def test_golden_unchanged_without_target(lo_run) -> None:  # type: ignore[no-untyped-def]
-    assert lo_run.clusters[0].target_selection == "all Dell 17G platforms and CPUs"
+    assert lo_run.clusters[0].target_selection == "VMware vSphere + vSAN ESA; all Dell 17G platforms and CPUs"
+
+
+def test_nutanix_cvm_reservation(fixtures_dir: Path) -> None:
+    proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
+    vm = load_policy()
+    nx = load_policy({"target_stack": "nutanix_ahv"})
+    prices, cache = load_prices(), ensure_db()
+    d_vm = size_project(proj.model_copy(deep=True), vm).clusters[0].demand
+    d_nx = size_project(proj.model_copy(deep=True), nx).clusters[0].demand
+    assert d_vm.d_t == d_nx.d_t and d_vm.m_t == d_nx.m_t  # demand is the same, only the target side changes
+    assert d_nx.protection == "nutanix_rf2" and not d_nx.external_storage
+    assert abs(d_nx.storage_raw_tib - d_vm.storage_raw_tib * 2.0 / 1.25) < 1e-6  # RF2 vs vSAN RAID-5 4+1
+    c_vm = evaluate_named(d_vm, "R7725", "amd-epyc-9355", vm, prices, cache)
+    c_nx = evaluate_named(d_nx, "R7725", "amd-epyc-9355", nx, prices, cache)
+    assert abs(c_nx.su_host_effective - 964 * (64 - 12) / 64) < 0.01  # 12 CVM vCPU reserved as cores
+    assert c_nx.mem_per_host_need_gb == round(c_vm.mem_per_host_need_gb + 48, 1)
+    assert any(e.step_id == "nutanix_cvm" for e in c_nx.explanations)
+    products = {line.product for line in c_nx.licenses}
+    assert "Nutanix NCI PRO" in products and not any("VMware" in p for p in products)
+    esxi = load_policy({"target_stack": "nutanix_esxi"})
+    c_esxi = evaluate_named(d_nx, "R7725", "amd-epyc-9355", esxi, prices, cache)
+    products = {line.product for line in c_esxi.licenses}
+    assert "VMware VCF" in products and "Nutanix NCI PRO" in products and "vSAN capacity add-on" not in products
+    small = evaluate_named(d_nx, "R7715", "amd-epyc-9015", nx, prices, cache)  # 8 cores < 12 CVM vCPU
+    assert not small.feasible and any("CVM" in r for r in small.reasons)
+
+
+def test_nutanix_min_nodes_and_validation() -> None:
+    pol = load_policy({"target_stack": "nutanix_ahv", "nutanix_protection": "nutanix_rf3"})
+    assert ha.plan(10, 13.3, 100, pol, "nutanix_rf3").n_total == 5
+    assert ha.plan(10, 13.3, 100, load_policy(), "nutanix_rf2").n_total == 3
+    with pytest.raises(ValueError, match="target_stack"):
+        load_policy({"target_stack": "hyperv"})

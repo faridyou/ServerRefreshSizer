@@ -56,7 +56,11 @@ What you see, page by page:
   each with a *Copy* button. Below it, the **Target servers** selector: pick *Intel and AMD*, *Intel Xeon 6* or
   *AMD EPYC 9005*, tick the Dell platforms the customer accepts (grouped by CPU vendor, with height in U, sockets
   and number of supported CPUs), and optionally restrict to specific CPU models. *Run sizing* saves this choice in
-  the project's `policy.yaml`.
+  the project's `policy.yaml`. The same box selects the **target stack**: VMware vSphere + vSAN ESA (default),
+  **Nutanix AHV** or **Nutanix on ESXi**. For Nutanix every node loses the Controller VM's share - its vCPUs are
+  reserved as physical cores (default 12) and its memory (default 48 GB) is added to each node - storage uses
+  Nutanix RF2/RF3 (or EC-X) with their minimum node counts, and Nutanix NCI per-core licensing replaces VMware
+  (AHV) or comes on top of it (ESXi). CVM size, protection and edition are on the Policy page (Nutanix group).
 * **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
   HA, memory, storage (protection, slack, DRR), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
@@ -90,6 +94,7 @@ refreshsizer template --out template.xlsx [--lang fr]          # manual input te
 refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
                   [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
+                  [--stack vmware_vsan|nutanix_ahv|nutanix_esxi]
 refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang fr]
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]

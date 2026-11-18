@@ -15,6 +15,8 @@ GROUPS: list[tuple[str, list[str]]] = [
                       "active_memory_factor"]),
     ("ui_pg_storage", ["storage_architecture", "protection", "slack", "drr.*", "min_drives_per_host"]),
     ("ui_pg_vcpu", ["vcpu_ratio_max.*", "numa_nps"]),
+    ("ui_pg_nutanix", ["nutanix_protection", "nutanix_cvm_vcpu", "nutanix_cvm_memory_gb", "nutanix_edition",
+                       "nutanix_min_cores_per_cpu"]),
     ("ui_pg_licensing", ["vmware_edition", "vmware_min_cores_per_cpu", "vmware_order_min_cores",
                          "oracle_db_cluster_licensing", "split_clusters", "target_virtualized"]),
     ("ui_pg_objective", ["objective", "prefer_measured_spec", "top_n"]),
@@ -34,6 +36,8 @@ CHOICES: dict[str, list[str]] = {
     "split_clusters": ["auto", "false"],
     "objective": ["min_tco", "min_hosts", "min_licensed_cores", "min_power", "max_headroom"],
     "rperf_factor_mode": ["conservative", "generation_matched"],
+    "nutanix_protection": ["nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"],
+    "nutanix_edition": ["nci_starter", "nci_pro", "nci_ultimate"],
 }
 NULLABLE = {"max_hosts_per_cluster_user"}
 

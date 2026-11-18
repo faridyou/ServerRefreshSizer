@@ -93,3 +93,18 @@ def test_cli_target_flags(tmp_path: Path, fixtures_dir: Path) -> None:
     assert sz["recommended"]["config"]["platform"] in ("R670", "R770") and "CPU scenarios" in r.output
     r = runner.invoke(app, ["size", str(pj), "--cpus", "EPYC 9355"])
     assert json.loads(pj.read_text())["sizing"]["clusters"][0]["recommended"]["config"]["cpu_id"] == "amd-epyc-9355"
+
+
+def test_cli_stack_flag(tmp_path: Path, fixtures_dir: Path) -> None:
+    import json
+
+    pj = tmp_path / "p.json"
+    assert runner.invoke(app, ["ingest", str(fixtures_dir / "liveoptics_estate.xlsx"), "--yes", "--out",
+                               str(pj)]).exit_code == 0
+    r = runner.invoke(app, ["size", str(pj), "--stack", "nutanix_ahv"])
+    assert r.exit_code == 0, r.output
+    cs = json.loads(pj.read_text())["sizing"]["clusters"][0]
+    assert cs["demand"]["protection"] == "nutanix_rf2"
+    out = tmp_path / "rep"
+    assert runner.invoke(app, ["report", str(pj), "--format", "html,xlsx", "--out", str(out)]).exit_code == 0
+    assert "Nutanix CVM" in (out / "refreshsizer_report.html").read_text(encoding="utf-8")

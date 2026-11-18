@@ -184,3 +184,27 @@ Each entry: **decision** – reason – how to change it.
 60. **Powered-off VMs and templates**: the existing `exclude_powered_off` / `exclude_templates` switches are now
     on the Policy page (Utilization handling) - set exclude_powered_off to false when powered-off VMs will be
     migrated and restarted on the new platform.
+
+## Nutanix as target stack (change request 3)
+
+61. **`target_stack`**: vmware_vsan (default, unchanged results), nutanix_ahv, nutanix_esxi. Chosen in the UI
+    Target servers box, `policy.yaml` / Policy sheet or CLI `--stack`. Source-side demand is identical; only the
+    target side changes.
+62. **CVM CPU**: the Controller VM's vCPUs (`nutanix_cvm_vcpu`, default 12) are reserved as **physical cores**
+    on every node: SU_usable = SU_host x (cores - CVM) / cores. Conservative (a vCPU could be a hyperthread);
+    nodes with fewer cores than the CVM are infeasible, and a warning is shown when the CVM takes > 50 % of a
+    node. Default 12 = typical all-NVMe node; Nutanix's documented minimum is 8 - confirm with Nutanix Sizer.
+63. **CVM memory**: `nutanix_cvm_memory_gb` (default 48; Nutanix minimum 32, more with dedup/compression or
+    large drives) is added to each node's memory requirement before the DIMM choice. The Excel memory host-count
+    formula subtracts it from the installed memory.
+64. **Storage**: Nutanix is always HCI (DSF) - the external-SAN auto rule for RISC/bare-metal sources does not
+    apply. Protection overhead / minimum nodes: RF2 2.0 / 3, RF3 3.0 / 5, RF2 EC-X 4+1 1.25 / 6,
+    RF3 EC-X 4+2 1.5 / 7. EC-X only applies to write-cold data, so the EC-X options are optimistic; RF2 is the
+    default. vSAN's high-IO 10 % CPU reserve is not applied (the CVM reservation replaces it).
+65. **NUMA / vCPU ratio**: the vCPU:pCore check uses the cores left after the CVM; on single-socket nodes the
+    largest VM must fit in the socket minus the CVM cores.
+66. **Licensing**: AHV -> no VMware; Nutanix NCI (Starter / Pro / Ultimate) per physical core per year,
+    placeholder prices in `prices.yaml`, optional minimum cores per CPU (default 0). Nutanix on ESXi -> VMware
+    VCF/VVF per core **and** NCI, without the vSAN capacity entitlement check.
+67. **Platforms**: the Dell 17G catalog is reused as-is; confirm each node model and CPU on the Nutanix
+    hardware compatibility list (or Dell XC) before quoting.

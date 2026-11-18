@@ -24,6 +24,9 @@ power:
 licensing:
   vmware_vcf_usd_per_core_year: 350    # reported list, negotiable
   vmware_vvf_usd_per_core_year: 150    # reported list, negotiable
+  nutanix_nci_starter_usd_per_core_year: 120   # placeholder, negotiable
+  nutanix_nci_pro_usd_per_core_year: 200       # placeholder, negotiable
+  nutanix_nci_ultimate_usd_per_core_year: 300  # placeholder, negotiable
   windows_dc_usd_per_2core_pack: 850   # perpetual, amortized over horizon
   windows_std_usd_per_2core_pack: 140
   sql_ent_usd_per_2core_pack: 15123

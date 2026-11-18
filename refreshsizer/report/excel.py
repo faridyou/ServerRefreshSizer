@@ -176,6 +176,9 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             r6 = row(ws6, S6, r6, "n_min", "Minimum hosts (protection / HA)", int(
                 ''.join(ch for ch in rec.n_min_reason.split('hosts')[0] if ch.isdigit()) or 2), None, rec.n_min_reason)
             r6 = row(ws6, S6, r6, "mem_host", "Installed memory per host (GB)", rec.dimm.total_gb if rec.dimm else 0)
+            cvm_mem = float(run.policy.get("nutanix_cvm_memory_gb", 0)) if str(
+                run.policy.get("target_stack", "vmware_vsan")).startswith("nutanix") else 0.0
+            r6 = row(ws6, S6, r6, "cvm_mem", "Nutanix CVM memory per node (GB, 0 = VMware)", cvm_mem)
             r6 = row(ws6, S6, r6, "drv_host", "Installed raw TiB per host", rec.drives.raw_tib if rec.drives else 0)
             r6 = row(ws6, S6, r6, "n_mem", "Hosts for memory = CEILING(M_T/mem)+k_HA", rec.n_total,
                      f"=IF({R['mem_host']}>0,CEILING(M_T_REF/{R['mem_host']}-1E-9,1)+{R['k_ha']},0)", fmt=bk.fi)
@@ -233,8 +236,10 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         r9 += 1
         if rec:
             # patch memory / storage host-count formulas now that M_T and Raw cells exist
-            mf = f"=IF({R['mem_host']}>0,CEILING({R['m_t']}/{R['mem_host']}-1E-9,1)+{R['k_ha']},0)"
-            n_mem_val = (int(-(-d.m_t // rec.dimm.total_gb)) + rec.k_ha) if rec.dimm else 0
+            mf = (f"=IF({R['mem_host']}>{R['cvm_mem']},CEILING({R['m_t']}/({R['mem_host']}-{R['cvm_mem']})-1E-9,1)"
+                  f"+{R['k_ha']},0)")
+            avail = (rec.dimm.total_gb - cvm_mem) if rec.dimm else 0
+            n_mem_val = (int(-(-d.m_t // avail)) + rec.k_ha) if avail > 0 else 0
             ws6.write_formula(n_mem_row, 1, mf, bk.fi, n_mem_val)
             sf = f"=IF({R['drv_host']}>0,CEILING({R['raw']}/{R['drv_host']}-1E-9,1),0)"
             n_sto_val = int(-(-d.storage_raw_tib // rec.drives.raw_tib)) if rec.drives and rec.drives.raw_tib else 0

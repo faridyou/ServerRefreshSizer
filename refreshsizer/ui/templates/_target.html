@@ -1,5 +1,9 @@
 <details class="card target" {% if open_target %}open{% endif %}>
 <summary><b>{{ t('ui_target') }}</b>: {{ tgt.text }} <span class="muted small">{{ t('ui_target_hint') }}</span></summary>
+<div class="row" style="margin:8px 0"><b>{{ t('ui_stack') }}:</b>
+{% for key, label in tgt.stacks %}<label><input type="radio" name="stack" value="{{ key }}" {{ 'checked' if tgt.stack == key else '' }}> {{ label }}</label>{% endfor %}
+</div>
+<p class="small muted" style="margin:0 0 6px">{{ t('ui_stack_hint') }} (CVM: {{ tgt.cvm[0] }} vCPU / {{ tgt.cvm[1] }} GB)</p>
 <div class="row" style="margin:8px 0">
 {% for v, label in [('both', t('ui_vendor_both')), ('Intel', 'Intel Xeon 6'), ('AMD', 'AMD EPYC 9005')] %}
 <label><input type="radio" name="vendor" value="{{ v }}" data-vendor-pick="{{ v }}" {{ 'checked' if tgt.vendor == v else '' }}> {{ label }}</label>

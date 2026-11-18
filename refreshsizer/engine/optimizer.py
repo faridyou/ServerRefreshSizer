@@ -53,14 +53,36 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
                              d.spc_source, spc.spc)
     c_req = d.c_req * kwl
     d_t = d.d_t * kwl
-    vsan = not d.external_storage
+    hci = not d.external_storage  # storage on the nodes (vSAN ESA or Nutanix DSF)
+    nutanix = policy.nutanix
+    vsan = hci and not nutanix
     su_eff = su_host
+    host_cores = cores * count
+    cvm_cores = policy.nutanix_cvm_vcpu if nutanix else 0
+    cvm_mem = float(policy.nutanix_cvm_memory_gb) if nutanix else 0.0
     expls.append(Explanation(
         step_id="target_su", title="Target host capacity",
         formula_latex=r"SU_{host} = SPC_{target} \times cores \times CPUs",
         formula_text=f"{spc.spc:.4f} x {cores} x {count} = {su_host:,.1f} SU ({kwl_note})",
         inputs={"cpu": cpu.model, "SPC": round(spc.spc, 4), "cores_per_cpu": cores, "cpus": count},
         output=round(su_host, 2), unit="SU", source_refs=spc.refs(), confidence=spc.confidence))
+    if nutanix:
+        usable = max(host_cores - cvm_cores, 0)
+        su_eff = su_host * usable / host_cores
+        if usable <= 0:
+            reasons.append(f"Nutanix CVM needs {cvm_cores} cores but the node has only {host_cores}")
+        elif usable < host_cores * 0.5:
+            warns.append(f"Nutanix CVM takes {cvm_cores} of {host_cores} cores ({cvm_cores / host_cores:.0%}) "
+                         "per node: small nodes are inefficient for Nutanix")
+        expls.append(Explanation(
+            step_id="nutanix_cvm", title="Nutanix CVM reservation per node",
+            formula_latex=r"SU_{eff} = SU_{host} \times (cores - cores_{CVM}) / cores;\ M_{host} = M + M_{CVM}",
+            formula_text=(f"{su_host:,.1f} SU x ({host_cores} - {cvm_cores}) / {host_cores} = {su_eff:,.1f} SU usable "
+                          f"by workloads; CVM memory {cvm_mem:g} GB added to every node's memory requirement"),
+            inputs={"cvm_vcpu_reserved_as_cores": cvm_cores, "cvm_memory_GB": cvm_mem, "node_cores": host_cores,
+                    "stack": policy.target_stack},
+            output=round(su_eff, 2), unit="SU",
+            assumptions=["CVM vCPUs are reserved as physical cores (conservative); verify with Nutanix Sizer"]))
     u_check = d.u_max if d.apply_headroom else 1.0
     plan = ha.plan(d_t, c_req, su_eff, policy, d.protection, u_check=u_check)
     if vsan and plan.n_active and d.backend_iops_t / plan.n_total > policy.vsan_high_io_threshold_iops_per_host:
@@ -79,17 +101,18 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
         if n > policy.max_cluster_size:
             break
         survivors = max(n - k - (1 if policy.maintenance_reserve else 0), 1)
-        need_mem = d.m_t / survivors
+        need_mem = d.m_t / survivors + cvm_mem
         dimm = choose_dimms(platform, count, cores, cpu.core_type, cpu.max_mt_s, need_mem)
         if dimm is None:
             n_floor = n + 1
             continue
-        if vsan and d.storage_raw_tib > 0:
+        if hci and d.storage_raw_tib > 0:
             drives = choose_drives(d.storage_raw_tib / n, platform.drive_bays, prices, policy.min_drives_per_host)
             if drives is None:
                 n_floor = n + 1
                 continue
-        raw, norm, status = vcpu_ratio(vcpu_t, n * cores * count, spc.spc, d.spc_source or spc.spc, rmax)
+        raw, norm, status = vcpu_ratio(vcpu_t, n * (host_cores - cvm_cores), spc.spc, d.spc_source or spc.spc,
+                                       rmax)
         if status == "fail":
             n_floor = n + 1
             continue
@@ -99,17 +122,20 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
         reasons.append(f"needs {n} hosts > max cluster size {policy.max_cluster_size}")
     if dimm is None:
         reasons.append(f"memory {d.m_t:,.0f} GB cannot be met within {policy.max_cluster_size} hosts")
-    if vsan and d.storage_raw_tib > 0 and drives is None:
+    if hci and d.storage_raw_tib > 0 and drives is None:
         reasons.append("storage does not fit the drive bays")
     expls.append(plan.explanation)
     survivors = max(n - k, 1)
     if dimm:
         expls.append(Explanation(
             step_id="dimm", title="Memory per host and DIMM population",
-            formula_text=(f"{d.m_t:,.0f} GB / ({n} - {k}) = {d.m_t / survivors:,.0f} GB per host -> "
+            formula_text=(f"{d.m_t:,.0f} GB / ({n} - {k}) = {d.m_t / survivors:,.0f} GB per host"
+                          + (f" + CVM {cvm_mem:g} GB = {d.m_t / survivors + cvm_mem:,.0f} GB" if cvm_mem else "")
+                          + " -> "
                           f"{dimm.dimm_count} x {dimm.dimm_size_gb} GB = {dimm.total_gb} GB, {dimm.dpc} DPC @ "
                           f"{dimm.speed_mt_s} MT/s, {dimm.gbs_per_core} GB/s per core"),
-            inputs={"M_T": round(d.m_t), "hosts_after_failure": survivors}, output=dimm.total_gb, unit="GB"))
+            inputs={"M_T": round(d.m_t), "hosts_after_failure": survivors, "cvm_memory_GB": cvm_mem},
+            output=dimm.total_gb, unit="GB"))
         if dimm.gbs_per_core is not None and dimm.gbs_per_core < policy.mem_bw_min_gbs_per_core and d.wl_class in (
                 "hpc", "analytics", "dwh"):
             warns.append(f"memory bandwidth {dimm.gbs_per_core} GB/s/core < {policy.mem_bw_min_gbs_per_core} for "
@@ -125,21 +151,25 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
             inputs={"raw_TiB": round(d.storage_raw_tib, 2), "hosts": n}, output=drives.count, unit="drives"))
     numa_ok = True
     if d.platform_type == "x86" and d.largest_vm_vcpu:
-        numa_ok, nexpl = numa_check(d.largest_vm_vcpu, cores, policy)
+        # single-socket Nutanix node: the CVM shares the only NUMA node with the workloads
+        node_cores = cores - (cvm_cores if count == 1 else 0)
+        numa_ok, nexpl = numa_check(d.largest_vm_vcpu, node_cores, policy)
         expls.append(nexpl)
         if not numa_ok:
-            reasons.append(f"largest VM {d.largest_vm_vcpu:g} vCPU exceeds cores per NUMA node {cores}")
+            reasons.append(f"largest VM {d.largest_vm_vcpu:g} vCPU exceeds cores per NUMA node {node_cores}")
     if d.total_vcpu:
-        raw, norm, status = vcpu_ratio(vcpu_t, n * cores * count, spc.spc, d.spc_source or spc.spc, rmax)
+        wl_cores = n * (host_cores - cvm_cores)
+        raw, norm, status = vcpu_ratio(vcpu_t, wl_cores, spc.spc, d.spc_source or spc.spc, rmax)
         expls.append(Explanation(
             step_id="vcpu_ratio", title="vCPU:pCore ratio",
-            formula_text=(f"raw {vcpu_t:,.0f} / {n * cores * count} = {raw:.2f}; normalized {raw:.2f} / "
+            formula_text=(f"raw {vcpu_t:,.0f} / {wl_cores} = {raw:.2f}; normalized {raw:.2f} / "
                           f"({spc.spc:.2f}/{d.spc_source:.2f}) = {norm:.2f}; R_max {rmax:g} -> {status}"),
-            inputs={"vcpu_T": round(vcpu_t), "target_cores": n * cores * count, "R_max": rmax}, output=round(norm, 3)))
+            inputs={"vcpu_T": round(vcpu_t), "target_cores_for_workloads": wl_cores, "R_max": rmax},
+            output=round(norm, 3)))
         if status == "warn":
             warns.append(f"raw vCPU:pCore {raw:.2f} > {rmax:g} but normalized {norm:.2f} OK: pilot to confirm "
                          "CPU ready < 5 %")
-    nic, netexpl, netwarn = choose_nics(d.mbps_t, max(n - k, 1), vsan, policy)
+    nic, netexpl, netwarn = choose_nics(d.mbps_t, max(n - k, 1), hci, policy)
     expls.append(netexpl)
     warns += netwarn
     power_host = (cpu.tdp_w or 200) * count + platform.base_power_w
@@ -171,7 +201,7 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
         su_host=round(su_host, 3), su_host_effective=round(su_eff, 3),
         n_active=plan.n_active, k_ha=k, n_total=n, n_min_reason=plan.n_min_reason,
         util_normal=round(plan.util_normal, 4), util_failed=round(plan.util_failed, 4),
-        mem_per_host_need_gb=round(d.m_t / survivors, 1), dimm=dimm, drives=drives, nics=nic,
+        mem_per_host_need_gb=round(d.m_t / survivors + cvm_mem, 1), dimm=dimm, drives=drives, nics=nic,
         raw_per_host_tib=round(d.storage_raw_tib / n, 3) if n else 0, power_w_host=power_host,
         power_w_total=power_host * n, rack_units=ru, capex_host=round(capex_h), capex_total=round(capex),
         power_opex=round(power_opex), licenses=lines, license_total=round(lic_total), tco=round(tco),
@@ -227,15 +257,21 @@ def enumerate_configs(policy: Policy) -> list[tuple[TargetPlatform, CpuModel, in
     return out
 
 
+STACK_LABELS = {"vmware_vsan": "VMware vSphere + vSAN ESA", "nutanix_ahv": "Nutanix AHV",
+                "nutanix_esxi": "Nutanix on VMware ESXi"}
+
+
 def target_selection_text(policy: Policy) -> str:
-    parts = []
+    parts = [STACK_LABELS.get(policy.target_stack, policy.target_stack)]
     if policy.target_platforms:
         parts.append("platforms " + ", ".join(policy.target_platforms))
     if policy.target_cpu_vendors:
         parts.append("CPU vendor " + " / ".join(policy.target_cpu_vendors))
     if policy.target_cpus:
         parts.append(f"{len(policy.target_cpus)} selected CPU(s)")
-    return "; ".join(parts) or "all Dell 17G platforms and CPUs"
+    if len(parts) == 1:
+        parts.append("all Dell 17G platforms and CPUs")
+    return "; ".join(parts)
 
 
 def cpu_scenarios(feas: list[Candidate], objective: str, db: bool, prefer_measured: bool,

@@ -151,13 +151,16 @@ def size(project_file: Path = typer.Argument(..., exists=True),
          platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
          cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
          cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
+         stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
          out: Path | None = typer.Option(None, "--out", help="Output project (default: overwrite input)"),
          verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Size a project (adds the 'sizing' section to project.json)."""
     _setup_logging(verbose)
     project = _load_project(project_file)
-    pol = _policy(project.policy_overrides, policy,
-                  _cli_overrides(growth, years, objective, p95_estimate, None, platforms, cpu_vendor, cpus))
+    ov = _cli_overrides(growth, years, objective, p95_estimate, None, platforms, cpu_vendor, cpus)
+    if stack:
+        ov["target_stack"] = stack
+    pol = _policy(project.policy_overrides, policy, ov)
     run = _do_size(project, pol)
     _print_sizing(run)
     _save_project(project, out or project_file)
@@ -189,6 +192,7 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
         cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
+        stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
         format: str = typer.Option("html,pdf,xlsx", "--format"), lang: str = typer.Option("en", "--lang"),
         name: str | None = typer.Option(None, "--name"), verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Ingest + size + report in one go."""
@@ -198,8 +202,10 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     project = workflow.ingest(files, review_mode=_review_mode(yes, strict), llm=False if no_llm else "auto",
                               name=name)
     render_ingest_summary(project, console, lang)
-    pol = _policy(project.policy_overrides, policy,
-                  _cli_overrides(growth, years, objective, p95_estimate, lang, platforms, cpu_vendor, cpus))
+    ov = _cli_overrides(growth, years, objective, p95_estimate, lang, platforms, cpu_vendor, cpus)
+    if stack:
+        ov["target_stack"] = stack
+    pol = _policy(project.policy_overrides, policy, ov)
     sizing = _do_size(project, pol)
     _print_sizing(sizing)
     out.mkdir(parents=True, exist_ok=True)

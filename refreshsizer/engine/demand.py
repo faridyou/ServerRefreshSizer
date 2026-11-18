@@ -369,8 +369,14 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
     basis, m0, m_t, mexpl, mflags = memory_demand(wls, hosts, share, policy, mode, years, gm)
     expls.append(mexpl)
     flags += mflags
-    external = policy.storage_architecture == "external" or (
-        policy.storage_architecture == "auto" and (ptype in RISC or (hosts and len(bare) == len(hosts))))
+    if policy.nutanix:  # Nutanix targets are HCI: storage lives on the nodes (DSF), never on an external array
+        external = False
+    else:
+        external = policy.storage_architecture == "external" or (
+            policy.storage_architecture == "auto" and (ptype in RISC or bool(hosts and len(bare) == len(hosts))))
+    if policy.nutanix:
+        flags.append(f"target stack {policy.target_stack}: Nutanix CVM reserves {policy.nutanix_cvm_vcpu} cores and "
+                     f"{policy.nutanix_cvm_memory_gb:g} GB per node; storage on Nutanix DSF")
     prot, prot_note = resolve_protection(policy, bool(external))
     sd = storage_demand(wls, hosts, cluster.storage, share, policy, mode, years, prot)
     expls += sd["explanations"]

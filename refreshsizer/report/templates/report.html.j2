@@ -134,7 +134,7 @@ details summary { cursor: pointer; color: var(--accent); }
 <h2>{{ t('s5') }} - {{ d.cluster }}</h2>
 <section class="card"><table><tr><th>step</th><th>{{ t('formula') }}</th><th>{{ t('result') }}</th></tr>
 {% for e in d.explanations if e.step_id in ('src_capacity', 'd0', 'adjust') %}{{ expl(e) }}{% endfor %}
-{% if r %}{% for e in r.explanations if e.step_id == 'target_su' %}{{ expl(e) }}{% endfor %}{% endif %}
+{% if r %}{% for e in r.explanations if e.step_id in ('target_su', 'nutanix_cvm') %}{{ expl(e) }}{% endfor %}{% endif %}
 </table></section>
 
 <h2>{{ t('s6') }} - {{ d.cluster }}</h2>
@@ -167,7 +167,8 @@ details summary { cursor: pointer; color: var(--accent); }
 <tr><td>{{ t('memory') }}</td><td>{% if r.dimm %}{{ r.dimm.dimm_count }} x {{ r.dimm.dimm_size_gb }} GB DDR5 = {{ r.dimm.total_gb }} GB, {{ r.dimm.dpc }} DPC @ {{ r.dimm.speed_mt_s }} MT/s{% endif %}</td></tr>
 <tr><td>{{ t('drives') }}</td><td>{% if r.drives %}{{ r.drives.count }} x {{ r.drives.drive_tb }} TB NVMe ({{ r.drives.raw_tib }} TiB raw){% else %}boot only (BOSS); data on external storage{% endif %}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ r.nics }} (OCP 3.0)</td></tr>
-<tr><td>{{ t('psu') }}</td><td>2 x {{ r.config.psu }} (redundant)</td></tr></table>
+<tr><td>{{ t('psu') }}</td><td>2 x {{ r.config.psu }} (redundant)</td></tr>
+{% if policy.target_stack and policy.target_stack != 'vmware_vsan' %}<tr><td>{{ t('cvm_row') }}</td><td>{{ policy.nutanix_cvm_vcpu }} vCPU reserved as cores / {{ policy.nutanix_cvm_memory_gb }} GB per node; storage {{ d.protection }}</td></tr>{% endif %}</table>
 {% if c.dimm_diagram %}<h3>{{ t('dimm_diagram') }}</h3><pre class="dimm">{% for l in c.dimm_diagram %}{{ l }}
 {% endfor %}</pre>{% endif %}
 <p class="muted">The Dell spec sheet / configurator is authoritative for supported configurations.</p>

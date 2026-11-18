@@ -64,7 +64,8 @@
 <tr><td>{{ t('memory') }}</td><td>{% if rec.dimm %}{{ rec.dimm.dimm_count }} x {{ rec.dimm.dimm_size_gb }} GB = {{ rec.dimm.total_gb }} GB, {{ rec.dimm.dpc }} DPC @ {{ rec.dimm.speed_mt_s }} MT/s, {{ rec.dimm.gbs_per_core }} GB/s/core{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'dimm') | first, t) }}{{ calc(d.explanations | selectattr('step_id', 'equalto', 'memory') | first, t) }}</td></tr>
 <tr><td>{{ t('drives') }}</td><td>{% if rec.drives %}{{ rec.drives.count }} x {{ rec.drives.drive_tb }} TB NVMe ({{ rec.drives.raw_tib }} TiB){% else %}external storage{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'drives') | first, t) }}{{ calcs(d.explanations | selectattr('step_id', 'in', ['storage', 'iops']) | list, t) }}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ rec.nics }}{{ calc(ex | selectattr('step_id', 'equalto', 'network') | first, t) }}</td></tr>
-<tr><td>{{ t('psu') }}</td><td>2 x {{ rec.config.psu }}</td></tr></table>
+<tr><td>{{ t('psu') }}</td><td>2 x {{ rec.config.psu }}</td></tr>
+{% if r.policy.target_stack and r.policy.target_stack != 'vmware_vsan' %}<tr><td>{{ t('cvm_row') }}</td><td>{{ r.policy.nutanix_cvm_vcpu }} vCPU (reserved cores) / {{ r.policy.nutanix_cvm_memory_gb }} GB · {{ d.protection }}{{ calc(ex | selectattr('step_id', 'equalto', 'nutanix_cvm') | first, t) }}</td></tr>{% endif %}</table>
 {% if c.dimm_diagram %}<h3>{{ t('dimm_diagram') }}</h3><pre>{% for l in c.dimm_diagram %}{{ l }}
 {% endfor %}</pre>{% endif %}</div>
 <div class="card"><h3>{{ t('s11') }}</h3><table class="small">{% for k in c.constraints %}<tr><td>{{ k.check }}</td><td>{{ k.detail }}</td><td><span class="tag {{ k.status }}">{{ k.status }}</span></td></tr>{% endfor %}</table>

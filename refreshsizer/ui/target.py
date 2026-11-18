@@ -40,7 +40,12 @@ def context(policy: Policy | None) -> dict[str, Any]:
     from refreshsizer.engine.optimizer import target_selection_text
 
     text = target_selection_text(policy) if policy else "all Dell 17G platforms and CPUs"
-    return {"groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text}
+    from refreshsizer.engine.optimizer import STACK_LABELS
+
+    stack = policy.target_stack if policy else "vmware_vsan"
+    return {"groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
+            "stacks": list(STACK_LABELS.items()),
+            "cvm": (policy.nutanix_cvm_vcpu, policy.nutanix_cvm_memory_gb) if policy else (12, 48)}
 
 
 def overrides_from_form(form: Any) -> dict[str, Any]:
@@ -56,8 +61,12 @@ def overrides_from_form(form: Any) -> dict[str, Any]:
         chosen = [p for p in chosen if platform_vendor(p) in vendors]
         if not chosen:
             raise ValueError(f"no selected platform uses {vendors[0]} CPUs")
-    return {"target_platforms": None if set(chosen) == set(plats) else chosen,
-            "target_cpu_vendors": vendors, "target_cpus": cpus or None}
+    out: dict[str, Any] = {"target_platforms": None if set(chosen) == set(plats) else chosen,
+                           "target_cpu_vendors": vendors, "target_cpus": cpus or None}
+    stack = str(form.get("stack", "") or "")
+    if stack:
+        out["target_stack"] = None if stack == "vmware_vsan" else stack  # None = back to the default
+    return out
 
 
 def merge_into_saved(saved: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:

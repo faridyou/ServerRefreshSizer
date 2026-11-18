@@ -55,6 +55,12 @@ class Policy(BaseModel):
     drr: dict[str, float] = Field(default_factory=lambda: {"default": 1.3})
     storage_architecture: str = "auto"
     protection: str = "vsan_esa_raid5_4p1"
+    target_stack: str = "vmware_vsan"
+    nutanix_protection: str = "nutanix_rf2"
+    nutanix_cvm_vcpu: int = 12
+    nutanix_cvm_memory_gb: float = 48
+    nutanix_min_cores_per_cpu: int = 0
+    nutanix_edition: str = "nci_pro"
     slack: float = 0.30
     min_drives_per_host: int = 4
     vsan_cpu_reserve_high_io: float = 0.10
@@ -137,6 +143,12 @@ class Policy(BaseModel):
         if self.monte_carlo_runs < 1:
             bad.append("monte_carlo_runs must be >= 1")
         bad += self._check_targets()
+        if self.target_stack not in ("vmware_vsan", "nutanix_ahv", "nutanix_esxi"):
+            bad.append(f"target_stack = {self.target_stack}: use vmware_vsan, nutanix_ahv or nutanix_esxi")
+        if self.nutanix_protection not in ("nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"):
+            bad.append(f"nutanix_protection = {self.nutanix_protection}: unknown")
+        if self.nutanix_cvm_vcpu < 0 or self.nutanix_cvm_memory_gb < 0:
+            bad.append("nutanix_cvm_vcpu / nutanix_cvm_memory_gb must be >= 0")
         if bad:
             raise ValueError("invalid policy: " + "; ".join(bad))
         return self
@@ -162,6 +174,10 @@ class Policy(BaseModel):
         return bad
 
     # ---- helpers -------------------------------------------------------
+    @property
+    def nutanix(self) -> bool:
+        return self.target_stack.startswith("nutanix")
+
     def umax(self, wl_class: str) -> float:
         return float(self.u_max.get(wl_class, self.u_max.get("default", 0.75)))
 
