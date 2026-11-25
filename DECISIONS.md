@@ -321,7 +321,7 @@ Each entry: **decision** – reason – how to change it.
 
 94. **PowerStore Gen 3** (1500 / 5500 / 9500, PowerStoreOS 5, released July 2026) added to `catalog/powerstore.yaml`
     and offered by default (`default_generations: [3]`); Gen 2 models stay selectable. Gen 3 data used: 3U two-node
-    appliances, E3 NVMe; 24 drive slots (1500) and 40 (5500/9500) per Dell's InfoHub and shop pages (one Dell spec
+    appliances, E3 NVMe; 40 drive slots on all three models (user-confirmed, see 97; earlier 24 for the 1500) per Dell's InfoHub and shop pages (one Dell spec
     sheet extract lists 24 for all three - to verify); no expansion enclosures yet (announced for a later release),
     so capacity is limited to the base enclosure; TLC 3.84/7.68/15.36 TB and QLC 30.72 TB drive sizes (public review,
     to verify); minimum drives 7 / 11 from Dell's capacity tables. Prices, power and indicative IOPS are placeholders.
@@ -334,3 +334,5 @@ Each entry: **decision** – reason – how to change it.
     only). The CVM reservation is kept on every compute node (conservative: the CVM still runs the Nutanix services;
     its size with external storage may be smaller - adjust nutanix_cvm_vcpu / nutanix_cvm_memory_gb). Licensing: NCI
     per core, no VMware, no extra storage licence. This supersedes decision 83.
+97. **Gen 3 data confirmed by the user**: 40 drive slots on the 1500, 5500 and 9500, and drive sizes TLC
+    3.84 / 7.68 / 15.36 TB and QLC 30.72 TB. The 1500 is updated from 24 to 40 slots (supersedes that part of 94).
