@@ -1,4 +1,6 @@
 # Curated published SPECrate2017_int_base results (offline fallback). source=curated.
+# Rows with a url were checked against the published spec.org result; rows without one were entered without
+# access to spec.org and are replaced by real results after `refreshsizer bench update` / Update from spec.org.
 # A live fetch from spec.org overrides a curated row with the same result id.
 # Fields: id, cpu (canonical name), system, vendor, chips, cores (enabled), tpc, base, test_date, sponsor, software, url
 suite: cpu2017
@@ -18,9 +20,9 @@ results:
   - {id: cur-6952p-r770ap, cpu: Intel Xeon 6952P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1810, test_date: 2025-04, sponsor: Dell Inc.}
   - {id: cur-6972p-r770ap, cpu: Intel Xeon 6972P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1940, test_date: 2025-04, sponsor: Dell Inc.}
   - {id: cur-9015-r7725, cpu: AMD EPYC 9015, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 16, tpc: 2, base: 233, test_date: 2024-12, sponsor: Dell Inc.}
-  - {id: cur-9135-r7715, cpu: AMD EPYC 9135, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 16, tpc: 2, base: 232, test_date: 2024-12, sponsor: Dell Inc.}
-  - {id: cur-9175f-r7725, cpu: AMD EPYC 9175F, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 32, tpc: 2, base: 579, test_date: 2024-12, sponsor: Dell Inc.}
-  - {id: cur-9335-r7715, cpu: AMD EPYC 9335, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 32, tpc: 2, base: 457, test_date: 2024-12, sponsor: Dell Inc.}
+  - {id: cur-9135-r7715, cpu: AMD EPYC 9135, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 16, tpc: 2, base: 232, test_date: 2024-11, sponsor: Dell Inc., url: "https://www.spec.org/cpu2017/results/res2024q4/cpu2017-20241104-45207.html"}
+  - {id: cur-9175f-r7725, cpu: AMD EPYC 9175F, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 32, tpc: 2, base: 579, test_date: 2025-06, sponsor: Dell Inc., url: "https://www.spec.org/cpu2017/results/res2025q3/cpu2017-20250616-48769.html"}
+  - {id: cur-9335-r7715, cpu: AMD EPYC 9335, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 32, tpc: 2, base: 457, test_date: 2025-05, sponsor: Dell Inc., url: "https://www.spec.org/cpu2017/results/res2025q2/cpu2017-20250602-48562.html"}
   - {id: cur-9355-r7725, cpu: AMD EPYC 9355, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 64, tpc: 2, base: 964, test_date: 2024-12, sponsor: Dell Inc.}
   - {id: cur-9555p-r7715, cpu: AMD EPYC 9555P, system: Dell PowerEdge R7715, vendor: Dell Inc., chips: 1, cores: 64, tpc: 2, base: 825, test_date: 2024-12, sponsor: Dell Inc.}
   - {id: cur-9555-r7725, cpu: AMD EPYC 9555, system: Dell PowerEdge R7725, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1610, test_date: 2024-12, sponsor: Dell Inc.}
