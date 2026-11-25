@@ -16,6 +16,7 @@ from refreshsizer.engine.storage_design import usable_tib
 from refreshsizer.ingest.pipeline import ingest_files
 from refreshsizer.report.build import write_reports
 from refreshsizer.report.email_prompt import build_email_prompt
+from tests.baseline import VSAN
 
 runner = CliRunner()
 
@@ -27,7 +28,7 @@ def _sized(fixtures_dir: Path, ov: dict | None = None):  # type: ignore[no-untyp
 
 
 def test_hci_storage_design(fixtures_dir: Path) -> None:
-    _, run = _sized(fixtures_dir)
+    _, run = _sized(fixtures_dir, VSAN)
     cs = run.clusters[0]
     st, rec = cs.storage, cs.recommended
     assert st and rec and rec.drives and st.architecture == "hci" and st.array is None
@@ -38,8 +39,8 @@ def test_hci_storage_design(fixtures_dir: Path) -> None:
 
 
 def test_external_powerstore_design(fixtures_dir: Path) -> None:
-    _, hci = _sized(fixtures_dir)
-    _, run = _sized(fixtures_dir, {"storage_architecture": "external"})
+    _, hci = _sized(fixtures_dir, VSAN)
+    _, run = _sized(fixtures_dir, {"target_stack": "vmware_vsan", "storage_architecture": "external"})
     cs = run.clusters[0]
     st, rec, d = cs.storage, cs.recommended, cs.demand
     assert d.external_storage and d.protection == "external" and rec and rec.drives is None
@@ -59,13 +60,13 @@ def test_external_powerstore_design(fixtures_dir: Path) -> None:
 
 
 def test_external_options(fixtures_dir: Path) -> None:
-    _, run = _sized(fixtures_dir, {"storage_architecture": "external", "external_storage": {
+    _, run = _sized(fixtures_dir, {"target_stack": "vmware_vsan", "storage_architecture": "external", "external_storage": {
         "drr": 3, "parity": "double", "protocol": "nvme_tcp25", "models": ["PowerStore 3200T"]}})
     st = run.clusters[0].storage
     assert st and st.array and st.array.model == "PowerStore 3200T" and not st.alternatives
     assert st.drr == 3 and st.physical_t_tib == pytest.approx(st.used_t_tib / 3, rel=1e-3)
     assert "25 GbE NIC" in st.host_adapter and st.protocol_label.startswith("NVMe/TCP")
-    _, run2 = _sized(fixtures_dir, {"storage_architecture": "external", "external_storage": {"array": "existing"}})
+    _, run2 = _sized(fixtures_dir, {"target_stack": "vmware_vsan", "storage_architecture": "external", "external_storage": {"array": "existing"}})
     st2 = run2.clusters[0].storage
     assert st2 and st2.array is None and "existing" in st2.solution and st2.capex_usd > 0
 
@@ -88,14 +89,14 @@ def test_policy_validation() -> None:
         load_policy({"external_storage": {"protocol": "smoke-signals"}})
     with pytest.raises(ValueError, match="unknown"):
         load_policy({"external_storage": {"models": ["PowerStore 1T"]}})
-    assert load_policy({"target_stack": None}).target_stack == "vmware_vsan"  # None = back to default
+    assert load_policy({"target_stack": None}).target_stack == "nutanix_ahv"  # None = back to the default
 
 
 @pytest.mark.parametrize("level", ["customer", "presales", "full"])
 def test_storage_section_in_reports(fixtures_dir: Path, tmp_path: Path, level: str) -> None:
     import docx
 
-    p, _ = _sized(fixtures_dir, {"storage_architecture": "external"})
+    p, _ = _sized(fixtures_dir, {"target_stack": "vmware_vsan", "storage_architecture": "external"})
     out = write_reports(p, tmp_path, ["html", "docx", "xlsx"], level=level)
     html = next(x for x in out if x.suffix == ".html").read_text(encoding="utf-8")
     assert "Storage design" in html and "PowerStore" in html and "Fibre Channel" in html
@@ -128,7 +129,8 @@ def test_cli_storage_and_prompt(fixtures_dir: Path, tmp_path: Path) -> None:
     pj = tmp_path / "p.json"
     assert runner.invoke(app, ["ingest", str(fixtures_dir / "liveoptics_estate.xlsx"), "--yes", "--out",
                                str(pj)]).exit_code == 0
-    r = runner.invoke(app, ["size", str(pj), "--storage", "external", "--protocol", "iscsi25", "--array-drr", "2.5"])
+    r = runner.invoke(app, ["size", str(pj), "--stack", "vmware_vsan", "--storage", "external", "--protocol",
+                            "iscsi25", "--array-drr", "2.5"])
     assert r.exit_code == 0, r.output
     import json
 
@@ -150,7 +152,7 @@ def test_gen3_default_models_and_media(fixtures_dir: Path) -> None:
     models = [st.array.model] + [o.model for o in st.alternatives]
     assert set(models) <= {"PowerStore 1500", "PowerStore 5500", "PowerStore 9500"}  # current generation by default
     assert st.array.media == "TLC" and st.array.rack_units == 3 and st.array.expansions_per_appliance == 0
-    _, q = _sized(fixtures_dir, {"storage_architecture": "external", "external_storage": {"media": "qlc"}})
+    _, q = _sized(fixtures_dir, {"target_stack": "vmware_vsan", "storage_architecture": "external", "external_storage": {"media": "qlc"}})
     assert q.clusters[0].storage.array.media == "QLC"  # type: ignore[union-attr]
     _, g2 = _sized(fixtures_dir, {"storage_architecture": "external",
                                   "external_storage": {"models": ["PowerStore 500T"]}})

@@ -18,6 +18,7 @@ from refreshsizer.engine.results import SizingRun
 from refreshsizer.ui.app import create_app
 from refreshsizer.ui.jobs import JobManager
 from refreshsizer.ui.projects import MAX_RUNS, ProjectStore
+from tests.baseline import VSAN
 
 TOL = 0.005
 FIXTURES = ["liveoptics_estate.xlsx", "rvtools_estate.xlsx", "manual_template_en.xlsx", "manual_template_fr.xlsx",
@@ -119,11 +120,12 @@ def test_golden_a_ui_equals_cli(ui: UI, fixtures_dir: Path) -> None:
     name = ui.new("golden A")
     ui.upload(name, f)
     ui.ingest(name)
+    ui.c.post(f"/p/{name}/policy", data=_target_form(INTEL + AMD, "both", {**VSAN_FORM, "then": "save"}))
     ui.size(name)
     d = ui.sizing(name).clusters[0].demand
     assert approx(d.d0, 819.5) and approx(d.d_t, 1648.4) and approx(d.c_req, 2197.8)
     assert approx(d.m_t, 6408) and approx(d.storage_raw_tib, 207.4)
-    cli = workflow.size(workflow.ingest([f]), workflow.make_policy())
+    cli = workflow.size(workflow.ingest([f]), workflow.make_policy(None, None, VSAN))
     same_clusters(ui.sizing(name), cli)
 
 
@@ -132,15 +134,17 @@ def test_golden_b_ui_equals_cli(ui: UI, fixtures_dir: Path) -> None:
     name = ui.new("golden B")
     ui.upload(name, f)
     ui.ingest(name)
-    r = ui.c.post(f"/p/{name}/policy", data={"growth.cpu_pct": "10", "then": "save"})
+    r = ui.c.post(f"/p/{name}/policy", data=_target_form(INTEL + AMD, "both", {**VSAN_FORM, "growth.cpu_pct": "10",
+                                                                               "then": "save"}))
     assert r.status_code == 200
-    assert ui.store.policy_overrides(name) == {"growth": {"cpu_pct": 10.0}}
+    saved = ui.store.policy_overrides(name)
+    assert saved["growth"] == {"cpu_pct": 10.0} and saved["target_stack"] == "vmware_vsan"
     ui.size(name)
     cs = ui.sizing(name).clusters[0]
     assert approx(cs.demand.d0, 153.0) and approx(cs.demand.c_req, 439.9)
     assert cs.recommended and cs.recommended.label == "R7725 2x AMD EPYC 9175F" and cs.recommended.n_total == 2
     assert cs.recommended.oracle_licenses_active == 16 and cs.recommended.oracle_licenses_all == 32
-    cli = workflow.size(workflow.ingest([f]), workflow.make_policy(None, None, {"growth": {"cpu_pct": 10}}))
+    cli = workflow.size(workflow.ingest([f]), workflow.make_policy(None, None, {**VSAN, "growth": {"cpu_pct": 10}}))
     same_clusters(ui.sizing(name), cli)
 
 
@@ -377,6 +381,7 @@ def _target_form(plats: list[str], vendor: str = "both", extra: dict[str, str] |
 
 
 INTEL = ["R670", "R770", "R770AP", "R470", "R570"]
+VSAN_FORM = {"stack": "vmware_vsan", "arch": "auto"}  # selector values of the tests/baseline.py VSAN policy
 AMD = ["R6715", "R7715", "R6725", "R7725"]
 
 
@@ -429,18 +434,26 @@ def test_nutanix_stack_from_selector(ui: UI, fixtures_dir: Path) -> None:
     ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
     ui.ingest(name)
     assert 'name="stack"' in ui.c.get(f"/p/{name}/summary").text
-    form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "stack": "nutanix_ahv"})
+    page = ui.c.get(f"/p/{name}/summary").text
+    # default: Nutanix AHV + disaggregated (PowerStore), listed first and selected
+    assert page.index('value="nutanix_ahv"') < page.index('value="vmware_vsan"')
+    assert page.index('name="arch" value="external"') < page.index('name="arch" value="hci"')
+    assert 'value="nutanix_ahv" checked' in page and 'name="arch" value="external" data-arch="external" checked' in page
+    form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "stack": "nutanix_ahv",
+                                              "arch": "hci"})
     j = ui.job(ui.c.post(f"/p/{name}/size", data=form))
-    assert ui.store.policy_overrides(name)["target_stack"] == "nutanix_ahv"
+    assert "target_stack" not in ui.store.policy_overrides(name)  # the default is not stored
+    assert ui.store.policy_overrides(name)["storage_architecture"] == "hci"
     cs = ui.sizing(name).clusters[0]
     assert cs.demand.protection == "nutanix_rf2" and "Nutanix AHV" in cs.target_selection
     page = ui.c.get(j.redirect)
     assert "Nutanix CVM" in page.text and "Nutanix CVM reservation per node" in page.text
-    # back to VMware clears the saved stack
+    # VMware is saved explicitly (it is no longer the default) and really used
     ui.job(ui.c.post(f"/p/{name}/size", data=_target_form(INTEL + AMD, "both",
                                                          {"from": "summary", "save_target": "1",
-                                                          "stack": "vmware_vsan"})))
-    assert "target_stack" not in ui.store.policy_overrides(name)
+                                                          "stack": "vmware_vsan", "arch": "hci"})))
+    assert ui.store.policy_overrides(name)["target_stack"] == "vmware_vsan"
+    assert "vSAN ESA" in ui.sizing(name).clusters[0].target_selection
 
 
 def test_report_level_selector(ui: UI, fixtures_dir: Path) -> None:
@@ -465,11 +478,13 @@ def test_storage_architecture_selector_and_email(ui: UI, fixtures_dir: Path) -> 
     page = ui.c.get(f"/p/{name}/summary").text
     assert 'name="arch"' in page and "PowerStore 3200T" in page
     form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "arch": "external",
+                                              "stack": "vmware_vsan",
                                               "es_array": "powerstore", "es_protocol": "nvme_fc32",
                                               "ps_model": ["PowerStore 1200T", "PowerStore 3200T"]})
     j = ui.job(ui.c.post(f"/p/{name}/size", data=form))
     saved = ui.store.policy_overrides(name)
-    assert saved["storage_architecture"] == "external"
+    assert "storage_architecture" not in saved  # external is the default
+    assert saved["target_stack"] == "vmware_vsan"
     assert saved["external_storage"]["models"] == ["PowerStore 1200T", "PowerStore 3200T"]
     st = ui.sizing(name).clusters[0].storage
     assert st and st.array and st.array.model in ("PowerStore 1200T", "PowerStore 3200T")
@@ -479,7 +494,7 @@ def test_storage_architecture_selector_and_email(ui: UI, fixtures_dir: Path) -> 
     # policy page keeps the external-storage section next to the selector
     ui.c.post(f"/p/{name}/policy", data={"external_storage.max_fill": "0.7", "then": "save"})
     saved = ui.store.policy_overrides(name)
-    assert saved["external_storage"]["max_fill"] == 0.7 and saved["storage_architecture"] == "external"
+    assert saved["external_storage"]["max_fill"] == 0.7 and saved["target_stack"] == "vmware_vsan"
     # Nutanix on ESXi + external is refused with a clear message (AHV is supported)
     bad = ui.c.post(f"/p/{name}/size", data=_target_form(INTEL + AMD, "both", {
         "from": "whatif", "stack": "nutanix_esxi", "arch": "external"}))

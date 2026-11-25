@@ -362,3 +362,15 @@ Each entry: **decision** – reason – how to change it.
      moved to its own file (`static/cpu_tip.js`, plain ES5), and every CPU also carries a native `title` tooltip as
      the fallback in any browser or with scripts blocked (the script removes it on hover, so only one popup shows).
      The CSS-only popup was dropped (it could be clipped by scrolling table cards).
+102. **Default target: Nutanix AHV + disaggregated (one PowerStore)** at the user's request: `target_stack:
+     nutanix_ahv`, `storage_architecture: external`, listed first and pre-selected in the selector (stack, then
+     architecture: Disaggregated / HCI / Auto). Choosing a non-default value is now stored explicitly (VMware used to
+     be "no override"; with the new default that would have silently meant Nutanix). The golden reference cases
+     are defined on VMware vSphere + vSAN ESA and are now pinned to it in the tests (`tests/baseline.py`), so their
+     numbers are unchanged. CLI: `--stack nutanix_esxi` alone implies `--storage hci` (Nutanix on ESXi has no
+     external storage). With Nutanix AHV the selector selects NVMe/TCP and greys out the other protocols.
+103. **"Disaggregated chosen but HCI sized"**: not reproducible with the current server code (summary and policy
+     routes, VMware and Nutanix, single and consolidated estates all size external storage). Two causes are
+     addressed: a stale cached app.js whose old rule disabled "Disaggregated" for any Nutanix stack and silently fell
+     back to HCI (fixed by no-cache + versioned static files, decision 101), and the empty Results page's "Run
+     sizing" button, which uses the saved/default policy - now disaggregated by default.

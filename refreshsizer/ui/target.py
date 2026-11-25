@@ -8,6 +8,15 @@ from refreshsizer.catalog.loader import load_cpus, load_platforms
 from refreshsizer.config.schema import Policy
 
 VENDORS = ["Intel", "AMD"]
+# selector order: the default first (Nutanix AHV + PowerStore, disaggregated)
+SELECTOR_STACKS = [("nutanix_ahv", "Nutanix AHV"), ("vmware_vsan", "VMware vSphere (vSAN ESA when HCI)"),
+                   ("nutanix_esxi", "Nutanix on VMware ESXi (HCI only)")]
+
+
+def _default(key: str) -> object:
+    from refreshsizer.config.schema import default_policy_dict
+
+    return default_policy_dict().get(key)
 
 
 def platform_vendor(model: str) -> str:
@@ -40,14 +49,15 @@ def context(policy: Policy | None) -> dict[str, Any]:
     from refreshsizer.engine.optimizer import target_selection_text
 
     text = target_selection_text(policy) if policy else "all Dell 17G platforms and CPUs"
-    from refreshsizer.engine.optimizer import STACK_LABELS
+    from refreshsizer.config.schema import default_policy_dict
 
-    stack = policy.target_stack if policy else "vmware_vsan"
+    dflt = default_policy_dict()
+    stack = policy.target_stack if policy else dflt["target_stack"]
     from refreshsizer.catalog.loader import load_powerstore
     from refreshsizer.config.schema import PROTOCOLS
 
     es = policy.external_storage if policy else None
-    arch = policy.storage_architecture if policy else "auto"
+    arch = policy.storage_architecture if policy else dflt["storage_architecture"]
     cat = load_powerstore()
     gens = set(cat.get("default_generations") or [])
     arrays = [{"model": m["model"], "media": "/".join((m.get("drives") or {m["media"]: []}).keys()),
@@ -57,7 +67,7 @@ def context(policy: Policy | None) -> dict[str, Any]:
     storage = {"arch": "hci" if arch == "vsan_esa" else arch, "array": es.array if es else "powerstore",
                "protocol": es.protocol if es else "fc32", "protocols": list(PROTOCOLS.items()), "models": arrays}
     return {"consolidation": policy.consolidation if policy else "single", "storage": storage, "groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
-            "stacks": list(STACK_LABELS.items()),
+            "stacks": SELECTOR_STACKS,
             "cvm": (policy.nutanix_cvm_vcpu, policy.nutanix_cvm_memory_gb) if policy else (12, 48)}
 
 
@@ -78,13 +88,13 @@ def overrides_from_form(form: Any) -> dict[str, Any]:
                            "target_cpu_vendors": vendors, "target_cpus": cpus or None}
     stack = str(form.get("stack", "") or "")
     if stack:
-        out["target_stack"] = None if stack == "vmware_vsan" else stack  # None = back to the default
+        out["target_stack"] = None if stack == _default("target_stack") else stack  # None = back to the default
     cons = str(form.get("consolidation", "") or "")
     if cons in ("single", "per_cluster"):
-        out["consolidation"] = None if cons == "single" else cons  # None = back to the default
+        out["consolidation"] = None if cons == _default("consolidation") else cons  # None = back to the default
     arch = str(form.get("arch", "") or "")
     if arch in ("auto", "hci", "external"):
-        out["storage_architecture"] = None if arch == "auto" else arch
+        out["storage_architecture"] = None if arch == _default("storage_architecture") else arch
         from refreshsizer.catalog.loader import load_powerstore
         from refreshsizer.config.schema import PROTOCOLS
 

@@ -67,6 +67,12 @@ function syncArch(box) {
   if (ext) { ext.disabled = nutanix; if (nutanix && ext.checked) box.querySelector("input[name=arch][value=hci]").checked = true; }
   arch = box.querySelector("input[name=arch]:checked");
   if (opts) opts.style.display = (arch && arch.value === "external") ? "" : "none";
+  // Nutanix AHV with PowerStore: NVMe/TCP only (NCI 7.6) - select it and grey out the other protocols
+  var ahv = stack && stack.value === "nutanix_ahv", proto = box.querySelector("select[name=es_protocol]");
+  if (proto) {
+    Array.prototype.forEach.call(proto.options, function (o) { o.disabled = ahv && o.value !== "nvme_tcp25"; });
+    if (ahv) { proto.value = "nvme_tcp25"; }
+  }
 }
 document.addEventListener("change", function (e) {
   if (e.target.name === "arch" || e.target.name === "stack") syncArch(e.target.closest(".target"));

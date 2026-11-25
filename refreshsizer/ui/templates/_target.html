@@ -9,7 +9,7 @@
 <label><input type="radio" name="consolidation" value="per_cluster" {{ 'checked' if tgt.consolidation == 'per_cluster' else '' }}> {{ t('ui_cons_per_cluster') }}</label>
 </div>
 <div class="row" style="margin:8px 0"><b>{{ t('ui_arch') }}:</b>
-{% for key, label in [('auto', t('ui_arch_auto')), ('hci', t('ui_arch_hci')), ('external', t('ui_arch_external'))] %}<label><input type="radio" name="arch" value="{{ key }}" data-arch="{{ key }}" {{ 'checked' if tgt.storage.arch == key else '' }}> {{ label }}</label>{% endfor %}
+{% for key, label in [('external', t('ui_arch_external')), ('hci', t('ui_arch_hci')), ('auto', t('ui_arch_auto'))] %}<label><input type="radio" name="arch" value="{{ key }}" data-arch="{{ key }}" {{ 'checked' if tgt.storage.arch == key else '' }}> {{ label }}</label>{% endfor %}
 </div>
 <div class="card" data-external-opts style="margin:0 0 8px;padding:8px 12px">
 <div class="row"><b>{{ t('ui_es_array') }}:</b>

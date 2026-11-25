@@ -56,16 +56,16 @@ What you see, page by page:
   each with a *Copy* button. Below it, the **Target servers** selector: pick *Intel and AMD*, *Intel Xeon 6* or
   *AMD EPYC 9005*, tick the Dell platforms the customer accepts (grouped by CPU vendor, with height in U, sockets
   and number of supported CPUs), and optionally restrict to specific CPU models. *Run sizing* saves this choice in
-  the project's `policy.yaml`. The same box selects the **target stack**: VMware vSphere + vSAN ESA (default),
-  **Nutanix AHV** or **Nutanix on ESXi**. For Nutanix every node loses the Controller VM's share - its vCPUs are
-  reserved as physical cores (default 12) and its memory (default 48 GB) is added to each node - storage uses
-  Nutanix RF2/RF3 (or EC-X) with their minimum node counts, and Nutanix NCI per-core licensing replaces VMware
-  (AHV) or comes on top of it (ESXi). CVM size, protection and edition are on the Policy page (Nutanix group).
+  the project's `policy.yaml`. **Default: Nutanix AHV + disaggregated storage (one Dell PowerStore)**, listed first
+  and pre-selected; the box also offers VMware vSphere (vSAN ESA when HCI) and Nutanix on ESXi (HCI only). For
+  Nutanix every node loses the Controller VM's share - its vCPUs are reserved as physical cores (default 12) and its
+  memory (default 48 GB) is added to each node - with HCI storage uses Nutanix RF2/RF3 (or EC-X) with their minimum
+  node counts, and Nutanix NCI per-core licensing replaces VMware (AHV) or comes on top of it (ESXi). CVM size, protection and edition are on the Policy page (Nutanix group).
   **Storage architecture**: *HCI* (storage in the servers: vSAN ESA or Nutanix) or *Disaggregated* (servers +
   hypervisor + external storage, e.g. a Dell Private Cloud style design with PowerStore). Disaggregated servers get
   boot drives only, no vSAN licence add-on and no vSAN minimum host count; the array is either a **Dell
   PowerStore sized by the tool** (tick the allowed models; protocol FC 32 Gb, NVMe/FC, iSCSI or NVMe/TCP 25 GbE)
-  or the **customer's existing array** (connectivity only). *Auto* keeps the previous behaviour (HCI, external for
+  or the **customer's existing array** (connectivity only). *Auto* means HCI, but external storage for
   RISC/bare-metal sources). PowerStore models: Gen 3 **1500 / 5500 / 9500** are offered by default (Gen 2 500T-9200T
   can be ticked); drive media TLC by default (`external_storage.media: qlc` or `any` for capacity-optimized QLC).
   **Nutanix AHV + PowerStore** (NCI 7.6+) is supported: NVMe/TCP only, a single-appliance PowerStore cluster, at least

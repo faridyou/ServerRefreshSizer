@@ -70,10 +70,10 @@ class Policy(BaseModel):
     mem_free_reserve: float = 0.05
     mem_bw_min_gbs_per_core: float = 4.0
     drr: dict[str, float] = Field(default_factory=lambda: {"default": 1.3})
-    storage_architecture: str = "auto"
+    storage_architecture: str = "external"
     external_storage: ExternalStorage = Field(default_factory=ExternalStorage)
     protection: str = "vsan_esa_raid5_4p1"
-    target_stack: str = "vmware_vsan"
+    target_stack: str = "nutanix_ahv"
     nutanix_protection: str = "nutanix_rf2"
     nutanix_cvm_vcpu: int = 12
     nutanix_cvm_memory_gb: float = 48

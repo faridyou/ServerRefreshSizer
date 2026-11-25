@@ -15,6 +15,7 @@ from refreshsizer.ingest import rvtools
 from refreshsizer.ingest.base import assemble
 from refreshsizer.ingest.pipeline import ingest_files
 from refreshsizer.model.entities import SizingMode
+from tests.baseline import VSAN
 
 TOL = 0.005
 
@@ -24,7 +25,7 @@ def approx(v: float, ref: float) -> bool:
 
 
 def test_golden_a_liveoptics_summary(fixtures_dir: Path) -> None:
-    policy = load_policy()
+    policy = load_policy(VSAN)
     proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
     run = size_project(proj, policy)
     cs = run.clusters[0]
@@ -51,7 +52,7 @@ def test_golden_a_liveoptics_summary(fixtures_dir: Path) -> None:
 
 
 def test_golden_b_power_rperf(fixtures_dir: Path) -> None:
-    policy = load_policy({"growth": {"cpu_pct": 10}})
+    policy = load_policy(VSAN, {"growth": {"cpu_pct": 10}})
     proj = ingest_files([fixtures_dir / "aix_nmon_summary.csv"])
     run = size_project(proj, policy)
     cs = run.clusters[0]
@@ -71,7 +72,7 @@ def test_golden_b_power_rperf(fixtures_dir: Path) -> None:
 
 
 def test_golden_c_inventory_only(fixtures_dir: Path) -> None:
-    policy = load_policy()
+    policy = load_policy(VSAN)
     r = rvtools.parse(fixtures_dir / "rvtools_estate.xlsx")
     for h in r.hosts:
         h.cpu_util_snapshot_pct = None
@@ -95,7 +96,7 @@ def test_golden_c_inventory_only(fixtures_dir: Path) -> None:
 
 @pytest.mark.parametrize("g", [5, 15, 30])
 def test_more_growth_more_hosts_smoke(fixtures_dir: Path, g: int) -> None:
-    policy = load_policy({"growth": {"cpu_pct": g}})
+    policy = load_policy(VSAN, {"growth": {"cpu_pct": g}})
     proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
     run = size_project(proj, policy)
     assert run.clusters[0].recommended is not None

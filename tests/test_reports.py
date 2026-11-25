@@ -101,7 +101,7 @@ def test_cli_stack_flag(tmp_path: Path, fixtures_dir: Path) -> None:
     pj = tmp_path / "p.json"
     assert runner.invoke(app, ["ingest", str(fixtures_dir / "liveoptics_estate.xlsx"), "--yes", "--out",
                                str(pj)]).exit_code == 0
-    r = runner.invoke(app, ["size", str(pj), "--stack", "nutanix_ahv"])
+    r = runner.invoke(app, ["size", str(pj), "--stack", "nutanix_ahv", "--storage", "hci"])
     assert r.exit_code == 0, r.output
     cs = json.loads(pj.read_text())["sizing"]["clusters"][0]
     assert cs["demand"]["protection"] == "nutanix_rf2"

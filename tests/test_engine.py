@@ -19,11 +19,12 @@ from refreshsizer.engine.sizing import size_project, split_cluster
 from refreshsizer.engine.uncertainty import run as mc_run
 from refreshsizer.ingest.pipeline import ingest_files
 from refreshsizer.model.entities import Confidence, SizingMode
+from tests.baseline import VSAN
 
 
 @pytest.fixture(scope="module")
 def lo_run(fixtures_dir: Path):  # type: ignore[no-untyped-def]
-    return size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), load_policy())
+    return size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), load_policy(VSAN))
 
 
 def _demand(**kw: object) -> ClusterDemand:
@@ -54,7 +55,7 @@ def test_top5_and_pareto(lo_run) -> None:  # type: ignore[no-untyped-def]
 
 @pytest.mark.parametrize("objective", ["min_hosts", "min_power", "min_licensed_cores", "max_headroom"])
 def test_objectives(fixtures_dir: Path, objective: str) -> None:
-    run = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), load_policy({"objective": objective}))
+    run = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), load_policy(VSAN, {"objective": objective}))
     cs = run.clusters[0]
     assert cs.recommended is not None
     if objective == "min_hosts":
@@ -62,7 +63,7 @@ def test_objectives(fixtures_dir: Path, objective: str) -> None:
 
 
 def test_ha_rules() -> None:
-    pol = load_policy()
+    pol = load_policy(VSAN)
     p = ha.plan(1000, 1333.3, 100, pol, "vsan_esa_raid5_4p1")
     assert p.n_active == 14 and p.k_ha == 1 and p.n_total == 15
     p = ha.plan(1600, 2133.3, 100, pol, "vsan_esa_raid5_4p1")
@@ -71,14 +72,14 @@ def test_ha_rules() -> None:
     assert p.n_total == 4  # vSAN RAID-5 4+1 minimum
     p = ha.plan(10, 13.3, 100, pol, "external")
     assert p.n_total == 2
-    pol3 = load_policy({"max_hosts_per_cluster_user": 3})
+    pol3 = load_policy(VSAN, {"max_hosts_per_cluster_user": 3})
     from refreshsizer.engine.storage import resolve_protection
 
     assert resolve_protection(pol3, False)[0] == "vsan_esa_raid5_2p1"
 
 
 def test_licensing_minimums() -> None:
-    pol = load_policy()
+    pol = load_policy(VSAN)
     prices = load_prices()
     d = _demand(licensing={"windows_dc": {"workloads": 10, "vcpu": 40, "physc": 0, "vm_cores_min4": 40},
                            "sql_ent": {"workloads": 2, "vcpu": 4, "physc": 0, "vm_cores_min4": 8},
@@ -89,24 +90,24 @@ def test_licensing_minimums() -> None:
     assert by["Windows Server Datacenter"].quantity == 3 * 16  # min 8/CPU, 16/server
     assert by["SQL Server Enterprise"].quantity == 8  # per-VM (2 VMs x min 4) cheaper than 3 hosts x 2 x 8
     assert info["oracle_all"] == 3 * 16 * 0.5
-    pol2 = load_policy({"vmware_order_min_cores": 72})
+    pol2 = load_policy(VSAN, {"vmware_order_min_cores": 72})
     lines2, _ = target_licensing(d, 1, 1, 2, 8, "AMD EPYC 9015", 5, pol2, prices, 10, True)
     assert lines2[0].quantity == 72
 
 
 def test_split_clusters(fixtures_dir: Path) -> None:
     p = ingest_files([fixtures_dir / "manual_template_en.xlsx"])
-    parts = split_cluster(p.clusters[0], load_policy())
+    parts = split_cluster(p.clusters[0], load_policy(VSAN))
     assert [x[0] for x in parts] == ["Manual-Cluster-db", "Manual-Cluster"] and parts[0][3]
     assert abs(parts[0][2] - 32 / 176) < 1e-9
-    off = split_cluster(p.clusters[0], load_policy({"split_clusters": False}))
+    off = split_cluster(p.clusters[0], load_policy(VSAN, {"split_clusters": False}))
     assert len(off) == 1
 
 
 def test_monte_carlo_deterministic(lo_run) -> None:  # type: ignore[no-untyped-def]
     cs = lo_run.clusters[0]
-    u1 = mc_run(cs.demand, cs.recommended, load_policy())
-    u2 = mc_run(cs.demand, cs.recommended, load_policy())
+    u1 = mc_run(cs.demand, cs.recommended, load_policy(VSAN))
+    u2 = mc_run(cs.demand, cs.recommended, load_policy(VSAN))
     assert u1.p50_hosts == u2.p50_hosts and u1.histogram == u2.histogram and u1.runs == 5000
     assert u1.p90_hosts >= u1.p50_hosts and u1.tornado
 
@@ -114,7 +115,7 @@ def test_monte_carlo_deterministic(lo_run) -> None:  # type: ignore[no-untyped-d
 @settings(max_examples=25, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(g1=st.floats(min_value=0, max_value=40), dg=st.floats(min_value=0, max_value=20))
 def test_more_growth_never_fewer_hosts(g1: float, dg: float) -> None:
-    pol = load_policy()
+    pol = load_policy(VSAN)
     prices, cache = load_prices(), ensure_db()
 
     def hosts(g: float) -> int:
@@ -151,7 +152,7 @@ def test_policy_rejects_meaningless_values(ov: dict, msg: str) -> None:  # type:
 
 
 def test_ha_loop_always_terminates() -> None:
-    pol = load_policy()
+    pol = load_policy(VSAN)
     with pytest.raises(ValueError):
         ha.plan(1000, 1000, 100, pol, "external", u_check=-0.5)  # used to loop for ever
     p = ha.plan(1e12, 1.0, 100, pol, "external", u_check=0.75)  # absurd input still returns
@@ -167,7 +168,7 @@ def _vendor(cpu_id: str) -> str:
 @pytest.mark.parametrize("vendor", ["Intel", "AMD"])
 def test_cpu_vendor_filter(fixtures_dir: Path, vendor: str) -> None:
     run = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]),
-                       load_policy({"target_cpu_vendors": [vendor]}))
+                       load_policy(VSAN, {"target_cpu_vendors": [vendor]}))
     cs = run.clusters[0]
     assert cs.recommended and _vendor(cs.recommended.config.cpu_id) == vendor
     assert {_vendor(c.config.cpu_id) for c in cs.candidates + cs.scenarios + cs.pareto} == {vendor}
@@ -187,10 +188,10 @@ def test_cpu_scenarios_best_per_cpu_and_vendor(lo_run) -> None:  # type: ignore[
 
 
 def test_target_platform_and_cpu_filter(fixtures_dir: Path) -> None:
-    pol = load_policy({"target_platforms": ["R770"], "target_cpus": ["intel-xeon-6787p", "intel-xeon-6760p"]})
+    pol = load_policy(VSAN, {"target_platforms": ["R770"], "target_cpus": ["intel-xeon-6787p", "intel-xeon-6760p"]})
     cs = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), pol).clusters[0]
     assert cs.evaluated == 2 and {c.config.platform for c in cs.scenarios} == {"R770"}
-    none = load_policy({"target_platforms": ["R770"], "target_cpu_vendors": ["AMD"]})
+    none = load_policy(VSAN, {"target_platforms": ["R770"], "target_cpu_vendors": ["AMD"]})
     cs2 = size_project(ingest_files([fixtures_dir / "liveoptics_estate.xlsx"]), none).clusters[0]
     assert cs2.recommended is None and any("no target configuration" in w for w in cs2.warnings)
 
@@ -207,8 +208,8 @@ def test_golden_unchanged_without_target(lo_run) -> None:  # type: ignore[no-unt
 
 def test_nutanix_cvm_reservation(fixtures_dir: Path) -> None:
     proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
-    vm = load_policy()
-    nx = load_policy({"target_stack": "nutanix_ahv"})
+    vm = load_policy(VSAN)
+    nx = load_policy(VSAN, {"target_stack": "nutanix_ahv"})
     prices, cache = load_prices(), ensure_db()
     d_vm = size_project(proj.model_copy(deep=True), vm).clusters[0].demand
     d_nx = size_project(proj.model_copy(deep=True), nx).clusters[0].demand
@@ -222,7 +223,7 @@ def test_nutanix_cvm_reservation(fixtures_dir: Path) -> None:
     assert any(e.step_id == "nutanix_cvm" for e in c_nx.explanations)
     products = {line.product for line in c_nx.licenses}
     assert "Nutanix NCI PRO" in products and not any("VMware" in p for p in products)
-    esxi = load_policy({"target_stack": "nutanix_esxi"})
+    esxi = load_policy(VSAN, {"target_stack": "nutanix_esxi"})
     c_esxi = evaluate_named(d_nx, "R7725", "amd-epyc-9355", esxi, prices, cache)
     products = {line.product for line in c_esxi.licenses}
     assert "VMware VCF" in products and "Nutanix NCI PRO" in products and "vSAN capacity add-on" not in products
@@ -231,8 +232,8 @@ def test_nutanix_cvm_reservation(fixtures_dir: Path) -> None:
 
 
 def test_nutanix_min_nodes_and_validation() -> None:
-    pol = load_policy({"target_stack": "nutanix_ahv", "nutanix_protection": "nutanix_rf3"})
+    pol = load_policy(VSAN, {"target_stack": "nutanix_ahv", "nutanix_protection": "nutanix_rf3"})
     assert ha.plan(10, 13.3, 100, pol, "nutanix_rf3").n_total == 5
-    assert ha.plan(10, 13.3, 100, load_policy(), "nutanix_rf2").n_total == 3
+    assert ha.plan(10, 13.3, 100, load_policy(VSAN), "nutanix_rf2").n_total == 3
     with pytest.raises(ValueError, match="target_stack"):
-        load_policy({"target_stack": "hyperv"})
+        load_policy(VSAN, {"target_stack": "hyperv"})

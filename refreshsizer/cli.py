@@ -153,8 +153,8 @@ def size(project_file: Path = typer.Argument(..., exists=True),
          platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
          cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
          cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
-         stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
-         storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+         stack: str | None = typer.Option(None, "--stack", help="nutanix_ahv (default) | vmware_vsan | nutanix_esxi"),
+         storage: str | None = typer.Option(None, "--storage", help="external (default, disaggregated) | hci | auto"),
          clusters: str | None = typer.Option(None, "--clusters", help="single (consolidate) | per_cluster"),
          array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
          protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
@@ -168,6 +168,8 @@ def size(project_file: Path = typer.Argument(..., exists=True),
     if stack:
         ov["target_stack"] = stack
     ov.update(_storage_overrides(storage, array, protocol, array_drr))
+    if stack == "nutanix_esxi" and not storage:  # Nutanix on ESXi is HCI only (external storage needs AHV)
+        ov["storage_architecture"] = "hci"
     if clusters:
         ov["consolidation"] = clusters
     pol = _policy(project.policy_overrides, policy, ov)
@@ -242,8 +244,8 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         platforms: str | None = typer.Option(None, "--platforms", help=TARGET_HELP),
         cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
-        stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
-        storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+        stack: str | None = typer.Option(None, "--stack", help="nutanix_ahv (default) | vmware_vsan | nutanix_esxi"),
+        storage: str | None = typer.Option(None, "--storage", help="external (default, disaggregated) | hci | auto"),
         clusters: str | None = typer.Option(None, "--clusters", help="single (consolidate) | per_cluster"),
         array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
         protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
@@ -262,6 +264,8 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     if stack:
         ov["target_stack"] = stack
     ov.update(_storage_overrides(storage, array, protocol, array_drr))
+    if stack == "nutanix_esxi" and not storage:  # Nutanix on ESXi is HCI only (external storage needs AHV)
+        ov["storage_architecture"] = "hci"
     if clusters:
         ov["consolidation"] = clusters
     pol = _policy(project.policy_overrides, policy, ov)
