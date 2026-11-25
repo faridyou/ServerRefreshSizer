@@ -15,7 +15,9 @@ results:
   - {id: cur-gold6426y-r660, cpu: Intel Xeon Gold 6426Y, system: Dell PowerEdge R660, vendor: Dell Inc., chips: 2, cores: 32, tpc: 2, base: 329, test_date: 2023-02, sponsor: Dell Inc.}
   - {id: cur-6740e-r770, cpu: Intel Xeon 6740E, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 192, tpc: 1, base: 966, test_date: 2025-03, sponsor: Dell Inc.}
   - {id: cur-6780e-r770, cpu: Intel Xeon 6780E, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 288, tpc: 1, base: 1330, test_date: 2025-03, sponsor: Dell Inc., notes: 1 thread/core}
-  - {id: cur-6760p-r770, cpu: Intel Xeon 6760P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1270, test_date: 2025-03, sponsor: Dell Inc.}
+  - {id: cur-6760p-r770, cpu: Intel Xeon 6760P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 128, tpc: 2, base: 1270, test_date: 2025-02, sponsor: Dell Inc., url: "https://www.spec.org/cpu2017/results/res2025q1/cpu2017-20250310-46878.html"}
+  - {id: cur-6737p-r770, cpu: Intel Xeon 6737P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 64, tpc: 2, base: 755, test_date: 2025-06, sponsor: Dell Inc., url: "https://www.spec.org/cpu2017/results/res2025q3/cpu2017-20250613-48668.html"}
+  - {id: cur-6737p-dl380g12, cpu: Intel Xeon 6737P, system: HPE ProLiant Compute DL380 Gen12, vendor: Hewlett Packard Enterprise, chips: 2, cores: 64, tpc: 2, base: 756, test_date: 2025-04, sponsor: HPE, url: "https://www.spec.org/cpu2017/results/res2025q2/cpu2017-20250406-47303.html"}
   - {id: cur-6787p-r770, cpu: Intel Xeon 6787P, system: Dell PowerEdge R770, vendor: Dell Inc., chips: 2, cores: 172, tpc: 2, base: 1540, test_date: 2025-03, sponsor: Dell Inc.}
   - {id: cur-6952p-r770ap, cpu: Intel Xeon 6952P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1810, test_date: 2025-04, sponsor: Dell Inc.}
   - {id: cur-6972p-r770ap, cpu: Intel Xeon 6972P, system: Dell PowerEdge R770AP, vendor: Dell Inc., chips: 2, cores: 192, tpc: 2, base: 1940, test_date: 2025-04, sponsor: Dell Inc.}
