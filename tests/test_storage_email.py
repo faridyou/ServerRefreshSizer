@@ -123,6 +123,8 @@ def test_email_prompt(fixtures_dir: Path) -> None:
     assert "$" in priced and "budgetary" in priced and "infrastructure team" in priced
     fr = build_email_prompt(p, lang="fr")
     assert "Rédigez l'e-mail en français" in fr and "FAITS" in fr
+    assert "Why this benchmark:" in txt and "independent non-profit" in txt and "WHY this benchmark" in txt
+    assert "Pourquoi ce benchmark :" in fr
 
 
 def test_cli_storage_and_prompt(fixtures_dir: Path, tmp_path: Path) -> None:

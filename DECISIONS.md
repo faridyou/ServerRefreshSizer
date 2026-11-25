@@ -388,3 +388,8 @@ Each entry: **decision** – reason – how to change it.
      and the new E5-2698 v4 row; the E5-2680 v3 test date was corrected (2023-05, not 2017-10). The other curated
      rows get their links from "Update from spec.org" (Benchmarks page / `refreshsizer bench update`) on a machine
      with internet access.
+107. **Email prompt: "Why this benchmark"** (EN/FR) is part of the facts - independent SPEC consortium with reviewed,
+     fully documented results; throughput metric matching consolidated/virtualized servers; integer suite for
+     business workloads; base (not vendor-tuned peak) for cross-vendor comparability; coverage of old and new CPUs;
+     why not cores/GHz, consumer tests or application-specific benchmarks. A rule asks the AI for one or two plain
+     sentences (a short paragraph for a technical audience) built only from those facts.

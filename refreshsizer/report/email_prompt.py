@@ -33,7 +33,9 @@ TXT: dict[str, dict[str, Any]] = {
                 "commitments. If something is not in the facts, leave it out or ask for it.",
             "Keep the numbers exactly as given (you may round for readability, never change them).",
             "Explain the benchmark simply: the comparison uses the published SPEC CPU 2017 (SPECrate2017_int_base) "
-                "results, i.e. measured performance per core, not core counts or clock speed (GHz).",
+                "results, i.e. measured performance per core, not core counts or clock speed (GHz). Add one or two "
+                "plain sentences on WHY this benchmark was chosen, using only the 'Why this benchmark' facts (for a "
+                "technical audience you may give the full reasoning in a short paragraph).",
             "Present the sizing as a preliminary proposal to be validated (pilot, final configuration and "
                 "quotation with Dell).",
             "Structure: subject line; short greeting; 2-3 sentence summary; the proposal as a few bullet points; "
@@ -53,6 +55,23 @@ TXT: dict[str, dict[str, Any]] = {
         "naive": "Like-for-like comparison", "storage": "Storage", "alts": "Alternative processor options",
         "costs": "Indicative costs (placeholders, not a quote)", "next": "Next steps",
         "questions": "Information still needed from the customer", "end": "Return only the email (subject + body).",
+        "why_title": "Why this benchmark:",
+        "why": [
+            "SPEC CPU 2017 is the industry-standard server CPU benchmark from SPEC, an independent non-profit "
+            "consortium; results are reviewed by SPEC before publication and published with the full hardware and "
+            "software configuration, so anyone can check them.",
+            "SPECrate2017_int_base measures throughput: many copies of real application code running at the same "
+            "time on all cores, which is how a virtualized server runs many VMs at once; the integer suite reflects "
+            "typical business workloads (applications, databases, middleware).",
+            "'Base' uses conservative, uniform compiler settings, so results are comparable across vendors; "
+            "'peak' (vendor-tuned) results are never used.",
+            "Results exist for both the current servers and the new Dell PowerEdge processors (Intel and AMD, many "
+            "generations), so old and new are measured on the same scale.",
+            "Core counts and GHz ignore the per-core performance gains of newer generations and would oversize "
+            "the new platform; desktop/consumer tests (e.g. PassMark, Geekbench) are not audited and do not "
+            "represent loaded servers; application-specific benchmarks (VMmark, SAP SD, SPECjbb, TPC) cover few "
+            "processors, especially older ones.",
+        ],
     },
     "fr": {
         "role": "Vous êtes ingénieur avant-vente Dell Technologies. Rédigez un e-mail à un client au sujet du "
@@ -71,7 +90,9 @@ TXT: dict[str, dict[str, Any]] = {
             "Gardez les chiffres tels quels (arrondis possibles pour la lisibilité, jamais modifiés).",
             "Expliquez simplement le benchmark : la comparaison s'appuie sur les résultats publiés SPEC CPU 2017 "
                 "(SPECrate2017_int_base), c'est-à-dire la performance mesurée par cœur, et non le nombre de cœurs "
-                "ou la fréquence (GHz).",
+                "ou la fréquence (GHz). Ajoutez une ou deux phrases simples sur la RAISON de ce choix, en utilisant "
+                "uniquement les faits « Pourquoi ce benchmark » (pour un public technique, un court paragraphe est "
+                "possible).",
             "Présentez le dimensionnement comme une proposition préliminaire à valider (pilote, configuration "
                 "finale et devis avec Dell).",
             "Structure : objet ; salutation courte ; résumé en 2-3 phrases ; la proposition en quelques puces ; le "
@@ -92,6 +113,23 @@ TXT: dict[str, dict[str, Any]] = {
         "naive": "Comparaison à l'identique", "storage": "Stockage", "alts": "Autres options de processeur",
         "costs": "Coûts indicatifs (valeurs indicatives, pas un devis)", "next": "Prochaines étapes",
         "questions": "Informations encore attendues du client", "end": "Renvoyez uniquement l'e-mail (objet + corps).",
+        "why_title": "Pourquoi ce benchmark :",
+        "why": [
+            "SPEC CPU 2017 est le benchmark processeur de référence pour les serveurs, publié par SPEC, consortium "
+            "indépendant à but non lucratif ; les résultats sont revus par SPEC avant publication et publiés avec la "
+            "configuration matérielle et logicielle complète, donc vérifiables par tous.",
+            "SPECrate2017_int_base mesure le débit : de nombreuses copies de code applicatif réel exécutées en même "
+            "temps sur tous les cœurs, comme un serveur virtualisé qui exécute de nombreuses VM ; la suite entière "
+            "reflète les charges métier courantes (applications, bases de données, middleware).",
+            "« Base » utilise des options de compilation prudentes et uniformes, donc comparables entre "
+            "constructeurs ; les résultats « peak » (optimisés par le constructeur) ne sont jamais utilisés.",
+            "Des résultats existent pour les serveurs actuels comme pour les nouveaux processeurs Dell PowerEdge "
+            "(Intel et AMD, de nombreuses générations) : ancien et nouveau sont mesurés sur la même échelle.",
+            "Le nombre de cœurs et les GHz ignorent les gains de performance par cœur des nouvelles générations et "
+            "surdimensionneraient la nouvelle plateforme ; les tests grand public (PassMark, Geekbench...) ne sont "
+            "pas audités et ne représentent pas un serveur chargé ; les benchmarks applicatifs (VMmark, SAP SD, "
+            "SPECjbb, TPC) couvrent peu de processeurs, surtout anciens.",
+        ],
     },
 }
 TONE_FR = {"professional": "professionnel", "friendly": "cordial", "formal": "formel"}
@@ -186,6 +224,7 @@ def build_email_prompt(project: Project, lang: str = "en", audience: str = "exec
         if v.strip():
             lines.append(f"{x[k]}: {v.strip()}")
     lines += ["", f"=== {x['facts']} ===", f"Project: {project.name} (sizing of {ctx['run'].generated_at[:10]})"]
+    lines += ["", x["why_title"]] + [f"- {w}" for w in x["why"]] + [""]
     for c in ctx["clusters"]:
         lines += _cluster_facts(c, t, x, include_prices)
     steps = ([t("c_next_measure")] if any(c["banner"] for c in ctx["clusters"]) else []) + \
