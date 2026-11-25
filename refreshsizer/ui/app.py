@@ -266,16 +266,26 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         inv = {d.cluster for d in project.data_quality if d.mode == SizingMode.INVENTORY_ONLY}
         clusters = []
         for c in project.clusters:
-            if c.name not in inv:
-                continue
             hosts = []
+            measured = c.name not in inv
+            busy = {(w.host_id or "").lower() for w in c.workloads if w.physc_p95 or w.db_cpu_p95_cores}
             for h in c.hosts:
                 if is_physical(h, c):
                     r, why = p2v_ratio_for(h, c.name, pol)
+                    if not measured:
+                        state = ""
+                    elif h.host_id.lower() in busy:
+                        state = "physc"
+                    elif h.cpu_util_p95_pct is not None or h.cpu_util_peak_pct is not None:
+                        state = "util"
+                    else:
+                        state = "cluster"
                     hosts.append({"id": h.host_id, "cpu": h.cpu_model, "cores": h.cores, "ghz": h.nominal_ghz,
-                                  "ratio": r, "why": why, "own": pol.p2v_overrides.get(f"host:{h.host_id}")})
+                                  "ratio": r, "why": why, "own": pol.p2v_overrides.get(f"host:{h.host_id}"),
+                                  "unused": state})
             if hosts:
-                clusters.append({"name": c.name, "hosts": hosts, "own": pol.p2v_overrides.get(f"cluster:{c.name}")})
+                clusters.append({"name": c.name, "hosts": hosts, "own": pol.p2v_overrides.get(f"cluster:{c.name}"),
+                                 "unused": sum(1 for h in hosts if h["unused"])})
         if not clusters:
             return None
         named = {f"host:{h['id']}" for c in clusters for h in c["hosts"]} | {f"cluster:{c['name']}" for c in clusters}

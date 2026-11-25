@@ -589,3 +589,30 @@ def test_p2v_ratios_on_summary(ui: UI, fixtures_dir: Path) -> None:
     assert ui.store.policy_overrides(name)["p2v_overrides"][f"host:{host}"] == 1
     bad = ui.c.post(f"/p/{name}/p2v", data={"global": "0"})
     assert "p2v_ratio" in bad.text
+
+
+def test_p2v_card_lists_measured_servers_as_not_used(ui: UI, tmp_path: Path) -> None:
+    """Physical servers whose workloads have physc_p95 keep appearing on the P2V card, marked 'not used'."""
+    import openpyxl
+
+    from refreshsizer.ingest.manual_template import generate_template
+
+    f = generate_template(tmp_path / "phys.xlsx")
+    wb = openpyxl.load_workbook(f)
+    for sheet, rows in (("Hosts", [{"host_id": "srv1", "cluster": "BDN", "sockets": 2, "cores_per_socket": 10,
+                                    "hypervisor": "bare-metal"},
+                                   {"host_id": "srv2", "cluster": "BDN", "sockets": 2, "cores_per_socket": 10,
+                                    "hypervisor": "bare-metal"}]),
+                        ("Workloads", [{"workload_id": "w1", "host_id": "srv1", "vcpu": 16, "physc_p95": 6}])):
+        ws = wb[sheet]
+        hdr = [c.value for c in ws[1]]
+        for i, row in enumerate(rows, 2):
+            for k, v in row.items():
+                ws.cell(i, hdr.index(k) + 1, v)
+    wb.save(f)
+    name = ui.new("p2v-measured")
+    ui.upload(name, f)
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'id="p2v"' in page and "physc_p95 is filled in" in page
+    assert "with measured data (ratio not used)" in page

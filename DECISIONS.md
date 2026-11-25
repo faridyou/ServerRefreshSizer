@@ -429,3 +429,7 @@ Each entry: **decision** – reason – how to change it.
      for POWER), and a CHECK flag is raised when a host's workloads declare more busy cores than the host has -
      the usual sign that core or vCPU counts were typed in. The manual template README and header comments say
      to leave it empty when usage is unknown, so the P2V ratio applies.
+113. **P2V card always lists physical servers**: it used to appear only for inventory-only clusters, so it vanished
+     as soon as a manual Excel filled `physc_p95` (the cluster then counts as measured). Every physical server is
+     now listed; those with measured data show "not used" and why (physc_p95 in the Workloads sheet, host CPU
+     utilization, or measured cluster), so it is clear the ratio is ignored for them.
