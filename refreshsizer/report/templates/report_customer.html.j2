@@ -34,7 +34,7 @@
 <h3>2. {{ t('c_benchmarks') }}</h3>
 <p>{{ t('c_bench_intro') }}</p>
 <table><tr><th></th><th>{{ t('cpu') }}</th><th class="num">SPECrate2017_int_base</th><th class="num">{{ t('c_per_core') }}</th><th>{{ t('system') }}</th><th>{{ t('sources') }}</th></tr>
-{% for b in c.benchmarks if b.metric != 'rPerf' %}<tr><td>{{ t('c_side_' ~ b.side) }}</td><td>{{ b.cpu | cpu }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td class="muted">{{ b.url }}</td></tr>{% endfor %}
+{% for b in c.benchmarks if b.metric != 'rPerf' %}<tr><td>{{ t('c_side_' ~ b.side) }}</td><td>{{ b.cpu | cpu }}{% if b.role %}<div class="small muted">{{ b.role }}</div>{% endif %}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td class="muted">{{ b.url }}</td></tr>{% endfor %}
 </table>
 {% if s.perf_ratio %}<p class="note">{{ t('c_perf_ratio') | replace('{x}', s.perf_ratio | string) }}</p>{% endif %}
 </section>

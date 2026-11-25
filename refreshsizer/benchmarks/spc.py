@@ -69,6 +69,39 @@ def _pick(results: list[BenchmarkResult], chips: int | None, system_hint: str | 
     return cands, same_chips
 
 
+CPU2017_RELEASE = "2017-06"
+
+
+def _pre_release(r: BenchmarkResult) -> bool:
+    d = str(r.test_date or "")
+    return bool(d) and d[:7] < CPU2017_RELEASE
+
+
+def _sibling(cpu_id: str | None, name: str, chips: int | None, system_hint: str | None, cache: BenchCache,
+             suite: str, metric: str) -> tuple[float, str, list[BenchmarkResult]] | None:
+    """Same-generation SKU with a result (closest core count, then highest clock), scaled by the clock ratio."""
+    cpus = load_cpus()
+    if not cpu_id or cpu_id not in cpus:
+        return None
+    me = cpus[cpu_id]
+    sibs = [c for c in cpus.values() if c.codename == me.codename and c.id != me.id]
+    for sc in sorted(sibs, key=lambda c: (abs(c.cores - me.cores), -c.base_ghz)):
+        rs = [r for r in _dedupe(cache.query(sc.id, suite, metric)) if not _pre_release(r)] or \
+            _dedupe(cache.query(sc.id, suite, metric))
+        if not rs:
+            continue
+        picked, _ = _pick(rs, chips, system_hint)
+        base_spc = statistics.median([r.per_core or 0 for r in picked])
+        ghz_me = me.allcore_ghz or me.base_ghz
+        ghz_s = sc.allcore_ghz or sc.base_ghz
+        ratio = (ghz_me / ghz_s) if ghz_me and ghz_s else 1.0
+        spc = base_spc * ratio
+        note = (f"ESTIMATE: sibling {sc.model} SPC {base_spc:.2f} x clock ratio {ghz_me}/{ghz_s} GHz = {spc:.2f} "
+                f"per core, applied to the {me.cores} cores of {name}")
+        return spc, note, picked
+    return None
+
+
 def resolve_spc(cpu: str | None, chips: int | None = None, system_hint: str | None = None,
                 cache: BenchCache | None = None, user_spc: dict[str, float] | None = None,
                 suite: str = "cpu2017", metric: str = "SPECrate2017_int_base") -> SpcResult:
@@ -108,30 +141,26 @@ def resolve_spc(cpu: str | None, chips: int | None = None, system_hint: str | No
                                  f"{picked[0].chips}-socket result")
                 if any(r.source == "user" for r in picked):
                     method = "user"
+                elif all(_pre_release(r) for r in picked):
+                    # results tested before the SPEC CPU2017 release used early compilers and tend to score low;
+                    # sizing on a too-low source SPC would shrink the measured demand (undersizing), so the
+                    # same-generation estimate is used when it is higher; the published result stays listed.
+                    sib = _sibling(cpu_id, name, chips, system_hint, cache, suite, metric)
+                    if sib and sib[0] > spc:
+                        est, note, basis = sib
+                        flags.append(f"published {name} result(s) tested before the SPEC CPU2017 release (June 2017) "
+                                     f"give SPC {spc:.2f}, below the same-generation estimate {est:.2f} ({note}); "
+                                     f"the higher value {est:.2f} is used (conservative: avoids undersizing)")
+                        return SpcResult(cpu_id, name, est, spc, max(hi, est), "exact_pre_release",
+                                         Confidence.MEDIUM, flags, picked + basis, chips)
                 return SpcResult(cpu_id, name, spc, lo, hi, method, conf, flags, picked, chips)
 
-    # (b) sibling SKU of the same generation, scaled by cores x clock ratio
-    if cpu_id and cpu_id in cpus:
-        me = cpus[cpu_id]
-        sibs = [c for c in cpus.values() if c.codename == me.codename and c.id != me.id]
-        best = None
-        for s in sorted(sibs, key=lambda c: (abs(c.cores - me.cores), -c.base_ghz)):
-            rs = _dedupe(cache.query(s.id, suite, metric))
-            if rs:
-                best = (s, rs)
-                break
-        if best:
-            s, rs = best
-            picked, _ = _pick(rs, chips, system_hint)
-            base_spc = statistics.median([r.per_core or 0 for r in picked])
-            ghz_me = me.allcore_ghz or me.base_ghz
-            ghz_s = s.allcore_ghz or s.base_ghz
-            ratio = (ghz_me / ghz_s) if ghz_me and ghz_s else 1.0
-            spc = base_spc * ratio
-            flags.append(f"ESTIMATE: no SPEC result for {name}; sibling {s.model} SPC {base_spc:.2f} x clock ratio "
-                         f"{ghz_me}/{ghz_s} GHz = {spc:.2f}")
-            return SpcResult(cpu_id, name, spc, spc * 0.9, spc * 1.1, "sibling", Confidence.MEDIUM, flags, picked,
-                             chips)
+    # (b) sibling SKU of the same generation, scaled by the clock ratio
+    sib = _sibling(cpu_id, name, chips, system_hint, cache, suite, metric)
+    if sib:
+        spc, note, picked = sib
+        flags.append(note)
+        return SpcResult(cpu_id, name, spc, spc * 0.9, spc * 1.1, "sibling", Confidence.MEDIUM, flags, picked, chips)
 
     # (c) user-provided value
     if user_spc:

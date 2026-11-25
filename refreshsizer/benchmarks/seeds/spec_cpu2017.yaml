@@ -4,8 +4,9 @@
 suite: cpu2017
 metric: SPECrate2017_int_base
 results:
-  - {id: cur-e5-2680v3-dl380g9, cpu: Intel Xeon E5-2680 v3, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 24, tpc: 2, base: 127, test_date: 2017-10, sponsor: HPE}
-  - {id: cur-e5-2680v4-dl380g9, cpu: Intel Xeon E5-2680 v4, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 28, tpc: 2, base: 149, test_date: 2023-03, sponsor: HPE, software: RHEL 9.0}
+  - {id: cur-e5-2680v3-dl380g9, cpu: Intel Xeon E5-2680 v3, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 24, tpc: 2, base: 127, test_date: 2023-05, sponsor: HPE, url: "https://www.spec.org/cpu2017/results/res2023q2/cpu2017-20230522-36682.html"}
+  - {id: cur-e5-2680v4-dl380g9, cpu: Intel Xeon E5-2680 v4, system: HPE ProLiant DL380 Gen9, vendor: HPE, chips: 2, cores: 28, tpc: 2, base: 149, test_date: 2023-05, sponsor: HPE, software: RHEL 9.0, url: "https://www.spec.org/cpu2017/results/res2023q2/cpu2017-20230522-36684.html"}
+  - {id: cur-e5-2698v4-nf5280m4, cpu: Intel Xeon E5-2698 v4, system: Inspur NF5280M4, vendor: Inspur Corporation, chips: 2, cores: 40, tpc: 2, base: 143, test_date: 2016-12, sponsor: Inspur Corporation, software: Intel C/C++ 17.0.0.098, url: "https://www.spec.org/cpu2017/results/res2017q2/cpu2017-20161026-00026.html", notes: "tested before the SPEC CPU2017 release (June 2017) with an early compiler"}
   - {id: cur-gold6230-r640, cpu: Intel Xeon Gold 6230, system: Dell PowerEdge R640, vendor: Dell Inc., chips: 2, cores: 40, tpc: 2, base: 225, test_date: 2019-04, sponsor: Dell Inc.}
   - {id: cur-gold6230r-r640, cpu: Intel Xeon Gold 6230R, system: Dell PowerEdge R640, vendor: Dell Inc., chips: 2, cores: 52, tpc: 2, base: 288, test_date: 2020-03, sponsor: Dell Inc.}
   - {id: cur-gold6334-r650, cpu: Intel Xeon Gold 6334, system: Dell PowerEdge R650, vendor: Dell Inc., chips: 2, cores: 16, tpc: 2, base: 146, test_date: 2021-06, sponsor: Dell Inc.}

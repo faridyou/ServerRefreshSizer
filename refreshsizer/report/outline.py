@@ -70,7 +70,8 @@ def _current_env(c: dict[str, Any], t: Any) -> list[Block]:
 
 
 def _benchmarks(c: dict[str, Any], t: Any) -> list[Block]:
-    rows = [[t("c_side_" + b["side"]), _cpu(t, str(b["cpu"])), fmt(b.get("value")), str(b.get("spc") or ""),
+    rows = [[t("c_side_" + b["side"]), _cpu(t, str(b["cpu"])) + (f" - {b['role']}" if b.get("role") else ""),
+             fmt(b.get("value")), str(b.get("spc") or ""),
              str(b.get("system") or ""), str(b.get("url") or "")]
             for b in c["benchmarks"] if b.get("metric") != "rPerf"]
     out = [Block("para", t("c_bench_intro"), style="muted"),

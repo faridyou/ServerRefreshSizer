@@ -42,8 +42,10 @@ def translator(lang: str) -> Any:
     return t
 
 
-def benchmark_rows(cs: ClusterSizing) -> list[dict[str, Any]]:
+def benchmark_rows(cs: ClusterSizing, t: Any = None) -> list[dict[str, Any]]:
+    """Benchmark basis rows. role: why a row is listed when it is not simply 'the result used for this CPU'."""
     rows: dict[str, dict[str, Any]] = {}
+    tr = t or (lambda k: k)
 
     def add(cpu: str | None, chips: int | None, hint: str | None, side: str) -> None:
         if not cpu:
@@ -55,10 +57,21 @@ def benchmark_rows(cs: ClusterSizing) -> list[dict[str, Any]]:
                                             "system": "", "sponsor": "", "date": "", "url": "", "retrieved": "",
                                             "source": r.method, "note": "; ".join(r.flags)}
         for b in r.results:
+            role = ""
+            if r.method == "sibling" or (b.cpu_model_id and r.cpu_id and b.cpu_model_id != r.cpu_id):
+                role = tr("bench_role_basis").replace("{cpu}", r.cpu_name)
+            elif r.method == "exact_pre_release":
+                role = tr("bench_role_pre")
             rows[b.id] = {"side": side, "cpu": b.cpu_name, "metric": b.metric, "value": b.value_base,
                           "cores": b.enabled_cores, "chips": b.chips, "spc": round(b.per_core or 0, 3),
                           "system": b.system_name, "sponsor": b.sponsor, "date": b.test_date, "url": b.result_url,
-                          "retrieved": b.retrieved_at, "source": b.source, "note": "; ".join(r.flags)}
+                          "retrieved": b.retrieved_at, "source": b.source, "note": "; ".join(r.flags), "role": role}
+        if r.results and r.method in ("sibling", "exact_pre_release"):  # the value actually used
+            rows[f"{side}-{r.cpu_name}-used"] = {
+                "side": side, "cpu": r.cpu_name, "metric": "SPC used (estimate)", "value": "", "cores": "",
+                "spc": round(r.spc, 3), "system": "", "sponsor": "", "date": "", "url": "", "retrieved": "",
+                "source": r.method, "note": "; ".join(r.flags),
+                "role": tr("bench_role_used").replace("{cpu}", r.cpu_name)}
 
     d = cs.demand
     for h in d.hosts:
@@ -129,7 +142,7 @@ def cluster_context(cs: ClusterSizing, t: Any) -> dict[str, Any]:
         ctx["png"]["demand"] = charts.host_demand([h.host_id for h in hd], [h.su_cap for h in hd],
                                                   [h.demand_su or 0 for h in hd], f"{d.cluster}: {t('host_demand')}")
     ctx["charts"] = {k: charts.b64(v) for k, v in ctx["png"].items()}
-    ctx["benchmarks"] = benchmark_rows(cs)
+    ctx["benchmarks"] = benchmark_rows(cs, t)
     from refreshsizer.engine.optimizer import scenario_tags, spec_basis
 
     ctx["scenario_tags"] = scenario_tags(cs.scenarios, rec)

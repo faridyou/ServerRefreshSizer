@@ -87,7 +87,7 @@
 <section class="card">
 <p>{{ t('base_vs_peak') }}</p>
 <table><tr><th>side</th><th>CPU</th><th>{{ t('metric') }}</th><th>{{ t('value') }}</th><th>cores</th><th>SPC</th><th>{{ t('system') }}</th><th>{{ t('sponsor') }}</th><th>{{ t('test_date') }}</th><th>URL</th><th>{{ t('retrieved') }}</th><th>source</th></tr>
-{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu | cpu }}</td><td>{{ b.metric }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.sponsor }}</td><td>{{ b.date }}</td><td>{{ b.url }}</td><td>{{ b.retrieved }}</td><td>{{ b.source }}{% if b.note %}<div class="muted">{{ b.note }}</div>{% endif %}</td></tr>{% endfor %}</table>
+{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu | cpu }}{% if b.role %}<div class="small muted">{{ b.role }}</div>{% endif %}</td><td>{{ b.metric }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.sponsor }}</td><td>{{ b.date }}</td><td>{{ b.url }}</td><td>{{ b.retrieved }}</td><td>{{ b.source }}{% if b.note %}<div class="muted">{{ b.note }}</div>{% endif %}</td></tr>{% endfor %}</table>
 {% if d.rperf_factor %}<p>rPerf → SPEC factor used: <b>{{ d.rperf_factor }}</b> (generation-matched value: {{ d.rperf_factor_matched if d.rperf_factor_matched else 'no anchor' }}; conservative value 0.425; anchors: S924 213/583.1 = 0.365, E1080 1,700/3,999.3 = 0.425).</p>{% endif %}
 </section>
 

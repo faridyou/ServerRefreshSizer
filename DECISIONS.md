@@ -374,3 +374,17 @@ Each entry: **decision** – reason – how to change it.
      addressed: a stale cached app.js whose old rule disabled "Disaggregated" for any Nutanix stack and silently fell
      back to HCI (fixed by no-cache + versioned static files, decision 101), and the empty Results page's "Run
      sizing" button, which uses the saved/default policy - now disaggregated by default.
+104. **CPUs without their own SPEC result** (e.g. Xeon E5-2698 v4, 20 cores): the per-core value of the closest
+     same-generation SKU with a result (E5-2680 v4, 14 cores: 149 / 28 = 5.32) is scaled by the clock ratio
+     (2.2 / 2.4) and multiplied by the CPU's OWN cores - no cores are lost. The benchmark tables now say so: the
+     other CPU's row is labelled "basis of the estimate for ..." and a row shows the value actually used.
+105. **Results tested before the SPEC CPU2017 release (June 2017)** used early compilers and score low. When they
+     are the only exact results for a CPU and a same-generation estimate is higher, the estimate is used (a too-low
+     source SPC shrinks the measured demand -> undersizing); the published result stays listed with its URL and
+     sets the lower bound of the uncertainty band (Monte Carlo). Example: E5-2698 v4, Inspur NF5280M4, 143 base,
+     tested Dec 2016 -> 3.58 per core listed, 4.88 used, band 3.58-5.37, confidence MEDIUM.
+106. **Curated result URLs**: spec.org is not reachable from the build environment, so the curated seeds had no
+     links ("URL to be refreshed"). URLs found by web search were added for E5-2680 v3/v4 (HPE DL380 Gen9, 2023)
+     and the new E5-2698 v4 row; the E5-2680 v3 test date was corrected (2023-05, not 2017-10). The other curated
+     rows get their links from "Update from spec.org" (Benchmarks page / `refreshsizer bench update`) on a machine
+     with internet access.

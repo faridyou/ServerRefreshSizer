@@ -646,7 +646,8 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
             if b.get("metric") == "rPerf":
                 continue
             _cpu_note(ws3, r, 1, b["cpu"], t)
-            ws3.write_row(r, 0, [t("c_side_" + b["side"]), _cpu(t, b["cpu"]), b.get("value") or "", b.get("spc") or "",
+            ws3.write_row(r, 0, [t("c_side_" + b["side"]), _cpu(t, b["cpu"]) + (f" - {b['role']}" if b.get("role")
+                                                                         else ""), b.get("value") or "", b.get("spc") or "",
                                  b.get("system") or "", b.get("url") or ""])
             r += 1
         if c["src"]["perf_ratio"]:

@@ -147,3 +147,26 @@ def test_fetch_network_failure(cache: BenchCache) -> None:
 def test_offline_mode(cache: BenchCache) -> None:
     rep = spec_fetch.update("cpu2017", offline=True, cache=cache)
     assert not rep.online and rep.messages
+
+
+def test_pre_release_result_listed_but_conservative_estimate_used(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """E5-2698 v4: the only published result (143, tested Dec 2016 before the CPU2017 release) is listed with its
+    URL, but the higher same-generation estimate (E5-2680 v4 per core x 2.2/2.4 GHz) is used to avoid undersizing."""
+    import pytest
+
+    from refreshsizer.benchmarks.cache import BenchCache
+    from refreshsizer.benchmarks.curated_db import build
+    from refreshsizer.benchmarks.spc import resolve_spc
+
+    cache = build(BenchCache(tmp_path / "b.sqlite"), force=True)
+    r = resolve_spc("Intel(R) Xeon(R) CPU E5-2698 v4 @ 2.20GHz", chips=2, cache=cache)
+    assert r.method == "exact_pre_release" and r.confidence.value == "MEDIUM"
+    assert r.spc == pytest.approx(149 / 28 * 2.2 / 2.4, rel=1e-6)
+    assert r.spc_min == pytest.approx(143 / 40, rel=1e-6)  # the published value bounds the uncertainty band
+    urls = {x.cpu_name: x.result_url for x in r.results}
+    assert urls["Intel Xeon E5-2698 v4"].endswith("cpu2017-20161026-00026.html")
+    assert urls["Intel Xeon E5-2680 v4"].endswith("cpu2017-20230522-36684.html")
+    assert any("before the SPEC CPU2017 release" in f for f in r.flags)
+    # a normal (post-release) exact result is used as is
+    r2 = resolve_spc("intel-xeon-e5-2680-v4", chips=2, cache=cache)
+    assert r2.method == "exact" and r2.spc == pytest.approx(149 / 28)

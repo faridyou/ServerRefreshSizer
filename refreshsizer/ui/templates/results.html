@@ -88,7 +88,7 @@
 {% if c.charts.tornado %}<img class="chart" src="{{ c.charts.tornado }}" alt="tornado" style="max-width:760px">{% endif %}{% endif %}
 <ul class="small">{% for x in cs.recommendations %}<li>{{ x }}</li>{% endfor %}</ul></div>
 <div class="card"><h3>{{ t('s4') }}</h3><table class="small"><tr><th>side</th><th>CPU</th><th>{{ t('value') }}</th><th>cores</th><th>SPC</th><th>{{ t('system') }}</th><th>URL</th><th>source</th></tr>
-{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu | cpu }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.url | linkify }}</td><td>{{ b.source }}</td></tr>{% endfor %}</table></div>
+{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu | cpu }}{% if b.role %}<div class="small muted">{{ b.role }}</div>{% endif %}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.url | linkify }}</td><td>{{ b.source }}</td></tr>{% endfor %}</table></div>
 {% endif %}{% endfor %}
 {% endif %}
 {% endblock %}
