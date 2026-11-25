@@ -147,3 +147,39 @@ def test_report_level_cli_and_validation(fixtures_dir: Path, tmp_path: Path) -> 
     size_project(proj, load_policy())
     with pytest.raises(ValueError, match="report level"):
         write_reports(proj, tmp_path, ["html"], level="ceo")
+
+
+@pytest.mark.parametrize("level", ["customer", "presales", "full"])
+def test_office_exports(fixtures_dir: Path, tmp_path: Path, level: str) -> None:
+    import docx
+    import pptx
+
+    proj = ingest_files([fixtures_dir / "liveoptics_estate.xlsx"])
+    size_project(proj, load_policy())
+    out = write_reports(proj, tmp_path, ["docx", "pptx"], level=level)
+    assert sorted(p.suffix for p in out) == [".docx", ".pptx"]
+    d = docx.Document(str(next(p for p in out if p.suffix == ".docx")))
+    text = "\n".join(p.text for p in d.paragraphs) + "\n".join(
+        c.text for t in d.tables for r in t.rows for c in r.cells)
+    deck = pptx.Presentation(str(next(p for p in out if p.suffix == ".pptx")))
+    slides = "\n".join(sh.text_frame.text for s in deck.slides for sh in s.shapes if sh.has_text_frame)
+    assert d.inline_shapes and len(d.tables) >= 3 and len(deck.slides) >= 5
+    if level == "customer":
+        assert "Your current environment" in slides and "672 GHz in total" in text
+        assert "TCO" not in text and "$" not in text and "C_req" not in text
+    elif level == "presales":
+        assert "Sizing chain" in slides and "Licensing analysis" in slides and "10." not in slides and "TCO" in text and "Monte Carlo (5000" in text
+    else:
+        assert "Normalization math" in text and "Monte Carlo host count distribution" in slides
+        assert len(deck.slides) > 11
+
+
+def test_office_cli_french(fixtures_dir: Path, tmp_path: Path) -> None:
+    pj = tmp_path / "p.json"
+    runner.invoke(app, ["ingest", str(fixtures_dir / "rvtools_estate.xlsx"), "--yes", "--out", str(pj)])
+    runner.invoke(app, ["size", str(pj)])
+    r = runner.invoke(app, ["report", str(pj), "--level", "customer", "--lang", "fr", "--format", "docx,pptx",
+                            "--out", str(tmp_path / "o")])
+    assert r.exit_code == 0, r.output
+    assert {p.name for p in (tmp_path / "o").iterdir()} >= {"refreshsizer_report_customer_fr.docx",
+                                                           "refreshsizer_report_customer_fr.pptx"}

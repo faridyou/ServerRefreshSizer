@@ -370,7 +370,7 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
     async def reports_make(name: str, request: Request) -> RedirectResponse:
         n, _ = proj(name)
         form = await request.form()
-        formats = [f for f in ("html", "xlsx", "pdf") if form.get(f)] or ["html", "xlsx", "pdf"]
+        formats = [f for f in ("html", "xlsx", "pdf", "docx", "pptx") if form.get(f)] or ["html", "xlsx", "pdf"]
         lang = str(form.get("lang", "en"))
         rid = str(form.get("run", "")) or None
         level = str(form.get("level", "presales"))

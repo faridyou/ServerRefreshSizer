@@ -225,3 +225,22 @@ Each entry: **decision** – reason – how to change it.
 71. **Presales level** keeps every decision-relevant number but one line per step: the sizing chain
     (SU capacity -> D0 -> D0' -> D_T -> C_req -> SU per host -> hosts, memory, storage), constraint checks only
     when not OK, P50/P90 in one sentence, at most 8 warnings (the rest in the full report).
+
+## Word and PowerPoint export (change request 5)
+
+72. **One outline, two writers**: `report/outline.py` turns the report context (same data as the HTML, per
+    level) into neutral sections and blocks (heading, paragraph, KPI tiles, table, image, bullets); `docx_report.py`
+    and `pptx_report.py` only lay those out. The HTML/PDF templates are untouched, so no calculation or number
+    changes; the levels keep their rules (customer: no prices, no formulas).
+73. **Libraries**: `python-docx` and `python-pptx` (pure Python + lxml wheels, no Office needed, install in the venv
+    without admin rights, offline once installed). Charts are the same matplotlib PNGs as the HTML report.
+74. **Deck layout**: 16:9, blank layout with a title bar (no corporate template is shipped - the deck is meant to
+    be pasted into one); one section per slide, content that does not fit continues on a "(cont.)" slide, tables
+    at most 12 rows per slide with the header repeated, font size chosen from the column count (16 -> 11 pt).
+    The customer intro goes on the title slide, the disclaimer on a final Notes slide. The full level's
+    calculation details become monospace lines on several slides - presales is the level meant for decks.
+75. **Section numbers** from the HTML report ("8. Recommended bill of materials") are removed in Word/PowerPoint
+    titles because sections are regrouped per cluster there.
+76. **PDF stays HTML-based** (xhtml2pdf); Word/PowerPoint can be exported to PDF by Office if a styled PDF from
+    them is preferred. In the UI both new formats are ticked by default; the CLI default is unchanged
+    (`html,pdf,xlsx`).

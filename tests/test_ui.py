@@ -102,11 +102,12 @@ def test_every_fixture_end_to_end(ui: UI, fixtures_dir: Path, fixture: str) -> N
     res = ui.c.get(j.redirect)
     assert res.status_code == 200 and "Show calculation" in res.text and "data:image/png;base64," in res.text
     rid = ui.store.runs(name)[0]["id"]
-    ui.job(ui.c.post(f"/p/{name}/reports", data={"run": rid, "html": "1", "xlsx": "1", "pdf": "1", "lang": "en",
-                                                 "level": "full"}))
+    ui.job(ui.c.post(f"/p/{name}/reports", data={"run": rid, "html": "1", "xlsx": "1", "pdf": "1", "docx": "1",
+                                                 "pptx": "1", "lang": "en", "level": "full"}))
     files = {p.name for p in ui.store.reports_dir(name).iterdir()}
-    assert {"refreshsizer_report.html", "refreshsizer_report.xlsx", "refreshsizer_report.pdf"} <= files
-    for f in ("refreshsizer_report.html", "refreshsizer_report.xlsx", "refreshsizer_report.pdf"):
+    names = [f"refreshsizer_report.{x}" for x in ("html", "xlsx", "pdf", "docx", "pptx")]
+    assert set(names) <= files
+    for f in names:
         assert ui.c.get(f"/p/{name}/reports/{f}").status_code == 200
     view = ui.c.get(f"/p/{name}/reports/refreshsizer_report.html/view")
     assert view.status_code == 200 and view.headers["content-type"].startswith("text/html")

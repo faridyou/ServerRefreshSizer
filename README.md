@@ -80,7 +80,7 @@ What you see, page by page:
   the saved selection is not changed) and re-run in place. The last
   5 runs are kept with their label and overrides; pick two (A/B) to see them side by side (D0, D_T, C_req,
   recommendation, hosts, P50/P90, naive counts, TCO, licensing delta).
-* **7 Reports** – generate HTML, Excel and PDF in English or French for any kept run, at one of three
+* **7 Reports** – generate HTML, Excel, PDF, Word (.docx) and PowerPoint (.pptx) in English or French for any kept run, at one of three
   **levels**, then download them or open the HTML report in a new tab:
   * **Customer** – simple, no calculations or internal prices: current environment (CPU models, cores, GHz,
     memory, VMs, storage, measured utilization), the SPEC CPU comparison (per-core performance of current vs
@@ -90,6 +90,10 @@ What you see, page by page:
     BoM, CPU scenarios with TCO, licensing totals, only the checks that need attention, P50/P90, questions.
     Excel = the full live-formula workbook.
   * **Full** – every calculation with formulas, inputs and sources (the original report, 14 sections).
+
+  Word and PowerPoint follow the chosen level: the Word file is an editable document with the same content as the
+  HTML (tables, charts, bullet lists); the PowerPoint deck is 16:9, one topic per slide, long tables split over
+  several slides with the header repeated, intro on the title slide and the SPEC disclaimer on a final Notes slide.
 * **Benchmarks** – search the benchmark DB (CPU, metric, base value, cores, chips, SPC, system, live/curated/user
   source, URL) and see the resolved SPC with its method and confidence band; *Update from spec.org* runs in the
   background and says clearly when spec.org is unreachable and the curated offline data is kept; a form adds a
@@ -103,7 +107,7 @@ refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
                   [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
                   [--stack vmware_vsan|nutanix_ahv|nutanix_esxi]
-refreshsizer report project.json --format html,pdf,xlsx --out reports/ [--lang fr] [--level customer|presales|full]
+refreshsizer report project.json --format html,pdf,xlsx,docx,pptx --out reports/ [--lang fr] [--level customer|presales|full]
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]
 refreshsizer bench show "EPYC 9355"
@@ -157,7 +161,7 @@ or CLI flags). Decisions not covered by the specification: see [DECISIONS.md](DE
 ## Reports
 
 `reports/refreshsizer_report.html` (self-contained, primary), `.pdf` (xhtml2pdf; if it fails, the HTML is kept and
-a warning logged) and `.xlsx` (one sheet per section, **live formulas**: change a yellow input cell and the host
+a warning logged), `.docx` (Word) and `.pptx` (PowerPoint, 16:9 deck) built from the same content, and `.xlsx` (one sheet per section, **live formulas**: change a yellow input cell and the host
 count, utilization, memory, storage, naive comparisons and licensing recompute). Sections: executive summary,
 input data & confidence, source inventory, benchmark basis, normalization math, growth & headroom, candidates,
 BoM with DIMM diagram, memory/storage/network, licensing, constraints, uncertainty, validation plan, appendix.

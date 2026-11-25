@@ -188,10 +188,11 @@ def build_context(project: Project, lang: str = "en", level: str = "full") -> di
     for c in clusters:
         c["src"] = source_view(project, c["cs"])
         if level == "customer" and c["rec"] and c["cs"].naive:
-            c["charts"]["hosts"] = charts.b64(charts.host_comparison(
+            c["png"]["hosts"] = charts.host_comparison(
                 [t("c_lbl_proposal"), t("c_lbl_cores"), t("c_lbl_ghz")],
                 [c["rec"].n_total, c["cs"].naive.core_match_hosts, c["cs"].naive.ghz_match_hosts],
-                f"{c['d'].cluster}: {t('c_chart_title')}"))
+                f"{c['d'].cluster}: {t('c_chart_title')}")
+            c["charts"]["hosts"] = charts.b64(c["png"]["hosts"])
     return {"project": project, "run": run, "t": t, "lang": lang, "clusters": clusters,
             "estate": estate_summary(project), "version": __version__, "level": level,
             "questions": project.customer_questions_fr if lang == "fr" else project.customer_questions,
@@ -227,6 +228,22 @@ def write_reports(project: Project, out: Path, formats: list[str], lang: str = "
             written.append(write_excel_customer(ctx, out / f"{stem}.xlsx"))
         else:
             written.append(write_excel(ctx, out / f"{stem}.xlsx"))
+    if "docx" in formats or "pptx" in formats:
+        from refreshsizer.report.outline import build_outline
+
+        outline = build_outline(ctx)
+        if "docx" in formats:
+            from refreshsizer.report.docx_report import write_docx
+
+            if progress:
+                progress(0.5, "Word document")
+            written.append(write_docx(ctx, out / f"{stem}.docx", outline))
+        if "pptx" in formats:
+            from refreshsizer.report.pptx_report import write_pptx
+
+            if progress:
+                progress(0.55, "PowerPoint deck")
+            written.append(write_pptx(ctx, out / f"{stem}.pptx", outline))
     if "pdf" in formats:
         from refreshsizer.report.pdf import write_pdf
 
