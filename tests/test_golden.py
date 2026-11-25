@@ -39,7 +39,9 @@ def test_golden_a_liveoptics_summary(fixtures_dir: Path) -> None:
     assert c.n_active == 3 and c.k_ha == 1 and c.n_total == 4
     assert abs(c.util_failed - 0.57) < 0.005
     nv = naive(d, c.config.total_cores, 3.55, policy)
-    assert nv.core_match_hosts == 13 and nv.ghz_match_hosts == 6
+    # both naive methods start from the measured load (55 %): 280 x 0.55 = 154 used cores x 2.011 / 0.75 = 413
+    # -> ceil(413 / 64) + 1 = 8 ; 672 GHz x 0.55 x 2.011 / 0.75 = 991 GHz -> ceil(991 / (64 x 3.55)) + 1 = 6
+    assert nv.core_match_hosts == 8 and nv.ghz_match_hosts == 6
     assert approx(d.m_t, 6408)
     assert c.dimm and c.dimm.dimm_count == 24 and c.dimm.dimm_size_gb == 96
     assert approx(d.storage_raw_tib, 207.4)

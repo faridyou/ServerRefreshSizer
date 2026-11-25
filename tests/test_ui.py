@@ -507,3 +507,14 @@ def test_consolidation_selector(ui: UI, fixtures_dir: Path) -> None:
     ui.job(ui.c.post(f"/p/{name}/size", data=form))
     assert ui.store.policy_overrides(name)["consolidation"] == "per_cluster"
     assert len(ui.sizing(name).clusters) == 2
+
+
+def test_cpu_hover_works_without_cache_or_script(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("hover")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'class="cpu"' in page and 'title="Intel Xeon E5-2680 v4' in page  # native tooltip fallback
+    assert "/static/cpu_tip.js?v=" in page and "/static/app.js?v=" in page  # versioned: no stale script
+    r = ui.c.get("/static/cpu_tip.js")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache" and "cpu-tip" in r.text

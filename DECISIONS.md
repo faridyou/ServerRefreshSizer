@@ -347,3 +347,18 @@ Each entry: **decision** – reason – how to change it.
     small inline script shows one floating popup (position: fixed, so cards that scroll sideways cannot clip it),
     with a pure-CSS popup as the no-JavaScript fallback; also on keyboard focus. Excel shows the same details as a
     cell note on hover. PDF, Word and PowerPoint cannot show hover popups, so they carry the "(cores, GHz)" text only.
+
+## Fixes after field test (change request 10)
+
+100. **Naive core match was inconsistent with the GHz match** (bug): core match used INSTALLED cores
+     (cores x growth / U_max) while GHz match used USED GHz (utilization applied). On a lightly loaded estate this
+     gave e.g. 51 hosts (cores) vs 6 (GHz). Both now start from the same measured load as the recommendation:
+     used cores = installed cores x (used GHz / installed GHz); they differ from each other only by the clock ratio
+     and from the recommendation only by ignoring the per-core performance gain. When the source GHz is unknown the
+     installed cores are used (stated in the calculation). Golden A core match: 13 -> 8 (GHz match 6 unchanged);
+     inventory-only (assumed 100 % load) is unchanged. The recommended sizing itself never used these values.
+101. **CPU hover in Firefox**: the app's static files had no cache headers, so a browser could keep an old app.js;
+     they are now served with `Cache-Control: no-cache` and versioned URLs (`?v=<content hash>`). The hover script
+     moved to its own file (`static/cpu_tip.js`, plain ES5), and every CPU also carries a native `title` tooltip as
+     the fallback in any browser or with scripts blocked (the script removes it on hover, so only one popup shows).
+     The CSS-only popup was dropped (it could be clipped by scrolling table cards).

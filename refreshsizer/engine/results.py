@@ -51,6 +51,7 @@ class ClusterDemand(BaseModel):
     source_cores: int = 0
     source_threads: int = 0
     source_ghz_used: float = 0.0
+    source_ghz_installed: float = 0.0  # sum of cores x nominal GHz (0 = unknown)
     source_hosts: int = 0
     d0: float = 0.0
     d0_by_path: dict[str, float] = Field(default_factory=dict)

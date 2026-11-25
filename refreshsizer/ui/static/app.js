@@ -82,17 +82,3 @@ document.addEventListener("click", function (e) {
   if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(ta.value).then(done); }
   else { ta.select(); document.execCommand("copy"); done(); }
 });
-
-// CPU details popup (cores, GHz, cache, TDP)
-(function(){var tip=null;document.documentElement.classList.add('js-tip');
-function show(el){if(!tip){tip=document.createElement('div');tip.id='cpu-tip';document.body.appendChild(tip);}
-tip.textContent=el.getAttribute('data-tip');tip.style.display='block';var r=el.getBoundingClientRect();
-var x=Math.min(r.left,window.innerWidth-tip.offsetWidth-8),y=r.bottom+6;
-if(y+tip.offsetHeight>window.innerHeight-4){y=r.top-tip.offsetHeight-6;}
-tip.style.left=Math.max(4,x)+'px';tip.style.top=Math.max(4,y)+'px';}
-function hide(){if(tip){tip.style.display='none';}}
-['mouseover','focusin'].forEach(function(ev){document.addEventListener(ev,function(e){
-var el=e.target.closest&&e.target.closest('.cpu[data-tip]');if(el){show(el);}});});
-['mouseout','focusout'].forEach(function(ev){document.addEventListener(ev,function(e){
-var el=e.target.closest&&e.target.closest('.cpu[data-tip]');if(el){hide();}});});
-window.addEventListener('scroll',hide,true);})();

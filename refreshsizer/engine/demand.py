@@ -408,7 +408,9 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         years=years, su_cap_total=round(su_total * share, 3), spc_source=round(spc_src, 4),
         spc_source_min=round(spc_lo, 4), spc_source_max=round(spc_hi, 4),
         source_cores=int(round(cores_total * share)), source_threads=int(round(threads * share)),
-        source_ghz_used=round(ghz_used, 3), source_hosts=len(hosts), d0=round(d0, 4), d0_by_path=paths,
+        source_ghz_used=round(ghz_used, 3), source_hosts=len(hosts),
+        source_ghz_installed=round(sum((caps[h.host_id.lower()].cores if h.host_id.lower() in caps else (h.cores or 0))
+                                       * (h.nominal_ghz or 0) for h in hosts) * share, 3), d0=round(d0, 4), d0_by_path=paths,
         k_arch=k_arch, k_virt=k_virt, d0_adj=round(d0_adj, 4), growth_cpu_pct=g, d_t=round(d_t, 4), u_max=u_max,
         c_req=round(c_req, 4), c_req_no_headroom=round(d_t, 4), apply_headroom=apply_h,
         rperf_factor=next((c.rperf_factor for c in caps.values() if c.rperf_factor), None),

@@ -34,11 +34,33 @@ def _linkify(s: Any) -> str:
     return Markup(re.sub(r"(https?://[^\s<]+)", r'<a href="\1" target="_blank" rel="noopener">\1</a>', txt))
 
 
+
+class _RevalidatedStatic(StaticFiles):
+    """Static files with Cache-Control: no-cache, so a browser (e.g. Firefox's heuristic cache) never keeps an old
+    app.js / app.css after an update; it revalidates with ETag and gets 304 when nothing changed."""
+
+    def file_response(self, *args: Any, **kwargs: Any) -> Any:
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
+def _static_version() -> str:
+    import hashlib
+
+    h = hashlib.sha1()
+    for f in sorted((UI_DIR / "static").glob("*.*")):
+        h.update(f.read_bytes())
+    return h.hexdigest()[:10]
+
+
+STATIC_V = _static_version()
+
 def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None) -> FastAPI:
     app = FastAPI(title="RefreshSizer", version=__version__, docs_url=None, redoc_url=None)
     app.state.store = store or ProjectStore()
     app.state.jobs = jobs or JobManager()
-    app.mount("/static", StaticFiles(directory=str(UI_DIR / "static")), name="static")
+    app.mount("/static", _RevalidatedStatic(directory=str(UI_DIR / "static")), name="static")
     templates = Jinja2Templates(directory=str(UI_DIR / "templates"))
     env = templates.env
     env.filters.update({"fmt": fmt, "money": money, "pct": pct, "linkify": _linkify})
@@ -58,7 +80,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
 
     def render(request: Request, name: str, ctx: dict[str, Any] | None = None, status: int = 200) -> HTMLResponse:
         lang = lang_of(request)
-        base = {"request": request, "t": translator(lang), "lang": lang, "version": __version__}
+        base = {"request": request, "t": translator(lang), "lang": lang, "version": __version__,
+                "static_v": STATIC_V}
         base.update(ctx or {})
         return templates.TemplateResponse(request, name, base, status_code=status)
 

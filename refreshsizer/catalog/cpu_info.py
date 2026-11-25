@@ -104,12 +104,15 @@ def cpu_tip(key: str | None, cores: float | None = None, ghz: float | None = Non
 
 def cpu_html(key: str | None, cores: float | None = None, ghz: float | None = None, lang: str = "en",
              prefix: str = "") -> Markup:
-    """<span class="cpu" data-tip="...">[prefix]Name (cores, GHz)</span> - CSS hover/focus popup, no JavaScript."""
+    """<span class="cpu" title=... data-tip=...>[prefix]Name (cores, GHz)</span>.
+
+    The native `title` tooltip works in every browser without JavaScript; when the page script runs it removes the
+    title on hover and shows the styled popup (data-tip) instead, so only one tooltip appears."""
     if not key:
         return Markup("")
     tip = escape(cpu_tip(key, cores, ghz, lang)).replace("\n", "&#10;")
     text = escape(prefix + cpu_label(key, cores, ghz, lang))
-    return Markup(f'<span class="cpu" tabindex="0" data-tip="{tip}">{text}</span>')
+    return Markup(f'<span class="cpu" tabindex="0" title="{tip}" data-tip="{tip}">{text}</span>')
 
 
 def config_label(cfg: Any, lang: str = "en") -> str:
@@ -139,26 +142,33 @@ def register(env: Any) -> None:
     env.filters["cfg_text"] = pass_context(lambda ctx, x: config_label(x, lang(ctx)))
 
 
-CPU_CSS = (".cpu{position:relative;border-bottom:1px dotted #777;cursor:help}"
-           ".cpu:hover::after,.cpu:focus::after{content:attr(data-tip);position:absolute;left:0;top:100%;z-index:50;"
-           "margin-top:4px;padding:6px 9px;min-width:220px;white-space:pre-line;font-size:12px;font-weight:400;"
-           "line-height:1.4;color:#fff;background:#1F2A37;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.25)}")
+CPU_CSS = (".cpu{border-bottom:1px dotted #777;cursor:help}"
+           "#cpu-tip{position:fixed;z-index:1000;display:none;max-width:340px;padding:6px 9px;white-space:pre-line;"
+           "font-size:12px;font-weight:400;line-height:1.4;color:#fff;background:#1F2A37;border-radius:6px;"
+           "pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}"
+           "@media print{.cpu{border-bottom:0}#cpu-tip{display:none!important}}")
 
-# One floating popup (position: fixed) so tables inside scrolling cards cannot clip it; the CSS popup above stays
-# as the no-JavaScript fallback. Used inline by the HTML report and by the app (static/app.js).
-CPU_JS = """(function(){var tip=null;document.documentElement.classList.add('js-tip');
-function show(el){if(!tip){tip=document.createElement('div');tip.id='cpu-tip';document.body.appendChild(tip);}
-tip.textContent=el.getAttribute('data-tip');tip.style.display='block';var r=el.getBoundingClientRect();
-var x=Math.min(r.left,window.innerWidth-tip.offsetWidth-8),y=r.bottom+6;
-if(y+tip.offsetHeight>window.innerHeight-4){y=r.top-tip.offsetHeight-6;}
-tip.style.left=Math.max(4,x)+'px';tip.style.top=Math.max(4,y)+'px';}
-function hide(){if(tip){tip.style.display='none';}}
-['mouseover','focusin'].forEach(function(ev){document.addEventListener(ev,function(e){
-var el=e.target.closest&&e.target.closest('.cpu[data-tip]');if(el){show(el);}});});
-['mouseout','focusout'].forEach(function(ev){document.addEventListener(ev,function(e){
-var el=e.target.closest&&e.target.closest('.cpu[data-tip]');if(el){hide();}});});
-window.addEventListener('scroll',hide,true);})();"""
-CPU_JS_CSS = ("html.js-tip .cpu::after{display:none!important}"
-               "#cpu-tip{position:fixed;z-index:1000;display:none;max-width:320px;padding:6px 9px;white-space:pre-line;"
-               "font-size:12px;line-height:1.4;color:#fff;background:#1F2A37;border-radius:6px;pointer-events:none;"
-               "box-shadow:0 4px 14px rgba(0,0,0,.25)}")
+# One floating popup (position: fixed) so tables inside scrolling cards cannot clip it. Plain ES5, no dependency;
+# the native title tooltip is the fallback when scripts are blocked. Used inline by the HTML report and as
+# static/cpu_tip.js by the app.
+CPU_JS = """(function () {
+  var tip = null;
+  function cpuOf(t) { while (t && t.nodeType !== 1) { t = t.parentNode; }
+    return (t && t.closest) ? t.closest(".cpu[data-tip]") : null; }
+  function show(el) {
+    if (el.hasAttribute("title")) { el.removeAttribute("title"); }
+    if (!tip) { tip = document.createElement("div"); tip.id = "cpu-tip"; document.body.appendChild(tip); }
+    tip.textContent = el.getAttribute("data-tip");
+    tip.style.display = "block";
+    var r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = Math.min(r.left, window.innerWidth - w - 8), y = r.bottom + 6;
+    if (y + h > window.innerHeight - 4) { y = r.top - h - 6; }
+    tip.style.left = Math.max(4, x) + "px"; tip.style.top = Math.max(4, y) + "px";
+  }
+  function hide() { if (tip) { tip.style.display = "none"; } }
+  document.addEventListener("mouseover", function (e) { var el = cpuOf(e.target); if (el) { show(el); } else { hide(); } });
+  document.addEventListener("focusin", function (e) { var el = cpuOf(e.target); if (el) { show(el); } });
+  document.addEventListener("focusout", hide);
+  document.addEventListener("mouseleave", hide);
+  window.addEventListener("scroll", hide, true);
+})();"""
