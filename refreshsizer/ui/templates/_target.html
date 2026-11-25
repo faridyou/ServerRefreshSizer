@@ -4,6 +4,17 @@
 {% for key, label in tgt.stacks %}<label><input type="radio" name="stack" value="{{ key }}" {{ 'checked' if tgt.stack == key else '' }}> {{ label }}</label>{% endfor %}
 </div>
 <p class="small muted" style="margin:0 0 6px">{{ t('ui_stack_hint') }} (CVM: {{ tgt.cvm[0] }} vCPU / {{ tgt.cvm[1] }} GB)</p>
+<div class="row" style="margin:8px 0"><b>{{ t('ui_arch') }}:</b>
+{% for key, label in [('auto', t('ui_arch_auto')), ('hci', t('ui_arch_hci')), ('external', t('ui_arch_external'))] %}<label><input type="radio" name="arch" value="{{ key }}" data-arch="{{ key }}" {{ 'checked' if tgt.storage.arch == key else '' }}> {{ label }}</label>{% endfor %}
+</div>
+<div class="card" data-external-opts style="margin:0 0 8px;padding:8px 12px">
+<div class="row"><b>{{ t('ui_es_array') }}:</b>
+<label><input type="radio" name="es_array" value="powerstore" {{ 'checked' if tgt.storage.array == 'powerstore' else '' }}> {{ t('ui_es_powerstore') }}</label>
+<label><input type="radio" name="es_array" value="existing" {{ 'checked' if tgt.storage.array == 'existing' else '' }}> {{ t('ui_es_existing') }}</label>
+<label>{{ t('ui_es_protocol') }} <select name="es_protocol">{% for k, label in tgt.storage.protocols %}<option value="{{ k }}" {{ 'selected' if tgt.storage.protocol == k else '' }}>{{ label }}</option>{% endfor %}</select></label></div>
+<div class="row small">{% for m in tgt.storage.models %}<label><input type="checkbox" name="ps_model" value="{{ m.model }}" {{ 'checked' if m.checked else '' }}> {{ m.model }} <span class="muted">({{ m.media }})</span></label>{% endfor %}</div>
+<p class="small muted" style="margin:4px 0 0">{{ t('ui_arch_hint') }}</p>
+</div>
 <div class="row" style="margin:8px 0">
 {% for v, label in [('both', t('ui_vendor_both')), ('Intel', 'Intel Xeon 6'), ('AMD', 'AMD EPYC 9005')] %}
 <label><input type="radio" name="vendor" value="{{ v }}" data-vendor-pick="{{ v }}" {{ 'checked' if tgt.vendor == v else '' }}> {{ label }}</label>

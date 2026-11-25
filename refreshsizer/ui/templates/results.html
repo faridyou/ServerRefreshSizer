@@ -62,7 +62,7 @@
 <tr><td>Platform</td><td>Dell PowerEdge {{ rec.config.platform }} ({{ c.platform.form_factor_u }}U) x {{ rec.n_total }}</td></tr>
 <tr><td>{{ t('cpu') }}</td><td>{{ rec.config.cpu_count }} x {{ rec.config.cpu_name }} ({{ rec.config.cores_per_cpu }} c, {{ c.cpu.base_ghz }} GHz, {{ c.cpu.tdp_w }} W)</td></tr>
 <tr><td>{{ t('memory') }}</td><td>{% if rec.dimm %}{{ rec.dimm.dimm_count }} x {{ rec.dimm.dimm_size_gb }} GB = {{ rec.dimm.total_gb }} GB, {{ rec.dimm.dpc }} DPC @ {{ rec.dimm.speed_mt_s }} MT/s, {{ rec.dimm.gbs_per_core }} GB/s/core{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'dimm') | first, t) }}{{ calc(d.explanations | selectattr('step_id', 'equalto', 'memory') | first, t) }}</td></tr>
-<tr><td>{{ t('drives') }}</td><td>{% if rec.drives %}{{ rec.drives.count }} x {{ rec.drives.drive_tb }} TB NVMe ({{ rec.drives.raw_tib }} TiB){% else %}external storage{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'drives') | first, t) }}{{ calcs(d.explanations | selectattr('step_id', 'in', ['storage', 'iops']) | list, t) }}</td></tr>
+<tr><td>{{ t('drives') }}</td><td>{% if rec.drives %}{{ rec.drives.count }} x {{ rec.drives.drive_tb }} TB NVMe ({{ rec.drives.raw_tib }} TiB){% else %}{{ t('c_external') }}{% endif %}{{ calc(ex | selectattr('step_id', 'equalto', 'drives') | first, t) }}{{ calcs(d.explanations | selectattr('step_id', 'in', ['storage', 'iops']) | list, t) }}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ rec.nics }}{{ calc(ex | selectattr('step_id', 'equalto', 'network') | first, t) }}</td></tr>
 <tr><td>{{ t('psu') }}</td><td>2 x {{ rec.config.psu }}</td></tr>
 {% if r.policy.target_stack and r.policy.target_stack != 'vmware_vsan' %}<tr><td>{{ t('cvm_row') }}</td><td>{{ r.policy.nutanix_cvm_vcpu }} vCPU (reserved cores) / {{ r.policy.nutanix_cvm_memory_gb }} GB · {{ d.protection }}{{ calc(ex | selectattr('step_id', 'equalto', 'nutanix_cvm') | first, t) }}</td></tr>{% endif %}</table>
@@ -71,6 +71,13 @@
 <div class="card"><h3>{{ t('s11') }}</h3><table class="small">{% for k in c.constraints %}<tr><td>{{ k.check }}</td><td>{{ k.detail }}</td><td><span class="tag {{ k.status }}">{{ k.status }}</span></td></tr>{% endfor %}</table>
 {{ calcs(ex | selectattr('step_id', 'in', ['numa', 'vcpu_ratio']) | list, t) }}</div>
 </div>
+{% set st = c.storage %}{% if st %}<div class="card" id="storage-{{ loop.index }}"><h3>{{ st.title }}</h3>
+{% for f in st.flags %}<p class="warn">{{ f }}</p>{% endfor %}
+<div class="cols2">{% for title, rows in st.groups %}<div><h4>{{ title }}</h4><table class="small">{% for k, v in rows %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</table></div>{% endfor %}</div>
+{% if st.alternatives %}<h4>{{ t('st_alternatives') }}</h4><table class="small"><tr>{% for h in st.alternatives.header %}<th{% if st.alternatives.align[loop.index0] == 'r' %} class="num"{% endif %}>{{ h }}</th>{% endfor %}</tr>
+{% for row in st.alternatives.rows %}<tr{% if loop.first %} style="font-weight:600"{% endif %}>{% for v in row %}<td{% if st.alternatives.align[loop.index0] == 'r' %} class="num"{% endif %}>{{ v }}</td>{% endfor %}</tr>{% endfor %}</table>{% endif %}
+{{ calcs(st.explanations, t) }}
+{% if st.notes %}<ul class="small muted">{% for x in st.notes %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}</div>{% endif %}
 <div class="card"><h3>{{ t('s12') }}</h3>
 {% if d.inventory_sensitivity %}<table class="small"><tr><th>{{ t('sensitivity') }}</th><th class="num">D0</th><th class="num">D_T</th><th class="num">C_req</th><th class="num">{{ t('hosts') }}</th></tr>
 {% for s in d.inventory_sensitivity %}<tr><td>{{ s.assumed_util | pct }}</td><td class="num">{{ s.d0 | fmt }}</td><td class="num">{{ s.d_t | fmt }}</td><td class="num">{{ s.c_req | fmt }}</td><td class="num">{{ s.hosts }}</td></tr>{% endfor %}</table>

@@ -43,7 +43,17 @@ def context(policy: Policy | None) -> dict[str, Any]:
     from refreshsizer.engine.optimizer import STACK_LABELS
 
     stack = policy.target_stack if policy else "vmware_vsan"
-    return {"groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
+    from refreshsizer.catalog.loader import load_powerstore
+    from refreshsizer.config.schema import PROTOCOLS
+
+    es = policy.external_storage if policy else None
+    arch = policy.storage_architecture if policy else "auto"
+    arrays = [{"model": m["model"], "media": m["media"],
+               "checked": not (es and es.models) or m["model"] in (es.models or [])}
+              for m in load_powerstore()["models"]]
+    storage = {"arch": "hci" if arch == "vsan_esa" else arch, "array": es.array if es else "powerstore",
+               "protocol": es.protocol if es else "fc32", "protocols": list(PROTOCOLS.items()), "models": arrays}
+    return {"storage": storage, "groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
             "stacks": list(STACK_LABELS.items()),
             "cvm": (policy.nutanix_cvm_vcpu, policy.nutanix_cvm_memory_gb) if policy else (12, 48)}
 
@@ -66,14 +76,32 @@ def overrides_from_form(form: Any) -> dict[str, Any]:
     stack = str(form.get("stack", "") or "")
     if stack:
         out["target_stack"] = None if stack == "vmware_vsan" else stack  # None = back to the default
+    arch = str(form.get("arch", "") or "")
+    if arch in ("auto", "hci", "external"):
+        out["storage_architecture"] = None if arch == "auto" else arch
+        from refreshsizer.catalog.loader import load_powerstore
+        from refreshsizer.config.schema import PROTOCOLS
+
+        known = [m["model"] for m in load_powerstore()["models"]]
+        models = [m for m in form.getlist("ps_model") if m in known]
+        es: dict[str, Any] = {"models": None if not models or set(models) == set(known) else models}
+        if str(form.get("es_array", "")) in ("powerstore", "existing"):
+            es["array"] = str(form.get("es_array"))
+        if str(form.get("es_protocol", "")) in PROTOCOLS:
+            es["protocol"] = str(form.get("es_protocol"))
+        out["external_storage"] = es
     return out
 
 
 def merge_into_saved(saved: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+    from refreshsizer.config.schema import deep_merge
+
     out = dict(saved)
     for k, v in target.items():
         if v is None:
             out.pop(k, None)
+        elif isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = deep_merge(out[k], v)  # partial section (external_storage): keep the other saved keys
         else:
             out[k] = v
     return out

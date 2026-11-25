@@ -245,7 +245,7 @@ c_servers: {en: "servers", fr: "serveurs"}
 c_vs: {en: "today", fr: "aujourd'hui"}
 c_util_after_failure: {en: "Load with one server down", fr: "Charge avec un serveur en panne"}
 c_per_server: {en: "Processors per server", fr: "Processeurs par serveur"}
-c_external: {en: "existing external storage", fr: "stockage externe existant"}
+c_external: {en: "boot drives only; data on external storage (see Storage design)", fr: "disques de démarrage uniquement ; données sur stockage externe (voir Conception du stockage)"}
 c_platform: {en: "Platform", fr: "Plateforme"}
 c_assumptions: {en: "Sized for {g} % CPU growth per year over {y} years, keeping the servers below {u} % CPU load, with {k} server(s) of spare capacity for failures and maintenance.",
   fr: "Dimensionné pour une croissance CPU de {g} % par an sur {y} ans, avec une charge CPU maintenue sous {u} % et {k} serveur(s) de réserve pour les pannes et la maintenance."}
@@ -286,3 +286,75 @@ c_next_measure: {en: "Run a 7 to 30 day performance collection (Dell Live Optics
 c_next_pilot: {en: "Validate the proposal with a pilot on a representative set of workloads.", fr: "Valider la proposition par un pilote sur un ensemble représentatif de charges."}
 c_next_info: {en: "Provide the information listed below so that the sizing can be finalised.", fr: "Fournir les informations listées ci-dessous afin de finaliser le dimensionnement."}
 c_next_quote: {en: "Final configuration and quotation with Dell.", fr: "Configuration finale et devis avec Dell."}
+# ---- storage architecture / external storage (change request 6)
+ui_arch: {en: "Storage architecture", fr: "Architecture de stockage"}
+ui_arch_auto: {en: "Auto (HCI; external for RISC/bare-metal sources)", fr: "Auto (HCI ; externe pour les sources RISC/physiques)"}
+ui_arch_hci: {en: "HCI (storage in the servers)", fr: "HCI (stockage dans les serveurs)"}
+ui_arch_external: {en: "Disaggregated (servers + hypervisor + external storage)", fr: "Désagrégée (serveurs + hyperviseur + stockage externe)"}
+ui_arch_hint: {en: "Disaggregated: the servers get boot drives only, no vSAN; the array is sized from the same storage demand (growth, data reduction, max fill). PowerStore layout and indicative IOPS must be validated with Dell's PowerStore sizing tools. Nutanix is HCI only here.", fr: "Désagrégée : les serveurs n'ont que des disques de démarrage, pas de vSAN ; la baie est dimensionnée à partir de la même demande de stockage (croissance, réduction de données, remplissage max). La configuration PowerStore et les IOPS indicatifs sont à valider avec les outils de dimensionnement PowerStore de Dell. Nutanix est HCI uniquement ici."}
+ui_es_array: {en: "Array", fr: "Baie"}
+ui_es_powerstore: {en: "Size a Dell PowerStore", fr: "Dimensionner une Dell PowerStore"}
+ui_es_existing: {en: "Keep the customer's existing array", fr: "Conserver la baie existante du client"}
+ui_es_protocol: {en: "Protocol", fr: "Protocole"}
+ui_pg_external: {en: "External storage (disaggregated)", fr: "Stockage externe (désagrégé)"}
+h_external_storage_parity: {en: "PowerStore Dynamic Resiliency Engine: single parity (default) or double parity.", fr: "PowerStore Dynamic Resiliency Engine : simple parité (par défaut) ou double parité."}
+h_external_storage_max_fill: {en: "Share of the array usable capacity filled at the end of the horizon.", fr: "Part de la capacité utile de la baie remplie en fin d'horizon."}
+h_external_storage_drr: {en: "Array data reduction ratio (empty = the per-class drr values). PowerStore often reaches 3-5:1 on reducible data; databases and encrypted data reduce less.", fr: "Taux de réduction de données de la baie (vide = valeurs drr par classe). PowerStore atteint souvent 3-5:1 sur des données réductibles ; bases de données et données chiffrées se réduisent moins."}
+h_external_storage_host_ports: {en: "Storage ports per server (one per fabric / storage network).", fr: "Ports de stockage par serveur (un par fabric / réseau de stockage)."}
+h_external_storage_iops_max_util: {en: "Share of the indicative appliance IOPS allowed at the horizon (relative check only).", fr: "Part des IOPS indicatifs de l'appliance autorisée en fin d'horizon (contrôle relatif uniquement)."}
+st_title: {en: "Storage design", fr: "Conception du stockage"}
+st_g_capacity: {en: "Capacity and performance", fr: "Capacité et performances"}
+st_g_layout: {en: "Layout", fr: "Configuration"}
+st_g_connect: {en: "Connectivity", fr: "Connectivité"}
+st_g_cost: {en: "Storage cost (placeholders)", fr: "Coût du stockage (valeurs indicatives)"}
+st_arch: {en: "Architecture", fr: "Architecture"}
+st_arch_hci: {en: "HCI - storage in the servers", fr: "HCI - stockage dans les serveurs"}
+st_arch_external: {en: "Disaggregated - servers + hypervisor + external storage", fr: "Désagrégée - serveurs + hyperviseur + stockage externe"}
+st_solution: {en: "Solution", fr: "Solution"}
+st_protection: {en: "Data protection", fr: "Protection des données"}
+st_used0: {en: "Used capacity today", fr: "Capacité utilisée aujourd'hui"}
+st_growth: {en: "Growth", fr: "Croissance"}
+st_drr: {en: "Data reduction assumed", fr: "Réduction de données retenue"}
+st_physical: {en: "Physical capacity needed in year {y} (after data reduction)", fr: "Capacité physique nécessaire en année {y} (après réduction)"}
+st_usable: {en: "Usable capacity proposed", fr: "Capacité utile proposée"}
+st_effective: {en: "Effective capacity (usable x data reduction)", fr: "Capacité effective (utile x réduction)"}
+st_fill: {en: "Fill today / year {y}", fr: "Remplissage aujourd'hui / année {y}"}
+st_perf: {en: "Performance today -> year {y}", fr: "Performances aujourd'hui -> année {y}"}
+st_drives_hci: {en: "Data drives", fr: "Disques de données"}
+st_array: {en: "Array", fr: "Baie"}
+st_per_appliance: {en: "per appliance", fr: "par appliance"}
+st_enclosures: {en: "Enclosures", fr: "Tiroirs"}
+st_enclosures_val: {en: "base enclosure + {n} expansion enclosure(s) per appliance", fr: "tiroir de base + {n} tiroir(s) d'extension par appliance"}
+st_rack_power: {en: "Rack space and power", fr: "Espace rack et consommation"}
+st_iops_check: {en: "IOPS check (year-end demand / indicative)", fr: "Contrôle IOPS (demande fin d'horizon / indicatif)"}
+st_indicative: {en: "indicative only", fr: "indicatif uniquement"}
+st_boot: {en: "Server boot", fr: "Démarrage des serveurs"}
+st_protocol: {en: "Protocol", fr: "Protocole"}
+st_host_adapter: {en: "Storage adapters per server", fr: "Adaptateurs de stockage par serveur"}
+st_array_ports: {en: "Array front-end ports", fr: "Ports frontaux de la baie"}
+st_switch: {en: "Switching", fr: "Commutation"}
+st_switch_val: {en: "{f} redundant fabrics, {p} ports per fabric (hosts + array)", fr: "{f} fabrics redondantes, {p} ports par fabric (hôtes + baie)"}
+st_capex_array: {en: "Array (appliances, enclosures, drives)", fr: "Baie (appliances, tiroirs, disques)"}
+st_capex_adapters: {en: "Server storage adapters", fr: "Adaptateurs de stockage des serveurs"}
+st_capex_total: {en: "Storage total", fr: "Total stockage"}
+st_alternatives: {en: "Other array models (cheapest layout per model)", fr: "Autres modèles de baie (configuration la moins chère par modèle)"}
+st_validate: {en: "The array configuration is an estimate to be validated with Dell's PowerStore sizing tools before quotation.", fr: "La configuration de la baie est une estimation à valider avec les outils de dimensionnement PowerStore de Dell avant devis."}
+st_fill_t: {en: "Fill year {y}", fr: "Remplissage année {y}"}
+ui_tab_email: {en: "8 Customer email", fr: "8 E-mail client"}
+ui_email_intro: {en: "RefreshSizer works offline and does not write the email itself: it builds a prompt with every relevant sizing fact and the writing rules. Copy it into the AI assistant you use (Copilot, ChatGPT, Claude, ...) to get a draft email, then review it before sending.", fr: "RefreshSizer fonctionne hors ligne et ne rédige pas l'e-mail lui-même : il construit une invite avec tous les faits du dimensionnement et les règles de rédaction. Copiez-la dans l'assistant IA que vous utilisez (Copilot, ChatGPT, Claude, ...) pour obtenir un brouillon, puis relisez-le avant envoi."}
+ui_email_audience: {en: "Audience", fr: "Public"}
+ui_email_executive: {en: "Decision makers", fr: "Décideurs"}
+ui_email_technical: {en: "Technical team", fr: "Équipe technique"}
+ui_email_tone: {en: "Tone", fr: "Ton"}
+ui_email_prices: {en: "Include indicative costs (placeholders)", fr: "Inclure les coûts indicatifs"}
+ui_email_recipient: {en: "Recipient (name, role)", fr: "Destinataire (nom, fonction)"}
+ui_email_company: {en: "Customer company", fr: "Société cliente"}
+ui_email_sender: {en: "Your name / signature", fr: "Votre nom / signature"}
+ui_email_notes: {en: "Extra context for the email (optional)", fr: "Contexte complémentaire (facultatif)"}
+ui_email_build: {en: "Build prompt", fr: "Construire l'invite"}
+ui_email_copy: {en: "Copy prompt", fr: "Copier l'invite"}
+ui_email_copied: {en: "Copied - paste it into your AI assistant.", fr: "Copié - collez-le dans votre assistant IA."}
+ui_email_download: {en: "Download .txt", fr: "Télécharger .txt"}
+ui_email_privacy: {en: "The prompt contains customer data (host counts, CPU models, capacities, questions). Paste it only into an AI service your company approves for customer information.", fr: "L'invite contient des données client (nombre d'hôtes, processeurs, capacités, questions). Ne la collez que dans un service IA approuvé par votre entreprise pour les informations client."}
+ui_fmt_prompt: {en: "Email prompt (.txt)", fr: "Invite e-mail (.txt)"}
+ui_email_short: {en: "build a prompt to paste into any AI assistant to draft the email to the customer.", fr: "construire une invite à coller dans un assistant IA pour rédiger l'e-mail au client."}

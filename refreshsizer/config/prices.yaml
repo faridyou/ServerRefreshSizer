@@ -16,6 +16,16 @@ dimm_usd_per_gb: {ddr5: 6.0}
 dimm_premium_large: {128: 1.15, 256: 1.6}   # price/GB multiplier for large DIMMs
 drive_usd_per_tb: {3.84: 130, 7.68: 110, 15.36: 125, 30.72: 150}   # NVMe price/TB sweet spot at 7.68
 nic_usd: {2x25GbE: 600, 2x100GbE: 1800}
+powerstore_base_usd:   # appliance with base enclosure, no drives (placeholders)
+  PowerStore 500T: 45000
+  PowerStore 1200T: 75000
+  PowerStore 3200T: 115000
+  PowerStore 3200Q: 105000
+  PowerStore 5200T: 165000
+  PowerStore 9200T: 245000
+powerstore_expansion_usd: 15000   # 24-slot NVMe expansion enclosure
+powerstore_drive_usd_per_tb: {TLC: {1.92: 230, 3.84: 190, 7.68: 165, 15.36: 155}, QLC: {15.36: 100, 30.72: 90}}
+storage_adapter_usd: {fc32: 1500, nvme_fc32: 1500, iscsi25: 600, nvme_tcp25: 600}   # dual-port, per host
 support_pct_per_year_hw: 0.0   # hardware support beyond base, fraction of capex/yr
 power:
   usd_per_kwh: 0.15

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+{% if not sized %}<div class="card"><p>{{ t('ui_not_sized') }}</p></div>{% else %}
+<div class="card"><p class="small">{{ t('ui_email_intro') }}</p>
+<form method="get" action="/p/{{ name }}/email" class="stack">
+<div class="row">
+<select name="run">{% for x in runs %}<option value="{{ x.id }}" {{ 'selected' if x.id == f.run else '' }}>{{ x.created }} - {{ x.label }}</option>{% endfor %}</select>
+<select name="lang"><option value="en" {{ 'selected' if f.lang == 'en' else '' }}>English</option><option value="fr" {{ 'selected' if f.lang == 'fr' else '' }}>Français</option></select>
+<label>{{ t('ui_email_audience') }} <select name="audience"><option value="executive" {{ 'selected' if f.audience == 'executive' else '' }}>{{ t('ui_email_executive') }}</option><option value="technical" {{ 'selected' if f.audience == 'technical' else '' }}>{{ t('ui_email_technical') }}</option></select></label>
+<label>{{ t('ui_email_tone') }} <select name="tone">{% for x in ['professional', 'friendly', 'formal'] %}<option value="{{ x }}" {{ 'selected' if f.tone == x else '' }}>{{ x }}</option>{% endfor %}</select></label>
+<label><input type="checkbox" name="prices" value="1" {{ 'checked' if f.prices else '' }}> {{ t('ui_email_prices') }}</label>
+</div>
+<div class="row">
+<label>{{ t('ui_email_recipient') }} <input name="recipient" value="{{ f.recipient }}" size="28"></label>
+<label>{{ t('ui_email_company') }} <input name="company" value="{{ f.company }}" size="20"></label>
+<label>{{ t('ui_email_sender') }} <input name="sender" value="{{ f.sender }}" size="24"></label>
+</div>
+<label style="display:block">{{ t('ui_email_notes') }}<br><textarea name="notes" rows="2" style="width:100%">{{ f.notes }}</textarea></label>
+<button>{{ t('ui_email_build') }}</button>
+</form></div>
+{% if prompt %}<div class="card">
+<div class="row"><button type="button" id="copy-prompt" data-done="{{ t('ui_email_copied') }}">{{ t('ui_email_copy') }}</button>
+<a href="/p/{{ name }}/email.txt?{{ query }}">{{ t('ui_email_download') }}</a> <span id="copy-msg" class="small muted"></span></div>
+<p class="small warn">{{ t('ui_email_privacy') }}</p>
+<textarea id="prompt" rows="28" style="width:100%;font-family:Consolas,monospace;font-size:12px" readonly>{{ prompt }}</textarea>
+</div>{% endif %}
+{% endif %}
+{% endblock %}

@@ -249,9 +249,13 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
             saved = S().policy_overrides(n)
             if "vendor" in raw:  # the form carries the target selector
                 ov = target.merge_into_saved(ov, target.overrides_from_form(raw))
-            else:  # keep the saved target selection
-                ov.update({k: saved[k] for k in ("target_platforms", "target_cpu_vendors", "target_cpus")
-                           if k in saved})
+            else:  # keep the saved target selection (servers, stack, storage architecture and array choice)
+                ov.update({k: saved[k] for k in ("target_platforms", "target_cpu_vendors", "target_cpus",
+                                                 "target_stack", "storage_architecture") if k in saved})
+                kept = {k: v for k, v in (saved.get("external_storage") or {}).items()
+                        if k in ("array", "protocol", "models")}
+                if kept:
+                    ov["external_storage"] = {**kept, **(ov.get("external_storage") or {})}
             from refreshsizer import workflow
 
             workflow.make_policy(None, ov)
@@ -370,7 +374,7 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
     async def reports_make(name: str, request: Request) -> RedirectResponse:
         n, _ = proj(name)
         form = await request.form()
-        formats = [f for f in ("html", "xlsx", "pdf", "docx", "pptx") if form.get(f)] or ["html", "xlsx", "pdf"]
+        formats = [f for f in ("html", "xlsx", "pdf", "docx", "pptx", "prompt") if form.get(f)] or ["html", "xlsx", "pdf"]
         lang = str(form.get("lang", "en"))
         rid = str(form.get("run", "")) or None
         level = str(form.get("level", "presales"))
@@ -399,6 +403,40 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         if p.suffix.lower() != ".html":
             raise HTTPException(404)
         return FileResponse(p, media_type="text/html")
+
+    # ---------------------------------------------------------------- 8 customer email (AI prompt)
+    def _email_opts(request: Request) -> tuple[dict[str, Any], dict[str, Any]]:
+        q = request.query_params
+        lang = q.get("lang") or lang_of(request)
+        f = {"run": q.get("run", ""), "lang": lang if lang in LANGS else "en",
+             "audience": q.get("audience", "executive"), "tone": q.get("tone", "professional"),
+             "prices": bool(q.get("prices")), "recipient": q.get("recipient", "")[:200],
+             "company": q.get("company", "")[:200], "sender": q.get("sender", "")[:200],
+             "notes": q.get("notes", "")[:4000]}
+        opts = {k: f[k] for k in ("lang", "audience", "tone", "recipient", "company", "sender", "notes")}
+        opts["include_prices"] = f["prices"]
+        return f, opts
+
+    @app.get("/p/{name}/email", response_class=HTMLResponse)
+    def email_page(name: str, request: Request) -> HTMLResponse:
+        n, meta = proj(name)
+        f, opts = _email_opts(request)
+        runs = S().runs(n)
+        prompt = services.email_prompt(S(), n, f["run"] or None, opts) if runs else None
+        return render(request, "email.html", {"name": n, "meta": meta, "tab": "email", "runs": runs,
+                                              "sized": bool(runs), "f": f, "prompt": prompt,
+                                              "query": request.url.query})
+
+    @app.get("/p/{name}/email.txt")
+    def email_txt(name: str, request: Request) -> Response:
+        n, _ = proj(name)
+        f, opts = _email_opts(request)
+        prompt = services.email_prompt(S(), n, f["run"] or None, opts)
+        if prompt is None:
+            raise HTTPException(404)
+        fn = f"refreshsizer_email_prompt{'_fr' if f['lang'] == 'fr' else ''}.txt"
+        return Response(prompt, media_type="text/plain; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
     # ---------------------------------------------------------------- 10 benchmarks
     @app.get("/benchmarks", response_class=HTMLResponse)

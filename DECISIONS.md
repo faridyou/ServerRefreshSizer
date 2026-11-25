@@ -244,3 +244,42 @@ Each entry: **decision** – reason – how to change it.
 76. **PDF stays HTML-based** (xhtml2pdf); Word/PowerPoint can be exported to PDF by Office if a styled PDF from
     them is preferred. In the UI both new formats are ticked by default; the CLI default is unchanged
     (`html,pdf,xlsx`).
+
+## Storage architecture and customer email prompt (change request 6)
+
+77. **Architecture choice**: `storage_architecture` = `auto` (unchanged default: HCI, external for RISC/bare-metal
+    sources), `hci` or `external` (disaggregated: servers + hypervisor + external array). It is on the target
+    selector next to the stack. `vsan_esa` is still accepted as a synonym of `hci`. A top-level `None` override now
+    means "back to the default" (also fixes resetting `target_stack` in a one-off sizing).
+78. **What disaggregated changes for the servers**: boot drives only (BOSS), no vSAN capacity add-on, the 2-host HA
+    minimum instead of the vSAN/Nutanix minimums, no vSAN CPU reserve - the existing `external` protection path.
+    The CPU demand (D0, D_T, C_req) is identical; only the host floor and the drives differ.
+79. **The array never changes the host count or the compute TCO** used to rank candidates (it is the same for every
+    candidate). Its cost (appliances, enclosures, drives, plus one storage adapter set per host) is reported
+    separately as "Storage total"; golden results are unchanged.
+80. **PowerStore model** (`catalog/powerstore.yaml`): 500T, 1200T, 3200T, 3200Q, 5200T, 9200T; base enclosure slots,
+    24-slot expansion enclosures, max drives, up to 4 appliances. Usable = (drives - 1 spare per resiliency set) x
+    TB x 0.9095 x DRE parity efficiency (single 4+1 / 8+1, double 4+2 / 16+2 by drive count) x (1 - 8 % system
+    overhead) - a deliberately simple model. Requirement = Used0 (1+g_s)^T / DRR / max fill (default 80 %). The
+    cheapest layout per model is kept (fewest appliances, then drives); the cheapest model is proposed and the
+    others are listed. Array data reduction defaults to the per-class `drr` (conservative 1.3-1.5:1); set
+    `external_storage.drr` (e.g. 3) for a PowerStore-typical assumption.
+81. **Indicative IOPS are placeholders, not Dell figures** (Dell does not publish per-model IOPS); they only rank
+    models relatively and add appliances when demand exceeds 70 % of them. Every report says the array must be
+    validated with Dell's PowerStore sizing tools; prices are placeholders in `prices.yaml`.
+82. **Connectivity**: two redundant fabrics/networks; `host_ports` (default 2) per host as dual-port 32 Gb FC HBAs
+    or dual-port 25 GbE NICs dedicated to storage; array front-end ports 4 per appliance (8 above 16 hosts); switch
+    ports per fabric = hosts x ports/2 + array ports/2 (ISLs and spares excluded).
+83. **Nutanix + external is refused** with a clear message: Nutanix disaggregated runs on Dell PowerFlex, which is
+    not modeled; PowerStore is not a Nutanix storage option.
+84. **"Existing array"** keeps the customer's array: requirement and connectivity are reported, no array is sized,
+    and the report asks to confirm free capacity, performance, support date and compatibility.
+85. **Storage design section** in every report level and format (HTML/PDF, Word, PowerPoint, Excel, UI results)
+    from one view: customer = capacity, layout, connectivity (no prices); presales adds storage cost and other
+    array models; full adds the formulas. HCI clusters get the same section (drives per host, raw, usable after
+    protection, effective, fill).
+86. **Email: a prompt, not an AI call**. The tool stays offline and AI-free; it produces a self-contained prompt
+    (instructions + facts) to paste into any assistant. The facts come from the customer report context, so the
+    email cannot contradict the report; prices are excluded unless requested, low-confidence data adds a "confirm
+    before ordering" rule, and the page warns that the prompt contains customer data. Instructions exist in
+    English and French (the facts use the report labels of the chosen language).

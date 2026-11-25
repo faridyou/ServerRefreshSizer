@@ -29,6 +29,22 @@ class GrowthEvent(BaseModel):
     storage_tib: float = 0.0
 
 
+class ExternalStorage(BaseModel):
+    """Disaggregated design: servers + hypervisor + external array (storage_architecture = external)."""
+    array: str = "powerstore"          # powerstore (size a Dell PowerStore) | existing (keep the customer's array)
+    models: list[str] | None = None    # restrict PowerStore models, e.g. ["PowerStore 3200T"]
+    drr: float | None = None           # array data reduction ratio; null = the per-class drr above
+    max_fill: float = 0.80             # usable capacity filled at the end of the horizon
+    parity: str = "single"             # single | double (PowerStore DRE)
+    protocol: str = "fc32"             # fc32 | nvme_fc32 | iscsi25 | nvme_tcp25
+    host_ports: int = 2                # storage ports per host (one per fabric)
+    iops_max_util: float = 0.70        # share of the indicative appliance IOPS used at the horizon
+
+
+PROTOCOLS = {"fc32": "32 Gb Fibre Channel (FC)", "nvme_fc32": "NVMe over 32 Gb FC",
+             "iscsi25": "iSCSI over 25 GbE", "nvme_tcp25": "NVMe/TCP over 25 GbE"}
+
+
 class Policy(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -54,6 +70,7 @@ class Policy(BaseModel):
     mem_bw_min_gbs_per_core: float = 4.0
     drr: dict[str, float] = Field(default_factory=lambda: {"default": 1.3})
     storage_architecture: str = "auto"
+    external_storage: ExternalStorage = Field(default_factory=ExternalStorage)
     protection: str = "vsan_esa_raid5_4p1"
     target_stack: str = "vmware_vsan"
     nutanix_protection: str = "nutanix_rf2"
@@ -147,6 +164,31 @@ class Policy(BaseModel):
             bad.append(f"target_stack = {self.target_stack}: use vmware_vsan, nutanix_ahv or nutanix_esxi")
         if self.nutanix_protection not in ("nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"):
             bad.append(f"nutanix_protection = {self.nutanix_protection}: unknown")
+        if self.storage_architecture not in ("auto", "hci", "vsan_esa", "external"):
+            bad.append(f"storage_architecture = {self.storage_architecture}: use auto, hci or external")
+        if self.nutanix and self.storage_architecture == "external":
+            bad.append("Nutanix targets are HCI only in RefreshSizer (Nutanix disaggregated runs on Dell PowerFlex, "
+                       "not PowerStore): choose VMware for a PowerStore design")
+        es = self.external_storage
+        if es.array not in ("powerstore", "existing"):
+            bad.append(f"external_storage.array = {es.array}: use powerstore or existing")
+        if es.parity not in ("single", "double"):
+            bad.append(f"external_storage.parity = {es.parity}: use single or double")
+        if es.protocol not in PROTOCOLS:
+            bad.append(f"external_storage.protocol = {es.protocol}: use {', '.join(PROTOCOLS)}")
+        if not 0 < es.max_fill <= 1 or not 0 < es.iops_max_util <= 1:
+            bad.append("external_storage.max_fill / iops_max_util must be fractions in (0, 1]")
+        if es.drr is not None and es.drr <= 0:
+            bad.append("external_storage.drr must be > 0")
+        if es.host_ports < 1:
+            bad.append("external_storage.host_ports must be >= 1")
+        if es.models:
+            from refreshsizer.catalog.loader import load_powerstore
+
+            known = [m["model"] for m in load_powerstore()["models"]]
+            unknown = [m for m in es.models if m not in known]
+            if unknown:
+                bad.append(f"external_storage.models: unknown {unknown} (known: {known})")
         if self.nutanix_cvm_vcpu < 0 or self.nutanix_cvm_memory_gb < 0:
             bad.append("nutanix_cvm_vcpu / nutanix_cvm_memory_gb must be >= 0")
         if bad:
@@ -248,10 +290,14 @@ def flat_to_nested(flat: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_policy(*overrides: dict[str, Any] | None) -> Policy:
-    data = default_policy_dict()
+    defaults = default_policy_dict()
+    data = copy.deepcopy(defaults)
     for ov in overrides:
         if ov:
             data = deep_merge(data, ov)
+            for k, v in ov.items():  # a top-level None means "back to the default" (e.g. target_stack)
+                if v is None:
+                    data[k] = copy.deepcopy(defaults.get(k))
     return Policy.model_validate(data)
 
 

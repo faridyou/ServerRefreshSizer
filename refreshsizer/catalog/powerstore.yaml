@@ -1,0 +1,24 @@
+# Dell PowerStore appliance models used for disaggregated (external storage) sizing.
+# Drive slots and drive sizes follow the public PowerStore T/Q spec sheets (base enclosure + up to three
+# 24-drive NVMe expansion enclosures per appliance, up to 4 appliances per PowerStore cluster).
+# indicative_iops are EDITABLE PLACEHOLDERS for a relative performance check only (8 KiB, 70/30 read/write
+# mix) - they are NOT Dell figures. Always validate the final array with Dell's PowerStore sizing tools.
+models:
+  - {model: PowerStore 500T,  media: TLC, base_slots: 25, max_drives: 97, min_drives: 6,  indicative_iops: 150000, rack_units_base: 2, power_w_base: 900}
+  - {model: PowerStore 1200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 250000, rack_units_base: 2, power_w_base: 1200}
+  - {model: PowerStore 3200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 400000, rack_units_base: 2, power_w_base: 1400}
+  - {model: PowerStore 3200Q, media: QLC, base_slots: 21, max_drives: 93, min_drives: 11, indicative_iops: 300000, rack_units_base: 2, power_w_base: 1400}
+  - {model: PowerStore 5200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 600000, rack_units_base: 2, power_w_base: 1700}
+  - {model: PowerStore 9200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 900000, rack_units_base: 2, power_w_base: 2100}
+drive_tb: {TLC: [1.92, 3.84, 7.68, 15.36], QLC: [15.36, 30.72]}
+expansion_slots: 24
+expansion_rack_units: 2
+expansion_power_w: 450
+max_appliances: 4
+# Dynamic Resiliency Engine (DRE) - simplified: one drive of spare capacity per resiliency set (25 drives
+# single parity, 50 double parity), parity stripe by drive count, plus system/metadata overhead.
+dre:
+  single: [{min_drives: 6, efficiency: 0.80}, {min_drives: 10, efficiency: 0.889}]
+  double: [{min_drives: 7, efficiency: 0.667}, {min_drives: 19, efficiency: 0.889}]
+  set_size: {single: 25, double: 50}
+  system_overhead: 0.08

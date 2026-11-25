@@ -3,10 +3,11 @@
 {% if not sized %}<div class="card"><p>{{ t('ui_not_sized') }}</p></div>{% else %}
 <div class="card"><form method="post" action="/p/{{ name }}/reports" class="row">
 <select name="run">{% for x in runs %}<option value="{{ x.id }}">{{ x.created }} - {{ x.label }}</option>{% endfor %}</select>
-<label><input type="checkbox" name="html" value="1" checked> HTML</label><label><input type="checkbox" name="xlsx" value="1" checked> Excel</label><label><input type="checkbox" name="pdf" value="1" checked> PDF</label><label><input type="checkbox" name="docx" value="1" checked> Word</label><label><input type="checkbox" name="pptx" value="1" checked> PowerPoint</label>
+<label><input type="checkbox" name="html" value="1" checked> HTML</label><label><input type="checkbox" name="xlsx" value="1" checked> Excel</label><label><input type="checkbox" name="pdf" value="1" checked> PDF</label><label><input type="checkbox" name="docx" value="1" checked> Word</label><label><input type="checkbox" name="pptx" value="1" checked> PowerPoint</label><label title="{{ t('ui_tab_email') }}"><input type="checkbox" name="prompt" value="1"> {{ t('ui_fmt_prompt') }}</label>
 <select name="level" title="{{ t('ui_level') }}"><option value="customer">{{ t('ui_level_customer') }}</option><option value="presales" selected>{{ t('ui_level_presales') }}</option><option value="full">{{ t('ui_level_full') }}</option></select>
 <select name="lang"><option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option><option value="fr" {{ 'selected' if lang == 'fr' else '' }}>Français</option></select>
-<button>{{ t('ui_generate') }}</button></form></div>
+<button>{{ t('ui_generate') }}</button></form>
+<p class="small muted"><a href="/p/{{ name }}/email">{{ t('ui_tab_email') }}</a>: {{ t('ui_email_short') }}</p></div>
 {% endif %}
 {% if files %}<div class="card"><table><thead><tr><th>{{ t('files') }}</th><th>kB</th><th></th><th></th></tr></thead><tbody>
 {% for f in files %}<tr><td>{{ f.name }}</td><td class="num">{{ f.kb }}</td><td class="small muted">{{ f.time }}</td><td><a href="/p/{{ name }}/reports/{{ f.name }}">{{ t('ui_download') }}</a>

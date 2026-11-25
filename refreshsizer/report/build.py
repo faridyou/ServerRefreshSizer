@@ -185,8 +185,11 @@ def build_context(project: Project, lang: str = "en", level: str = "full") -> di
     run = SizingRun.model_validate(project.sizing)
     t = translator(lang)
     clusters = [cluster_context(cs, t) for cs in run.clusters]
+    from refreshsizer.report.storage_view import storage_view
+
     for c in clusters:
         c["src"] = source_view(project, c["cs"])
+        c["storage"] = storage_view(c["cs"].storage, t, level)
         if level == "customer" and c["rec"] and c["cs"].naive:
             c["png"]["hosts"] = charts.host_comparison(
                 [t("c_lbl_proposal"), t("c_lbl_cores"), t("c_lbl_ghz")],
@@ -244,6 +247,12 @@ def write_reports(project: Project, out: Path, formats: list[str], lang: str = "
             if progress:
                 progress(0.55, "PowerPoint deck")
             written.append(write_pptx(ctx, out / f"{stem}.pptx", outline))
+    if "prompt" in formats:  # customer email draft as an AI prompt (defaults: decision makers, no prices)
+        from refreshsizer.report.email_prompt import build_email_prompt
+
+        p = out / f"refreshsizer_email_prompt{'_fr' if lang == 'fr' else ''}.txt"
+        p.write_text(build_email_prompt(project, lang, include_prices=False), encoding="utf-8")
+        written.append(p)
     if "pdf" in formats:
         from refreshsizer.report.pdf import write_pdf
 

@@ -48,6 +48,36 @@ def _abs(sheet: str, row: int, col: int) -> str:
     return f"'{sheet}'!{xl_rowcol_to_cell(row, col, row_abs=True, col_abs=True)}"
 
 
+def _storage_block(bk: Any, ws: Any, r: int, st: dict[str, Any] | None, t: Any) -> int:
+    """Storage design (values) - same content as the report section for the level."""
+    if not st:
+        return r
+    ws.write(r, 0, st["title"], bk.b)
+    r += 1
+    for f in st["flags"]:
+        ws.write(r, 0, f, bk.muted)
+        r += 1
+    for title, rows in st["groups"]:
+        ws.write(r, 0, title, bk.h)
+        r += 1
+        for k, v in rows:
+            ws.write(r, 0, k)
+            ws.write(r, 1, v)
+            r += 1
+    if st["alternatives"]:
+        ws.write(r, 0, t("st_alternatives"), bk.b)
+        r += 1
+        bk.header(ws, r, st["alternatives"]["header"])
+        r += 1
+        for row in st["alternatives"]["rows"]:
+            ws.write_row(r, 0, row)
+            r += 1
+    for n in st["notes"]:
+        ws.write(r, 0, n, bk.muted)
+        r += 1
+    return r + 1
+
+
 def write_excel(ctx: dict[str, Any], out: Path) -> Path:
     bk = Book(Path(out))
     t = ctx["t"]
@@ -235,6 +265,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             ws9.write(r9, 1, rec.nics)
             r9 += 1
         r9 += 1
+        r9 = _storage_block(bk, ws9, r9, c.get("storage"), t)
         if rec:
             # patch memory / storage host-count formulas now that M_T and Raw cells exist
             mf = (f"=IF({R['mem_host']}>{R['cvm_mem']},CEILING({R['m_t']}/({R['mem_host']}-{R['cvm_mem']})-1E-9,1)"
@@ -618,6 +649,7 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
             ws4.write(r, 0, k)
             ws4.write(r, 1, v)
             r += 1
+        r = _storage_block(bk, ws4, r + 1, c.get("storage"), t)
         sc = c["cs"].scenarios
         if len(sc) > 1:
             r += 1

@@ -168,6 +168,78 @@ class Uncertainty(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
+class ArrayOption(BaseModel):
+    model: str
+    media: str
+    appliances: int
+    drives_per_appliance: int
+    drive_tb: float
+    expansions_per_appliance: int
+    raw_tb: float
+    raw_tib: float
+    usable_tib: float
+    effective_tib: float
+    fill_today: float
+    fill_t: float
+    indicative_iops: float
+    iops_util: float
+    rack_units: int
+    power_w: float
+    capex_usd: float
+    parity_efficiency: float
+
+    @property
+    def label(self) -> str:
+        n = f"{self.appliances} x " if self.appliances > 1 else ""
+        return f"{n}{self.model}, {self.drives_per_appliance} x {self.drive_tb:g} TB NVMe {self.media}"
+
+
+class StorageDesign(BaseModel):
+    architecture: str                      # hci | external
+    solution: str
+    protection: str
+    protection_label: str
+    years: int
+    used0_tib: float
+    growth_pct: float
+    used_t_tib: float
+    drr: float
+    physical_t_tib: float                  # after data reduction
+    max_fill: float
+    iops0: float
+    iops_t: float
+    backend_iops_t: float
+    read_pct: float
+    mbps_t: float
+    # HCI
+    hosts: int = 0
+    drives_per_host: int = 0
+    drive_tb: float = 0.0
+    raw_tib: float = 0.0
+    usable_tib: float = 0.0
+    effective_tib: float = 0.0
+    fill_today: float = 0.0
+    fill_t: float = 0.0
+    host_boot: str = ""
+    # external
+    array_kind: str = ""                   # powerstore | existing
+    array: ArrayOption | None = None
+    alternatives: list[ArrayOption] = Field(default_factory=list)
+    parity: str = ""
+    protocol: str = ""
+    protocol_label: str = ""
+    host_adapter: str = ""
+    host_ports: int = 0
+    array_ports: int = 0
+    fabrics: int = 0
+    switch_ports_per_fabric: int = 0
+    adapters_capex_usd: float = 0.0
+    capex_usd: float = 0.0
+    notes: list[str] = Field(default_factory=list)
+    flags: list[str] = Field(default_factory=list)
+    explanations: list[Explanation] = Field(default_factory=list)
+
+
 class ClusterSizing(BaseModel):
     demand: ClusterDemand
     candidates: list[Candidate] = Field(default_factory=list)
@@ -176,6 +248,7 @@ class ClusterSizing(BaseModel):
     target_selection: str = ""
     all_points: list[tuple[int, float]] = Field(default_factory=list)
     recommended: Candidate | None = None
+    storage: StorageDesign | None = None
     naive: NaiveResult | None = None
     uncertainty: Uncertainty | None = None
     source_licensing: list[LicenseLine] = Field(default_factory=list)

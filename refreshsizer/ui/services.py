@@ -164,3 +164,13 @@ def run_bench_update(progress: Progress, job: Any) -> str:
     job.result = msg
     job.message = msg
     return f"/benchmarks?job={job.id}"
+
+
+def email_prompt(store: ProjectStore, name: str, rid: str | None, opts: dict[str, Any]) -> str | None:
+    """Customer email prompt for a kept run (same facts as the customer report)."""
+    from refreshsizer.report.email_prompt import build_email_prompt
+
+    project, _ = project_for_run(store, name, rid)
+    if project is None or not project.sizing:
+        return None
+    return build_email_prompt(project, **opts)

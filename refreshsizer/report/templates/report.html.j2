@@ -138,6 +138,7 @@
 {% for e in d.explanations if e.step_id in ('memory', 'storage', 'iops') %}{{ expl(e) }}{% endfor %}
 {% for e in r.explanations if e.step_id in ('dimm', 'drives', 'network') %}{{ expl(e) }}{% endfor %}
 </table></section>
+{% include "_storage.html.j2" %}
 
 <h2>{{ t('s10') }} - {{ d.cluster }}</h2>
 <section class="card">

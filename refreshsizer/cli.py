@@ -152,6 +152,10 @@ def size(project_file: Path = typer.Argument(..., exists=True),
          cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
          cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
          stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
+         storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+         array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
+         protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
+         array_drr: float | None = typer.Option(None, "--array-drr", help="external array data reduction, e.g. 3"),
          out: Path | None = typer.Option(None, "--out", help="Output project (default: overwrite input)"),
          verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Size a project (adds the 'sizing' section to project.json)."""
@@ -160,6 +164,7 @@ def size(project_file: Path = typer.Argument(..., exists=True),
     ov = _cli_overrides(growth, years, objective, p95_estimate, None, platforms, cpu_vendor, cpus)
     if stack:
         ov["target_stack"] = stack
+    ov.update(_storage_overrides(storage, array, protocol, array_drr))
     pol = _policy(project.policy_overrides, policy, ov)
     run = _do_size(project, pol)
     _print_sizing(run)
@@ -167,9 +172,20 @@ def size(project_file: Path = typer.Argument(..., exists=True),
     console.print(f"[green]Sizing saved: {out or project_file}[/green]")
 
 
+def _storage_overrides(storage: str | None, array: str | None, protocol: str | None,
+                       array_drr: float | None) -> dict[str, Any]:
+    ov: dict[str, Any] = {}
+    if storage:
+        ov["storage_architecture"] = storage
+    es = {k: v for k, v in (("array", array), ("protocol", protocol), ("drr", array_drr)) if v is not None}
+    if es:
+        ov["external_storage"] = es
+    return ov
+
+
 @app.command()
 def report(project_file: Path = typer.Argument(..., exists=True),
-           format: str = typer.Option("html,pdf,xlsx", "--format", help="Comma list: html,pdf,xlsx,docx,pptx"),
+           format: str = typer.Option("html,pdf,xlsx", "--format", help="Comma list: html,pdf,xlsx,docx,pptx,prompt"),
            out: Path = typer.Option(Path("reports"), "--out"), lang: str = typer.Option("en", "--lang"),
            level: str = typer.Option("full", "--level", help="customer | presales | full"),
            verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
@@ -184,6 +200,33 @@ def report(project_file: Path = typer.Argument(..., exists=True),
         console.print(f"[green]written[/green] {p}")
 
 
+@app.command("email-prompt")
+def email_prompt(project_file: Path = typer.Argument(..., exists=True),
+                 lang: str = typer.Option("en", "--lang", help="en | fr"),
+                 audience: str = typer.Option("executive", "--audience", help="executive | technical"),
+                 tone: str = typer.Option("professional", "--tone", help="professional | friendly | formal"),
+                 prices: bool = typer.Option(False, "--prices", help="include indicative (placeholder) costs"),
+                 to: str = typer.Option("", "--to", help="recipient name / role"),
+                 company: str = typer.Option("", "--company", help="customer company"),
+                 sender: str = typer.Option("", "--from", help="your name / signature"),
+                 notes: str = typer.Option("", "--notes", help="extra context for the email"),
+                 out: Path | None = typer.Option(None, "--out", help="write to this .txt file (default: print)")
+                 ) -> None:
+    """Build an AI prompt (facts + writing rules) to draft the customer email in any AI assistant."""
+    from refreshsizer.report.email_prompt import build_email_prompt
+
+    project = _load_project(project_file)
+    if not project.sizing:
+        console.print("[red]Project is not sized yet: run `refreshsizer size` first.[/red]")
+        raise typer.Exit(code=1)
+    text = build_email_prompt(project, lang, audience, tone, prices, to, sender, company, notes)
+    if out:
+        out.write_text(text, encoding="utf-8")
+        console.print(f"[green]written[/green] {out}")
+    else:
+        print(text)
+
+
 @app.command()
 def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.Option(Path("reports"), "--out"),
         yes: bool = typer.Option(False, "--yes"), strict: bool = typer.Option(False, "--strict"),
@@ -195,7 +238,11 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         cpu_vendor: str | None = typer.Option(None, "--cpu-vendor", help="intel | amd | intel,amd"),
         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
         stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
-        format: str = typer.Option("html,pdf,xlsx", "--format", help="Comma list: html,pdf,xlsx,docx,pptx"), lang: str = typer.Option("en", "--lang"),
+        storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+        array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
+        protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
+        array_drr: float | None = typer.Option(None, "--array-drr", help="external array data reduction, e.g. 3"),
+        format: str = typer.Option("html,pdf,xlsx", "--format", help="Comma list: html,pdf,xlsx,docx,pptx,prompt"), lang: str = typer.Option("en", "--lang"),
         level: str = typer.Option("full", "--level", help="customer | presales | full"),
         name: str | None = typer.Option(None, "--name"), verbose: bool = typer.Option(False, "-v", "--verbose")) -> None:
     """Ingest + size + report in one go."""
@@ -208,6 +255,7 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     ov = _cli_overrides(growth, years, objective, p95_estimate, lang, platforms, cpu_vendor, cpus)
     if stack:
         ov["target_stack"] = stack
+    ov.update(_storage_overrides(storage, array, protocol, array_drr))
     pol = _policy(project.policy_overrides, policy, ov)
     sizing = _do_size(project, pol)
     _print_sizing(sizing)

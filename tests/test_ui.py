@@ -456,3 +456,39 @@ def test_report_level_selector(ui: UI, fixtures_dir: Path) -> None:
     assert {"refreshsizer_report_customer.html", "refreshsizer_report_presales.html"} <= files
     view = ui.c.get(f"/p/{name}/reports/refreshsizer_report_customer.html/view")
     assert "Server refresh proposal" in view.text
+
+
+def test_storage_architecture_selector_and_email(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("storage")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'name="arch"' in page and "PowerStore 3200T" in page
+    form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "arch": "external",
+                                              "es_array": "powerstore", "es_protocol": "nvme_fc32",
+                                              "ps_model": ["PowerStore 1200T", "PowerStore 3200T"]})
+    j = ui.job(ui.c.post(f"/p/{name}/size", data=form))
+    saved = ui.store.policy_overrides(name)
+    assert saved["storage_architecture"] == "external"
+    assert saved["external_storage"]["models"] == ["PowerStore 1200T", "PowerStore 3200T"]
+    st = ui.sizing(name).clusters[0].storage
+    assert st and st.array and st.array.model in ("PowerStore 1200T", "PowerStore 3200T")
+    assert st.protocol == "nvme_fc32"
+    res = ui.c.get(j.redirect).text
+    assert "Storage design" in res and "NVMe over 32 Gb FC" in res
+    # policy page keeps the external-storage section next to the selector
+    ui.c.post(f"/p/{name}/policy", data={"external_storage.max_fill": "0.7", "then": "save"})
+    saved = ui.store.policy_overrides(name)
+    assert saved["external_storage"]["max_fill"] == 0.7 and saved["storage_architecture"] == "external"
+    # Nutanix + external is refused with a clear message
+    bad = ui.c.post(f"/p/{name}/size", data=_target_form(INTEL + AMD, "both", {
+        "from": "whatif", "stack": "nutanix_ahv", "arch": "external"}))
+    assert "HCI only" in bad.text
+    # customer email prompt page + download
+    e = ui.c.get(f"/p/{name}/email", params={"recipient": "Jane", "lang": "en"})
+    assert e.status_code == 200 and "Use ONLY the facts" in e.text and "Jane" in e.text
+    txt = ui.c.get(f"/p/{name}/email.txt", params={"lang": "fr", "prices": "1"})
+    assert txt.status_code == 200 and "FAITS" in txt.text and "$" in txt.text
+    assert "attachment" in txt.headers["content-disposition"]
+    ui.job(ui.c.post(f"/p/{name}/reports", data={"prompt": "1", "html": "1", "lang": "en", "level": "customer"}))
+    assert (ui.store.reports_dir(name) / "refreshsizer_email_prompt.txt").exists()

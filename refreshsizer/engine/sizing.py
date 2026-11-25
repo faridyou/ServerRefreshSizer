@@ -16,8 +16,9 @@ from refreshsizer.engine.demand import LICENSED, compute_demand
 from refreshsizer.engine.licensing import VMWARE_ORDER_WARNING, source_licensing
 from refreshsizer.engine.modes import select_mode
 from refreshsizer.engine.naive import naive
-from refreshsizer.engine.optimizer import cpu_scenarios, optimize, target_selection_text
+from refreshsizer.engine.optimizer import cpu_scenarios, optimize, stack_label, target_selection_text
 from refreshsizer.engine.results import ClusterDemand, ClusterSizing, SizingRun
+from refreshsizer.engine.storage_design import design as storage_design
 from refreshsizer.model.entities import Cluster, Project, SizingMode, SourceWorkload
 
 log = logging.getLogger("refreshsizer.engine")
@@ -93,6 +94,8 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
                     f"recommend P90 = {cs.uncertainty.p90_hosts} hosts for the final BoM")
         else:
             cs.warnings.append("no feasible configuration found; relax constraints or split the cluster")
+        cs.storage = storage_design(d, cs.recommended, policy, prices, stack_label(policy, d.external_storage))
+        cs.warnings += cs.storage.flags
         vp = sum(w.vcpu or 0 for w in wls if w.physc_p95 is not None)
         cs.source_licensing = source_licensing(d, c.hosts, vp, d.years, policy, prices)
         cs.recommendations += validation_plan(d)

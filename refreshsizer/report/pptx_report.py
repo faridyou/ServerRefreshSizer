@@ -169,6 +169,7 @@ class Deck:
 
     def render(self, b: Block) -> None:
         if b.kind == "heading":
+            self.ensure(int(Inches(1.4)))  # keep a heading with the first rows of what follows (no orphans)
             self.text(b.text, size=16, color=ACCENT, bold=True)
         elif b.kind == "para":
             style = {"lead": (20, INK, False, False), "muted": (13, MUTED, False, False),

@@ -61,8 +61,15 @@ What you see, page by page:
   reserved as physical cores (default 12) and its memory (default 48 GB) is added to each node - storage uses
   Nutanix RF2/RF3 (or EC-X) with their minimum node counts, and Nutanix NCI per-core licensing replaces VMware
   (AHV) or comes on top of it (ESXi). CVM size, protection and edition are on the Policy page (Nutanix group).
+  **Storage architecture**: *HCI* (storage in the servers: vSAN ESA or Nutanix) or *Disaggregated* (servers +
+  hypervisor + external storage, e.g. a Dell Private Cloud style design with PowerStore). Disaggregated servers get
+  boot drives only, no vSAN licence add-on and no vSAN minimum host count; the array is either a **Dell
+  PowerStore sized by the tool** (tick the allowed models; protocol FC 32 Gb, NVMe/FC, iSCSI or NVMe/TCP 25 GbE)
+  or the **customer's existing array** (connectivity only). *Auto* keeps the previous behaviour (HCI, external for
+  RISC/bare-metal sources). Nutanix is HCI only here (Nutanix disaggregated runs on PowerFlex, not modeled).
 * **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
-  HA, memory, storage (protection, slack, DRR), vCPU ratios/NUMA, licensing, optimizer objective, utilization
+  HA, memory, storage (protection, slack, DRR), external storage (DRE parity, max fill, array data reduction,
+  ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
   fields are highlighted. *Save* writes only the differences to `policy.yaml`; *Reset to defaults* removes it.
 * **5 Results** – summary cards (recommended configuration, hosts, cores, SU vs C_req, headroom / failure-mode
@@ -74,7 +81,8 @@ What you see, page by page:
   AMD*, with SPEC basis (published or estimated), hosts, cores, failure-mode utilization, power, TCO and the
   difference to the recommendation; *Use this scenario* re-runs the sizing on that platform and CPU so its BoM and
   reports can be produced for a customer who will not consider the other vendor – the per-host BoM with the DIMM channel diagram,
-  constraint checks with OK/WARN/FAIL tags, the uncertainty section (tornado, or the 100/70/50 % table in
+  the **Storage design** card (capacity today -> horizon, data reduction, usable/effective, fill, IOPS; drive or
+  PowerStore layout; connectivity; storage cost; other array models), constraint checks with OK/WARN/FAIL tags, the uncertainty section (tornado, or the 100/70/50 % table in
   inventory-only mode) and the benchmark basis.
 * **6 What-if** – change CPU growth, horizon, U_max (all classes), the objective or the target servers (one-off,
   the saved selection is not changed) and re-run in place. The last
@@ -94,6 +102,13 @@ What you see, page by page:
   Word and PowerPoint follow the chosen level: the Word file is an editable document with the same content as the
   HTML (tables, charts, bullet lists); the PowerPoint deck is 16:9, one topic per slide, long tables split over
   several slides with the header repeated, intro on the title slide and the SPEC disclaimer on a final Notes slide.
+* **8 Customer email** – RefreshSizer works offline and has no AI of its own, so it builds a **prompt** for any AI
+  assistant (Copilot, ChatGPT, Claude...): writing rules (use only the given facts, no invented numbers, structure,
+  length, language, tone, audience = decision makers or technical team, prices excluded unless ticked) followed by
+  every fact of the sizing (current estate, SPEC per-core comparison, proposal, like-for-like comparison, storage
+  design, CPU alternatives, next steps, open customer questions, your own notes). *Copy prompt* or *Download .txt*,
+  paste it into the assistant, review the draft. The prompt holds customer data: use an AI service your company
+  approves for it. Also available as the *Email prompt (.txt)* report format and `refreshsizer email-prompt`.
 * **Benchmarks** – search the benchmark DB (CPU, metric, base value, cores, chips, SPC, system, live/curated/user
   source, URL) and see the resolved SPC with its method and confidence band; *Update from spec.org* runs in the
   background and says clearly when spec.org is unreachable and the curated offline data is kept; a form adds a
@@ -107,7 +122,11 @@ refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
                   [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
                   [--stack vmware_vsan|nutanix_ahv|nutanix_esxi]
-refreshsizer report project.json --format html,pdf,xlsx,docx,pptx --out reports/ [--lang fr] [--level customer|presales|full]
+                  [--storage auto|hci|external] [--array powerstore|existing]
+                  [--protocol fc32|nvme_fc32|iscsi25|nvme_tcp25] [--array-drr 3]
+refreshsizer report project.json --format html,pdf,xlsx,docx,pptx,prompt --out reports/ [--lang fr] [--level customer|presales|full]
+refreshsizer email-prompt project.json [--lang fr] [--audience executive|technical] [--prices]
+                  [--to "Jane Doe, CIO"] [--company ACME] [--from "Your Name"] [--notes "..."] [--out mail.txt]
 refreshsizer run <files...> --out reports/ [--yes]             # ingest + size + report in one go
 refreshsizer bench update [--suite cpu2017 --since 2024q1] [--offline] [--force]
 refreshsizer bench show "EPYC 9355"
@@ -149,7 +168,9 @@ customer template is recognized next time. The ingest summary ends with a ready-
 5. **HA** N_active = ⌈C_req ÷ SU_host⌉, + N+1 (N+2 above 16 hosts); vSAN RAID-5 4+1 minimum 4 hosts; failure-mode
    utilization ≤ U_max.
 6. **Memory** M_T = M0 (1+g_m)^T (1+0.05) ÷ (1−0.05); balanced DIMMs, 1 DPC preferred.
-   **Storage** Raw = Used0 (1+g_s)^T ÷ DRR × P_prot ÷ (1−slack). **Network** 2 × 100 GbE for vSAN ESA all-NVMe.
+   **Storage** HCI: Raw = Used0 (1+g_s)^T ÷ DRR × P_prot ÷ (1−slack). Disaggregated: Usable_req =
+   Used0 (1+g_s)^T ÷ DRR ÷ max fill, then the cheapest PowerStore layout (model × drive size × appliances,
+   DRE parity, spare, overhead) meeting it and the indicative IOPS limit. **Network** 2 × 100 GbE for vSAN ESA.
 7. **Optimizer** exhaustive over platform × CPU × DIMM × drives; TCO = capex + power + licensing (VMware VCF/VVF,
    Windows DC, SQL Server, Oracle, RHEL); top 5 + Pareto front; per-core-licensed databases split into their
    own cluster optimized on SPC.
@@ -164,7 +185,8 @@ or CLI flags). Decisions not covered by the specification: see [DECISIONS.md](DE
 a warning logged), `.docx` (Word) and `.pptx` (PowerPoint, 16:9 deck) built from the same content, and `.xlsx` (one sheet per section, **live formulas**: change a yellow input cell and the host
 count, utilization, memory, storage, naive comparisons and licensing recompute). Sections: executive summary,
 input data & confidence, source inventory, benchmark basis, normalization math, growth & headroom, candidates,
-BoM with DIMM diagram, memory/storage/network, licensing, constraints, uncertainty, validation plan, appendix.
+BoM with DIMM diagram, memory/storage/network, **storage design** (in every level: capacity, layout, connectivity;
+cost and other array models from presales up; formulas in full), licensing, constraints, uncertainty, validation plan, appendix.
 `--lang fr` gives French (labels in `report/i18n.yaml`).
 
 ## Updating catalogs and benchmark data

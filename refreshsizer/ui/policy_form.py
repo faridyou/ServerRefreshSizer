@@ -13,7 +13,9 @@ GROUPS: list[tuple[str, list[str]]] = [
                   "max_hosts_per_cluster_user", "stretched_cluster"]),
     ("ui_pg_memory", ["memory_basis", "hypervisor_mem_overhead", "mem_free_reserve", "memory_overcommit_ratio",
                       "active_memory_factor"]),
-    ("ui_pg_storage", ["storage_architecture", "protection", "slack", "drr.*", "min_drives_per_host"]),
+    ("ui_pg_storage", ["protection", "slack", "drr.*", "min_drives_per_host"]),
+    ("ui_pg_external", ["external_storage.parity", "external_storage.max_fill", "external_storage.drr",
+                        "external_storage.host_ports", "external_storage.iops_max_util"]),
     ("ui_pg_vcpu", ["vcpu_ratio_max.*", "numa_nps"]),
     ("ui_pg_nutanix", ["nutanix_protection", "nutanix_cvm_vcpu", "nutanix_cvm_memory_gb", "nutanix_edition",
                        "nutanix_min_cores_per_cpu"]),
@@ -29,7 +31,7 @@ GROUPS: list[tuple[str, list[str]]] = [
 CHOICES: dict[str, list[str]] = {
     "ha_policy": ["auto", "N+0", "N+1", "N+2"],
     "memory_basis": ["configured", "consumed", "active", "overcommit"],
-    "storage_architecture": ["auto", "vsan_esa", "external"],
+    "external_storage.parity": ["single", "double"],
     "protection": ["vsan_esa_raid5_4p1", "vsan_esa_raid5_2p1", "vsan_esa_raid1", "vsan_esa_raid6_4p2"],
     "vmware_edition": ["vcf", "vvf", "none"],
     "oracle_db_cluster_licensing": ["active_nodes", "all_nodes"],
@@ -39,7 +41,8 @@ CHOICES: dict[str, list[str]] = {
     "nutanix_protection": ["nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"],
     "nutanix_edition": ["nci_starter", "nci_pro", "nci_ultimate"],
 }
-NULLABLE = {"max_hosts_per_cluster_user"}
+NULLABLE = {"max_hosts_per_cluster_user", "external_storage.drr"}
+NULLABLE_FLOAT = {"external_storage.drr"}
 
 
 def _get(d: dict[str, Any], path: str) -> Any:
@@ -61,8 +64,10 @@ def _expand(patterns: list[str], defaults: dict[str, Any]) -> list[str]:
 
 
 def _kind(path: str, default: Any) -> str:
-    if path.split(".")[0] in CHOICES:
+    if path in CHOICES or path.split(".")[0] in CHOICES:
         return "choice"
+    if path in NULLABLE_FLOAT:
+        return "float"
     if isinstance(default, bool):
         return "bool"
     if isinstance(default, int) and not isinstance(default, bool):
@@ -83,10 +88,10 @@ def form_groups(overrides: dict[str, Any], t: Any) -> list[dict[str, Any]]:
         for path in _expand(pats, defaults):
             d = _get(defaults, path)
             v = _get(current, path)
-            help_key = "h_" + path.split(".")[0]
+            help_key = "h_" + (path.replace(".", "_") if path.startswith("external_storage.") else path.split(".")[0])
             help_txt = t(help_key)
             fields.append({"path": path, "kind": _kind(path, d), "value": v, "default": d,
-                           "choices": CHOICES.get(path.split(".")[0], []), "changed": v != d,
+                           "choices": CHOICES.get(path, CHOICES.get(path.split(".")[0], [])), "changed": v != d,
                            "label": path, "help": "" if help_txt == help_key else help_txt})
         groups.append({"key": key, "title": t(key), "fields": fields})
     return groups

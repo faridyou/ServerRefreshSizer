@@ -261,8 +261,18 @@ STACK_LABELS = {"vmware_vsan": "VMware vSphere + vSAN ESA", "nutanix_ahv": "Nuta
                 "nutanix_esxi": "Nutanix on VMware ESXi"}
 
 
+def stack_label(policy: Policy, external: bool | None = None) -> str:
+    """Hypervisor + storage label; external = disaggregated (servers + hypervisor + external array)."""
+    if external is None:
+        external = policy.storage_architecture == "external" and not policy.nutanix
+    if external:
+        array = ("Dell PowerStore" if policy.external_storage.array == "powerstore" else "existing array")
+        return f"VMware vSphere + external storage ({array})"
+    return STACK_LABELS.get(policy.target_stack, policy.target_stack)
+
+
 def target_selection_text(policy: Policy) -> str:
-    parts = [STACK_LABELS.get(policy.target_stack, policy.target_stack)]
+    parts = [stack_label(policy)]
     if policy.target_platforms:
         parts.append("platforms " + ", ".join(policy.target_platforms))
     if policy.target_cpu_vendors:

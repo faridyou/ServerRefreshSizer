@@ -58,3 +58,27 @@ document.addEventListener("change", function (e) {
     if (v !== "both" && cb.getAttribute("data-vendor") !== v) cb.checked = false;
   });
 });
+// Target selector: external-storage options only for the disaggregated architecture; Nutanix is HCI only
+function syncArch(box) {
+  if (!box) return;
+  var arch = box.querySelector("input[name=arch]:checked"), opts = box.querySelector("[data-external-opts]");
+  var stack = box.querySelector("input[name=stack]:checked"), nutanix = stack && stack.value.indexOf("nutanix") === 0;
+  var ext = box.querySelector("input[name=arch][value=external]");
+  if (ext) { ext.disabled = nutanix; if (nutanix && ext.checked) box.querySelector("input[name=arch][value=hci]").checked = true; }
+  arch = box.querySelector("input[name=arch]:checked");
+  if (opts) opts.style.display = (arch && arch.value === "external") ? "" : "none";
+}
+document.addEventListener("change", function (e) {
+  if (e.target.name === "arch" || e.target.name === "stack") syncArch(e.target.closest(".target"));
+});
+function initArch() { Array.prototype.forEach.call(document.querySelectorAll(".target"), syncArch); }
+document.addEventListener("DOMContentLoaded", initArch);
+document.addEventListener("htmx:afterSwap", initArch);
+// Email prompt: copy to clipboard (falls back to select + execCommand when the Clipboard API is unavailable)
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("#copy-prompt"); if (!b) return;
+  var ta = document.getElementById("prompt"), msg = document.getElementById("copy-msg");
+  function done() { if (msg) msg.textContent = b.getAttribute("data-done"); }
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(ta.value).then(done); }
+  else { ta.select(); document.execCommand("copy"); done(); }
+});

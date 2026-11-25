@@ -67,6 +67,7 @@
 {% endfor %}</pre>{% endif %}
 </section>
 
+{% include "_storage.html.j2" %}
 {% if c.cs.scenarios %}
 <section class="card"><h3>{{ t('ui_scenarios') }}</h3>
 <table class="small"><tr><th>{{ t('cpu') }} / platform</th><th>{{ t('ui_spec_basis') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">{{ t('cores') }}</th><th class="num">{{ t('util_failed') }}</th><th class="num">TCO</th><th class="num">{{ t('ui_vs_rec') }}</th><th></th></tr>

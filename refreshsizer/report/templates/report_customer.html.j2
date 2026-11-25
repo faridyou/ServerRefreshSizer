@@ -59,9 +59,10 @@
 <p class="muted">{{ t('c_naive_note') }}</p>
 </section>
 
+{% set st_heading = '4. ' ~ t('st_title') %}{% include "_storage.html.j2" %}
 {% if c.cs.scenarios | length > 1 %}
 <section class="card">
-<h3>4. {{ t('c_alternatives') }}</h3>
+<h3>5. {{ t('c_alternatives') }}</h3>
 <table><tr><th>{{ t('cpu') }}</th><th>{{ t('c_platform') }}</th><th class="num">{{ t('c_servers') | capitalize }}</th><th class="num">{{ t('cores') }}</th><th class="num">{{ t('c_util_after_failure') }}</th><th class="num">{{ t('power') }}</th><th></th></tr>
 {% for x in c.cs.scenarios[:8] %}<tr><td>{{ x.config.cpu_count }} x {{ x.config.cpu_name }}</td><td>PowerEdge {{ x.config.platform }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ '{:,.0f}'.format(x.power_w_total) }} W</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}
 </table></section>

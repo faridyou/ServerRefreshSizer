@@ -154,7 +154,7 @@ def _bom(c: dict[str, Any], t: Any, policy: dict[str, Any]) -> list[Block]:
             [t("memory"), f"{r.dimm.dimm_count} x {r.dimm.dimm_size_gb} GB = {r.dimm.total_gb} GB, {r.dimm.dpc} DPC @ "
                           f"{r.dimm.speed_mt_s} MT/s" if r.dimm else ""],
             [t("drives"), f"{r.drives.count} x {r.drives.drive_tb} TB NVMe ({r.drives.raw_tib} TiB)" if r.drives
-             else "external"],
+             else t("c_external")],
             [t("network"), r.nics], [t("psu"), f"2 x {r.config.psu}"]]
     if str(policy.get("target_stack", "vmware_vsan")).startswith("nutanix"):
         rows.append([t("cvm_row"), f"{policy.get('nutanix_cvm_vcpu')} vCPU / {policy.get('nutanix_cvm_memory_gb')} GB "
@@ -162,6 +162,25 @@ def _bom(c: dict[str, Any], t: Any, policy: dict[str, Any]) -> list[Block]:
     out = [Block("table", header=["", ""], rows=rows, align="ll")]
     if c.get("dimm_diagram"):
         out.append(Block("pre", items=list(c["dimm_diagram"]), text=t("dimm_diagram")))
+    return out
+
+
+def _storage(c: dict[str, Any], t: Any) -> list[Block]:
+    st = c.get("storage")
+    if not st:
+        return []
+    out: list[Block] = [Block("para", f, style="warn") for f in st["flags"]]
+    if st["notes"]:  # caveats first: a trailing note would otherwise often spill onto a slide of its own
+        out.append(Block("para", " · ".join(st["notes"]), style="muted"))
+    for title, rows in st["groups"]:
+        out += [Block("heading", title, level=3), Block("table", header=["", ""], rows=[list(r) for r in rows],
+                                                        align="ll")]
+    if st["alternatives"]:
+        a = st["alternatives"]
+        out += [Block("heading", t("st_alternatives"), level=3),
+                Block("table", header=a["header"], rows=a["rows"], align="".join(a["align"]))]
+    if st["explanations"]:
+        out.append(Block("pre", text=t("formula"), items=[f"{e.title}: {e.formula_text}" for e in st["explanations"]]))
     return out
 
 
@@ -231,6 +250,8 @@ def _build(ctx: dict[str, Any]) -> Outline:
             ol.sections.append(Section(f"{name}: {t('c_current')}", banner + _current_env(c, t), name))
             ol.sections.append(Section(f"{name}: {t('c_benchmarks')}", _benchmarks(c, t), name))
             ol.sections.append(Section(f"{name}: {t('c_result')}", _proposal(c, t, policy), name))
+            if c.get("storage"):
+                ol.sections.append(Section(f"{name}: {t('st_title')}", _storage(c, t), name))
             alt = _alternatives(c, t, with_cost=False)
             if alt:
                 ol.sections.append(Section(f"{name}: {t('c_alternatives')}", alt, name))
@@ -262,6 +283,8 @@ def _build(ctx: dict[str, Any]) -> Outline:
         ol.sections.append(Section(f"{name}: {t('p_chain')}", [_chain(c, t)], name))
         if c["rec"]:
             ol.sections.append(Section(f"{name}: {t('s8')}", _bom(c, t, policy), name))
+            if c.get("storage"):
+                ol.sections.append(Section(f"{name}: {t('st_title')}", _storage(c, t), name))
             png = c["png"].get("hosts")
             alt = _alternatives(c, t, with_cost=True)
             if alt or png:

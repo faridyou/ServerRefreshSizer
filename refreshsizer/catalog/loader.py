@@ -107,3 +107,8 @@ def legacy_model_families(model: str) -> list[str] | None:
                 if best is None or len(pat) > best[0]:
                     best = (len(pat), list(entry["families"]))
     return best[1] if best else None
+
+
+@lru_cache(maxsize=1)
+def load_powerstore() -> dict[str, Any]:
+    return _load("powerstore.yaml")

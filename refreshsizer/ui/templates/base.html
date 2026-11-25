@@ -21,7 +21,7 @@
 {% if name is defined %}
 <h1>{{ meta.display or name }}</h1>
 <nav class="tabs">
-{% for key, url in [('upload','upload'), ('mapping','mapping'), ('summary','summary'), ('policy','policy'), ('results','results'), ('whatif','whatif'), ('reports','reports')] %}
+{% for key, url in [('upload','upload'), ('mapping','mapping'), ('summary','summary'), ('policy','policy'), ('results','results'), ('whatif','whatif'), ('reports','reports'), ('email','email')] %}
 <a class="{{ 'on' if tab == key else '' }}" href="/p/{{ name }}/{{ url }}">{{ t('ui_tab_' ~ key) }}</a>
 {% endfor %}
 </nav>
