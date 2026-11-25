@@ -568,3 +568,24 @@ def test_powered_off_card_on_summary(ui: UI, fixtures_dir: Path) -> None:
     page = ui.c.get(f"/p/{name}/summary").text
     assert 'id="powered-off"' in page and "5 powered-off VMs and 3 templates" in page
     assert "storage excluded by policy" not in page
+
+
+def test_p2v_ratios_on_summary(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("p2v")
+    ui.upload(name, fixtures_dir / "model_only_inventory.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'id="p2v"' in page and 'name="global"' in page
+    host = ui.store.project(name).clusters[0].hosts[0].host_id
+    cl = ui.store.project(name).clusters[0].name
+    r = ui.c.post(f"/p/{name}/p2v", data={"global": "3", f"cluster:{cl}": "", f"host:{host}": "1",
+                                          "patterns": "host:zz* = 2"})
+    assert r.status_code == 200
+    saved = ui.store.policy_overrides(name)
+    assert saved["p2v_ratio"] == 3 and saved["p2v_overrides"] == {"host:zz*": 2, f"host:{host}": 1}
+    assert "1 : 1" in ui.c.get(f"/p/{name}/summary").text and f"host:{host}" in ui.c.get(f"/p/{name}/summary").text
+    # the policy page keeps the per-server ratios when saved
+    ui.c.post(f"/p/{name}/policy", data={"slack": "0.25", "then": "save"})
+    assert ui.store.policy_overrides(name)["p2v_overrides"][f"host:{host}"] == 1
+    bad = ui.c.post(f"/p/{name}/p2v", data={"global": "0"})
+    assert "p2v_ratio" in bad.text

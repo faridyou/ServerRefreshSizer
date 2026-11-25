@@ -133,6 +133,7 @@ class SourceHost(BaseModel):
     smt_mode: int | None = None
     platform_type: str = "x86"
     hypervisor: str | None = None
+    p2v_ratio: float | None = None  # pCore:vCore consolidation ratio for this physical server (inventory only)
     iops_p95: float | None = None
     iops_peak: float | None = None
     iops_avg: float | None = None

@@ -9,6 +9,19 @@
 <td>{{ r.mode }}</td><td><span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(r.confidence, 'lo') }}">{{ r.confidence }}</span></td></tr>{% endfor %}
 <tr><th>{{ t('ui_overall') }}</th><th class="num">{{ total.hosts }}</th><th class="num">{{ total.sockets }}</th><th class="num">{{ total.cores }}</th><th class="num">{{ total.ram_gb | fmt }}</th><th class="num">{{ total.vms }}</th><th class="num">{{ total.vcpu | fmt }}</th><th class="num">{{ total.vram_gb | fmt }}</th><th class="num">{{ total.storage_prov_tib | fmt }}</th><th class="num">{{ total.storage_used_tib | fmt }}</th><th class="num">{{ total.iops | fmt }}</th><th></th><th></th></tr>
 </tbody></table></div>
+{% if p2v %}<div class="card" id="p2v"><h3>{{ t('ui_p2v_title') }}</h3>
+<p class="small">{{ t('ui_p2v_intro') }}</p>
+<form method="post" action="/p/{{ name }}/p2v">
+<div class="row"><label><b>{{ t('ui_p2v_global') }}</b> <input name="global" value="{{ p2v.global | fmt }}" size="5" inputmode="decimal"> : 1</label></div>
+{% for c in p2v.clusters %}<details {{ 'open' if loop.first else '' }} style="margin:8px 0"><summary><b>{{ c.name }}</b> ({{ c.hosts | length }} {{ t('ui_p2v_servers') }})
+&nbsp; {{ t('ui_p2v_cluster') }} <input name="cluster:{{ c.name }}" value="{{ c.own | fmt if c.own else '' }}" placeholder="{{ t('ui_p2v_inherit') }}" size="6" inputmode="decimal"> : 1</summary>
+<table class="small"><thead><tr><th>{{ t('ui_p2v_server') }}</th><th>{{ t('cpu') }}</th><th class="num">{{ t('cores') }}</th><th>{{ t('ui_p2v_now') }}</th><th>{{ t('ui_p2v_own') }}</th></tr></thead><tbody>
+{% for h in c.hosts %}<tr><td>{{ h.id }}</td><td>{{ h.cpu | cpu if h.cpu else '' }}</td><td class="num">{{ h.cores or '' }}</td>
+<td>{{ h.ratio | fmt }} : 1 <span class="muted">({{ h.why }})</span></td>
+<td><input name="host:{{ h.id }}" value="{{ h.own | fmt if h.own else '' }}" placeholder="{{ t('ui_p2v_inherit') }}" size="6" inputmode="decimal"> : 1</td></tr>{% endfor %}
+</tbody></table></details>{% endfor %}
+<label style="display:block;margin-top:6px">{{ t('ui_p2v_patterns') }}<br><textarea name="patterns" rows="3" style="width:100%;font-family:Consolas,monospace" placeholder="host:sql* = 1.5&#10;host:web* = 4&#10;cluster:Dev* = 6">{{ p2v.patterns }}</textarea></label>
+<button>{{ t('ui_p2v_save') }}</button></form></div>{% endif %}
 {% set offrows = rows | selectattr('off.count') | list %}{% if offrows %}
 <div class="card" id="powered-off"><h3>{{ t('ui_off_title') }}</h3>
 {% for r in offrows %}{% set o = r.off %}<p><b>{{ r.cluster }}</b>: {{ t('ui_off_line') | replace('{n}', o.powered_off | string) | replace('{k}', o.templates | string) | replace('{v}', o.vcpu | fmt) | replace('{m}', o.vram_gb | fmt) | replace('{s}', o.used_tib | fmt) }}

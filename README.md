@@ -70,6 +70,10 @@ What you see, page by page:
   can be ticked); drive media TLC by default (`external_storage.media: qlc` or `any` for capacity-optimized QLC).
   **Nutanix AHV + PowerStore** (NCI 7.6+) is supported: NVMe/TCP only, a single-appliance PowerStore cluster, at least
   3 compute nodes, CVM still reserved on each node, Nutanix NCI licensing; Nutanix on ESXi stays HCI only.
+* **Physical servers without utilization data (P2V)**: the Ingest summary shows a *P2V* card where you set the
+  pCore:vCore consolidation ratio globally, per cluster, per server or by name pattern (`host:sql* = 1.5`); a server's
+  CPU demand = its capacity / ratio (3:1 = three of today's cores per performance-equivalent new core). The manual
+  template also has a `p2v_ratio` column per server. Measured utilization always replaces the ratio.
 * **Powered-off VMs and templates** are not counted for CPU and memory, but their **storage is kept** (their
   disks migrate) unless you turn off `storage_include_powered_off` (Policy, Storage). The Ingest summary lists them per
   cluster and adds a customer question asking whether they will be deleted.

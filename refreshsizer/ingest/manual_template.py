@@ -26,7 +26,7 @@ from refreshsizer.model.entities import (
 HOST_FIELDS = [
     "host_id", "cluster", "site", "vendor", "model", "cpu_model", "sockets", "cores_per_socket",
     "threads_per_core", "nominal_ghz", "ram_gb", "cpu_util_p95_pct", "cpu_util_peak_pct", "cpu_util_avg_pct",
-    "mem_used_gb", "smt_mode", "platform_type", "hypervisor", "notes",
+    "mem_used_gb", "smt_mode", "platform_type", "hypervisor", "p2v_ratio", "notes",
 ]
 WORKLOAD_FIELDS = [
     "workload_id", "host_id", "name", "workload_class", "vcpu", "ram_gb_configured", "ram_gb_active",
@@ -41,7 +41,7 @@ FR = {
     "threads_per_core": "threads_par_coeur", "nominal_ghz": "frequence_ghz", "ram_gb": "ram_go",
     "cpu_util_p95_pct": "cpu_p95_pct", "cpu_util_peak_pct": "cpu_pic_pct", "cpu_util_avg_pct": "cpu_moy_pct",
     "mem_used_gb": "memoire_utilisee_go", "smt_mode": "mode_smt", "platform_type": "type_plateforme",
-    "hypervisor": "hyperviseur", "notes": "notes",
+    "hypervisor": "hyperviseur", "p2v_ratio": "ratio_p2v", "notes": "notes",
     "workload_id": "id_charge", "name": "nom", "workload_class": "classe_charge", "vcpu": "vcpu",
     "ram_gb_configured": "ram_go_configuree", "ram_gb_active": "ram_go_active", "physc_p95": "physc_p95",
     "db_cpu_p95_cores": "db_cpu_p95_coeurs", "storage_used_gib": "stockage_utilise_gio",
@@ -189,8 +189,11 @@ def parse(path: Path) -> ParseResult:
                 cpu_util_avg_pct=_pct(g["cpu_util_avg_pct"], "cpu_util_avg_pct", ref, res),
                 mem_used_gb=to_float(g["mem_used_gb"]), smt_mode=to_int(g["smt_mode"]), platform_type=ptype,
                 hypervisor=_enum(g["hypervisor"], HYPERVISORS, "hypervisor", ref, res, "vSphere"),
-                notes=to_str(g["notes"]),
+                notes=to_str(g["notes"]), p2v_ratio=to_float(g.get("p2v_ratio")),
             )
+            if h.p2v_ratio is not None and h.p2v_ratio <= 0:
+                res.errors.append(f"{ref}: p2v_ratio must be > 0")
+                h.p2v_ratio = None
             if h.smt_mode and h.smt_mode not in (1, 2, 4, 8):
                 res.errors.append(f"{ref}: smt_mode must be 1/2/4/8")
             if not h.cpu_model:

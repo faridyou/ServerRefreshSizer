@@ -35,6 +35,33 @@ def percentile_nearest_rank(values: list[float], p: float) -> float:
     return s[k - 1]
 
 
+def is_physical(h: SourceHost, cluster: Cluster) -> bool:
+    """A physical server to be virtualized (P2V): bare metal, or a cluster without any VM list."""
+    return (h.hypervisor or "").lower() == "bare-metal" or not cluster.workloads
+
+
+def p2v_ratio_for(h: SourceHost, cluster: str, policy: Policy) -> tuple[float, str]:
+    """pCore:vCore ratio of a physical server: input file > host override > cluster override > global.
+
+    Overrides: {"host:<name or glob>": r, "cluster:<name or glob>": r}; a bare key is a host pattern. Among matches,
+    host beats cluster, an exact name beats a pattern, and a longer pattern beats a shorter one."""
+    from fnmatch import fnmatch
+
+    if h.p2v_ratio:
+        return float(h.p2v_ratio), "input file"
+    best: tuple[tuple[int, int, int], float, str] | None = None
+    for key, r in policy.p2v_overrides.items():
+        kind, pat = key.split(":", 1) if ":" in key else ("host", key)
+        target = h.host_id if kind == "host" else cluster if kind == "cluster" else ""
+        if target and fnmatch(target.lower(), pat.strip().lower()):
+            score = (2 if kind == "host" else 1, int(pat.strip().lower() == target.lower()), len(pat))
+            if best is None or score > best[0]:
+                best = (score, float(r), key)
+    if best:
+        return best[1], best[2]
+    return float(policy.p2v_ratio), "global p2v_ratio"
+
+
 def auto_external(cluster: Cluster) -> bool:
     """storage_architecture = auto: external storage for RISC or all-bare-metal sources, HCI otherwise."""
     hosts = cluster.hosts
@@ -311,7 +338,17 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
             mode = SizingMode.INVENTORY_ONLY
             conf = Confidence.VERY_LOW
         a = policy.inventory_assumed_util
-        host_path = a * su_total * share
+        # physical servers (P2V): capacity / pCore:vCore ratio; virtualized hosts: assumed utilization
+        factor: dict[str, float] = {}
+        ratios: dict[str, list[str]] = {}
+        for h in hosts:
+            if is_physical(h, cluster):
+                r, why = p2v_ratio_for(h, cluster.name, policy)
+                factor[h.host_id.lower()] = 1 / r
+                ratios.setdefault(f"{r:g}:1 ({why})", []).append(h.host_id)
+            else:
+                factor[h.host_id.lower()] = a
+        host_path = sum(caps[k].su_cap * f for k, f in factor.items() if k in caps) * share
         vcpu = sum(w.vcpu or 0 for w in wls)
         spc_for_vcpu = spc_src or 5.0
         vcpu_path = vcpu * spc_for_vcpu / policy.inventory_vcpu_ratio_assumed
@@ -319,15 +356,28 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         d0 = min(cands) if cands else 0.0
         paths["inventory_host"] = host_path
         paths["inventory_vcpu"] = vcpu_path
-        ghz_used = sum((h.cores or 0) * (h.nominal_ghz or 0) for h in hosts) * a * share
+        ghz_used = sum((h.cores or 0) * (h.nominal_ghz or 0) * factor.get(h.host_id.lower(), a)
+                       for h in hosts) * share
+        n_phys = sum(len(v) for v in ratios.values())
+        p2v_txt = "; ".join(f"{k}: {len(v)} server(s)" for k, v in ratios.items())
+        if n_phys:
+            flags.append(f"P2V: {n_phys} physical server(s) without utilization sized at capacity / pCore:vCore "
+                         f"ratio ({p2v_txt})")
         expls.append(Explanation(
             step_id="d0", title="Inventory-only demand (no utilization data)",
-            formula_latex=r"D_0 = \min\left(\sum_h u_{assumed} \cdot Cap_{src}(h),\ \sum_{vm} vCPU \cdot SPC / r\right)",
-            formula_text=f"min({a:g} x {su_total * share:,.1f}, {vcpu:,.0f} x {spc_for_vcpu:.3f} / "
-                         f"{policy.inventory_vcpu_ratio_assumed:g} = {vcpu_path:,.1f}) = {d0:,.1f} {UNIT}",
-            inputs={"assumed_util": a, "vcpu": vcpu, "vcpu_ratio": policy.inventory_vcpu_ratio_assumed},
+            formula_latex=r"D_0 = \min\left(\sum_{phys} \frac{Cap_{src}(h)}{R_{P2V}(h)} + \sum_{virt} u_{assumed} "
+                          r"\cdot Cap_{src}(h),\ \sum_{vm} vCPU \cdot SPC / r\right)",
+            formula_text=(f"hosts: {host_path:,.1f} {UNIT}"
+                          + (f" (P2V ratios {p2v_txt})" if n_phys else f" ({a:g} x {su_total * share:,.1f})")
+                          + (f"; VMs: {vcpu:,.0f} x {spc_for_vcpu:.3f} / {policy.inventory_vcpu_ratio_assumed:g} = "
+                             f"{vcpu_path:,.1f}" if vcpu else "") + f" -> D0 = {d0:,.1f} {UNIT}"),
+            inputs={"assumed_util_virtualized_hosts": a, "physical_servers": n_phys,
+                    "p2v_ratios": {k: v[:20] for k, v in ratios.items()}, "vcpu": vcpu,
+                    "vcpu_ratio": policy.inventory_vcpu_ratio_assumed},
             output=round(d0, 3), unit=UNIT, confidence=Confidence.VERY_LOW,
-            assumptions=["configured vCPUs above physical capacity were never real demand (min applies)"]))
+            assumptions=["configured vCPUs above physical capacity were never real demand (min applies)",
+                         "P2V: a physical server needs its capacity divided by its pCore:vCore ratio once "
+                         "virtualized (measured data always replaces this)"]))
         flags.append("INVENTORY_ONLY: VERY LOW confidence - run a 7-30 day Live Optics collection before final BoM")
 
     # ---- 7.4 adjustments ---------------------------------------------------------
@@ -336,7 +386,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         k_arch_note = f"{ptype} -> x86, demand-weighted by LPAR class"
     else:
         k_arch, k_arch_note = k_arch_for(ptype, wl_class, policy)
-    bare = [h for h in hosts if (h.hypervisor or "").lower() == "bare-metal"]
+    bare = [h for h in hosts if (h.hypervisor or "").lower() == "bare-metal"
+            or (mode == SizingMode.INVENTORY_ONLY and is_physical(h, cluster))]  # P2V servers get virtualized
     k_virt = 1.0
     if policy.target_virtualized and bare and su_total:
         frac = sum(caps[h.host_id.lower()].su_cap for h in bare) / su_total
@@ -430,8 +481,9 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         explanations=expls, flags=list(dict.fromkeys(flags)), source_refs=sorted(set(refs)))
     if mode == SizingMode.INVENTORY_ONLY:
         vcpu_path = paths.get("inventory_vcpu", float("inf")) if wls else float("inf")
-        for a in (1.0, 0.7, 0.5):
-            hp = a * su_total * share
+        base_hp = paths.get("inventory_host", su_total * share)
+        for a in (1.0, 0.7, 0.5):  # relative to the inventory demand (assumed utilization / P2V ratios)
+            hp = a * base_hp
             dd = min(hp, vcpu_path) if hosts else vcpu_path
             dt = dd * k_arch * k_virt * growth_factor(g, years)
             dem.inventory_sensitivity.append({"assumed_util": a, "d0": round(dd, 2), "d_t": round(dt, 2),

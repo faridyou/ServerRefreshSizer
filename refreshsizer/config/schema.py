@@ -96,6 +96,8 @@ class Policy(BaseModel):
     inventory_assumed_util: float = 1.0
     inventory_vcpu_ratio_assumed: float = 1.0
     inventory_apply_headroom: bool = True
+    p2v_ratio: float = 1.0
+    p2v_overrides: dict[str, float] = Field(default_factory=dict)
     k_arch: dict[str, float] = Field(default_factory=dict)
     k_arch_range: dict[str, float] = Field(default_factory=lambda: {"low": 1.10, "high": 1.25})
     k_virt_baremetal_to_virtual: float = 1.07
@@ -167,6 +169,12 @@ class Policy(BaseModel):
             bad.append(f"target_stack = {self.target_stack}: use vmware_vsan, nutanix_ahv or nutanix_esxi")
         if self.nutanix_protection not in ("nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"):
             bad.append(f"nutanix_protection = {self.nutanix_protection}: unknown")
+        if self.p2v_ratio <= 0:
+            bad.append(f"p2v_ratio = {self.p2v_ratio}: must be > 0 (e.g. 3 for 3 physical cores per new core)")
+        for k, v in self.p2v_overrides.items():
+            kind = k.split(":", 1)[0] if ":" in k else "host"
+            if kind not in ("host", "cluster") or float(v) <= 0:
+                bad.append(f"p2v_overrides '{k}: {v}': use host:<name or pattern> or cluster:<name> with a ratio > 0")
         if self.consolidation not in ("single", "per_cluster"):
             bad.append(f"consolidation = {self.consolidation}: use single or per_cluster")
         if self.storage_architecture not in ("auto", "hci", "vsan_esa", "external"):

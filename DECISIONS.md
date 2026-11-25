@@ -408,3 +408,14 @@ Each entry: **decision** – reason – how to change it.
      deleted, the storage design shows "of which powered-off VMs / templates", and the email prompt mentions it.
      Live Optics imports now also state how many VMs were excluded (only RVTools did). Example (real Live Optics
      VMware file): 48 of 94 VMs powered off / templates, 6.1 TiB of 15.3 TiB used storage that was missing.
+110. **P2V ratio for physical servers without utilization data** (inventory only): CPU demand of each such server
+     = its capacity (SPEC Score of its CPUs x cores) / its pCore:vCore ratio R (3:1 = three of today's physical
+     cores per performance-equivalent new core). R per server comes from, most specific first: the manual template
+     column `p2v_ratio`, a `host:<name>` override, a `host:<glob>` pattern (exact > pattern, longer pattern first),
+     a `cluster:<name or glob>` override, then the global `p2v_ratio` (default 1 = full capacity = previous behaviour).
+     "Physical" = hypervisor bare-metal, or a cluster without any VM list. Virtualized hosts without utilization keep
+     `inventory_assumed_util`. Measured utilization always replaces the ratio. P2V servers also get the 7 %
+     bare-metal -> virtual overhead (k_virt). The 100/70/50 % sensitivity rows are now relative to this inventory
+     demand. Ratios are set on the Ingest summary (global, per cluster, per server, patterns) and saved in
+     policy.yaml (`p2v_ratio`, `p2v_overrides`); the Policy page keeps them when saved. The vCPU:pCore check does
+     not apply to these servers (they have no VM list).

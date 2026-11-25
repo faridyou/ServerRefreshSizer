@@ -252,7 +252,77 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         return render(request, "summary.html", {"name": n, "meta": meta, "tab": "summary", "project": project,
                                                 "rows": rows, "total": total, "error": error, "tgt": target_ctx(n),
                                                 "open_target": True,
-                                                "policy_keeps_off": getattr(effective_policy(n), "storage_include_powered_off", True)})
+                                                "policy_keeps_off": getattr(effective_policy(n), "storage_include_powered_off", True),
+                                                "p2v": _p2v_context(n, project)})
+
+    def _p2v_context(n: str, project: Any) -> dict[str, Any] | None:
+        """Physical servers of inventory-only clusters, with the pCore:vCore ratio each one gets now."""
+        from refreshsizer.engine.demand import is_physical, p2v_ratio_for
+        from refreshsizer.model.entities import SizingMode
+
+        pol = effective_policy(n)
+        if project is None or pol is None:
+            return None
+        inv = {d.cluster for d in project.data_quality if d.mode == SizingMode.INVENTORY_ONLY}
+        clusters = []
+        for c in project.clusters:
+            if c.name not in inv:
+                continue
+            hosts = []
+            for h in c.hosts:
+                if is_physical(h, c):
+                    r, why = p2v_ratio_for(h, c.name, pol)
+                    hosts.append({"id": h.host_id, "cpu": h.cpu_model, "cores": h.cores, "ghz": h.nominal_ghz,
+                                  "ratio": r, "why": why, "own": pol.p2v_overrides.get(f"host:{h.host_id}")})
+            if hosts:
+                clusters.append({"name": c.name, "hosts": hosts, "own": pol.p2v_overrides.get(f"cluster:{c.name}")})
+        if not clusters:
+            return None
+        named = {f"host:{h['id']}" for c in clusters for h in c["hosts"]} | {f"cluster:{c['name']}" for c in clusters}
+        patterns = "\n".join(f"{k} = {v:g}" for k, v in pol.p2v_overrides.items() if k not in named)
+        return {"global": pol.p2v_ratio, "clusters": clusters, "patterns": patterns}
+
+    @app.post("/p/{name}/p2v")
+    async def p2v_save(name: str, request: Request) -> RedirectResponse:
+        """Save pCore:vCore ratios: global, per cluster, per server and free patterns (host:sql* = 2)."""
+        n, _ = proj(name)
+        form = await request.form()
+
+        def num(v: Any) -> float | None:
+            v = str(v or "").strip().replace(",", ".")
+            return float(v) if v else None
+
+        try:
+            ov: dict[str, float] = {}
+            for line in str(form.get("patterns", "")).splitlines():
+                if line.strip():
+                    if "=" not in line:
+                        raise ValueError(f"'{line.strip()}': use host:<pattern> = ratio or cluster:<name> = ratio")
+                    k, v = line.split("=", 1)
+                    r = num(v)
+                    if r is not None:
+                        ov[k.strip()] = r
+            for key in form:
+                if key.startswith(("host:", "cluster:")):
+                    r = num(form.get(key))
+                    if r is not None:
+                        ov[key] = r
+            g = num(form.get("global"))
+            saved = dict(S().policy_overrides(n))
+            saved["p2v_overrides"] = ov
+            if g is not None:
+                saved["p2v_ratio"] = g
+            if not ov:
+                saved.pop("p2v_overrides")
+            from refreshsizer import workflow
+
+            workflow.make_policy(None, saved)  # validates ratios > 0 and keys
+        except ValueError as e:
+            from refreshsizer.ui.jobs import friendly_error
+
+            return go(f"/p/{n}/summary?error={quote(friendly_error(e))[:600]}#p2v")
+        S().save_policy(n, saved)
+        return go(f"/p/{n}/summary#p2v")
 
     # ---------------------------------------------------------------- 4 policy
     @app.get("/p/{name}/policy", response_class=HTMLResponse)
@@ -284,6 +354,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
                         if k in ("array", "protocol", "models")}
                 if kept:
                     ov["external_storage"] = {**kept, **(ov.get("external_storage") or {})}
+            if "p2v_overrides" in saved and "p2v_overrides" not in ov:  # edited on the Ingest summary
+                ov["p2v_overrides"] = saved["p2v_overrides"]
             from refreshsizer import workflow
 
             workflow.make_policy(None, ov)

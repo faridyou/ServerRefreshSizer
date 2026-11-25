@@ -57,6 +57,9 @@ saturation_uplift: 1.10
 inventory_assumed_util: 1.00
 inventory_vcpu_ratio_assumed: 1.0
 inventory_apply_headroom: true
+p2v_ratio: 1.0               # physical servers WITHOUT utilization data (inventory only): pCore:vCore consolidation ratio;
+                             # CPU demand = capacity (SPEC Score) / ratio, e.g. 3 = three old physical cores per new core
+p2v_overrides: {}            # per server or group, most specific wins: {"host:sql01": 1, "host:web*": 4, "cluster:Dev": 5}
 k_arch: {x86: 1.0, risc_oltp_db: 1.25, risc_sap_app: 1.15, risc_other: 1.10}
 k_arch_range: {low: 1.10, high: 1.25}
 k_virt_baremetal_to_virtual: 1.07
