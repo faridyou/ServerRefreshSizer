@@ -108,6 +108,7 @@ class Policy(BaseModel):
     network_vmotion_mbps: float = 1250
     network_replication_mbps: float = 0
     split_clusters: str | bool = "auto"
+    consolidation: str = "single"
     prefer_measured_spec: bool = True
     objective: str = "min_tco"
     top_n: int = 5
@@ -164,6 +165,8 @@ class Policy(BaseModel):
             bad.append(f"target_stack = {self.target_stack}: use vmware_vsan, nutanix_ahv or nutanix_esxi")
         if self.nutanix_protection not in ("nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"):
             bad.append(f"nutanix_protection = {self.nutanix_protection}: unknown")
+        if self.consolidation not in ("single", "per_cluster"):
+            bad.append(f"consolidation = {self.consolidation}: use single or per_cluster")
         if self.storage_architecture not in ("auto", "hci", "vsan_esa", "external"):
             bad.append(f"storage_architecture = {self.storage_architecture}: use auto, hci or external")
         if self.nutanix and self.storage_architecture == "external":

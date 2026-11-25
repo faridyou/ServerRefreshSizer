@@ -57,10 +57,10 @@ def plan(d_t: float, c_req: float, su_host: float, policy: Policy, protection: s
     u_f = d_t / ((n_total - k - maint) * su_host) if su_host and n_total - k - maint > 0 else 1.0
     expl = Explanation(
         step_id="ha", title="Host count with HA",
-        formula_latex=r"N_{active} = \lceil C_{req} / SU_{host} \rceil;\ N_{total} = N_{active} + k_{HA}",
+        formula_latex=r"N_{active} = \lceil C_{req} / Cap_{host} \rceil;\ N_{total} = N_{active} + k_{HA}",
         formula_text=(f"ceil({c_req:,.1f} / {su_host:,.1f}) = {math.ceil(c_req / su_host - 1e-9) if su_host else 0}"
                       f" active; + {k} HA{' + 1 maintenance' if maint else ''} -> {n_total} hosts "
                       f"(utilization {u_n:.1%} normal, {u_f:.1%} with {k} host(s) failed; {reason})"),
-        inputs={"C_req": round(c_req, 2), "SU_host": round(su_host, 2), "k_HA": k, "n_min": n_min},
+        inputs={"C_req": round(c_req, 2), "Cap_host": round(su_host, 2), "k_HA": k, "n_min": n_min},
         output=n_total, unit="hosts")
     return HaPlan(n_active, k, n_total, u_n, u_f, n_min, reason, expl)

@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from refreshsizer import workflow
+from refreshsizer.units import UNIT
 
 app = typer.Typer(add_completion=False, no_args_is_help=True,
                   help="RefreshSizer: performance-normalized server refresh sizing (Dell PowerEdge 17G).")
@@ -110,7 +111,7 @@ def _do_size(project: Any, policy: Any) -> Any:
 
 def _print_sizing(run: Any) -> None:
     t = Table(title="Sizing results")
-    for h in ("cluster", "mode", "confidence", "C_req SU", "recommended", "hosts", "P50/P90", "core-match",
+    for h in ("cluster", "mode", "confidence", f"C_req {UNIT}", "recommended", "hosts", "P50/P90", "core-match",
               "GHz-match", "TCO (USD)"):
         t.add_column(h)
     for cs in run.clusters:
@@ -153,6 +154,7 @@ def size(project_file: Path = typer.Argument(..., exists=True),
          cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
          stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
          storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+         clusters: str | None = typer.Option(None, "--clusters", help="single (consolidate) | per_cluster"),
          array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
          protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
          array_drr: float | None = typer.Option(None, "--array-drr", help="external array data reduction, e.g. 3"),
@@ -165,6 +167,8 @@ def size(project_file: Path = typer.Argument(..., exists=True),
     if stack:
         ov["target_stack"] = stack
     ov.update(_storage_overrides(storage, array, protocol, array_drr))
+    if clusters:
+        ov["consolidation"] = clusters
     pol = _policy(project.policy_overrides, policy, ov)
     run = _do_size(project, pol)
     _print_sizing(run)
@@ -239,6 +243,7 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
         cpus: str | None = typer.Option(None, "--cpus", help="Only these CPUs (comma list)"),
         stack: str | None = typer.Option(None, "--stack", help="vmware_vsan | nutanix_ahv | nutanix_esxi"),
         storage: str | None = typer.Option(None, "--storage", help="auto | hci | external (disaggregated)"),
+        clusters: str | None = typer.Option(None, "--clusters", help="single (consolidate) | per_cluster"),
         array: str | None = typer.Option(None, "--array", help="external storage: powerstore | existing"),
         protocol: str | None = typer.Option(None, "--protocol", help="fc32 | nvme_fc32 | iscsi25 | nvme_tcp25"),
         array_drr: float | None = typer.Option(None, "--array-drr", help="external array data reduction, e.g. 3"),
@@ -256,6 +261,8 @@ def run(files: list[Path] = typer.Argument(..., exists=True), out: Path = typer.
     if stack:
         ov["target_stack"] = stack
     ov.update(_storage_overrides(storage, array, protocol, array_drr))
+    if clusters:
+        ov["consolidation"] = clusters
     pol = _policy(project.policy_overrides, policy, ov)
     sizing = _do_size(project, pol)
     _print_sizing(sizing)

@@ -283,3 +283,32 @@ Each entry: **decision** – reason – how to change it.
     email cannot contradict the report; prices are excluded unless requested, low-confidence data adds a "confirm
     before ordering" rule, and the page warns that the prompt contains customer data. Instructions exist in
     English and French (the facts use the report labels of the chosen language).
+
+## Consolidation and unit naming (change request 7)
+
+87. **One target cluster by default** (`consolidation: single`): all source clusters of a project are sized into
+    one target cluster. Each source cluster's demand is still computed on its own (mode, utilization, k_arch/k_virt,
+    growth, U_max of its class, memory, storage); the target needs the sum. C_req = Σ D_T(c) / U_max(c), so every
+    source keeps its headroom; the implied U_max, growth, source SPC and DRR of the target are the demand-weighted
+    values of those sums. `per_cluster` restores one target cluster per source cluster. A project with one source
+    cluster gives exactly the same result in both modes (golden cases unchanged).
+88. **Growth step events once**: per-cluster sizing applied policy events to every cluster; when consolidating they
+    are added once to the target total (to the main cluster, not to the database cluster).
+89. **Databases keep their own cluster** while `split_clusters: auto`: per-core-licensed DB VMs of every source
+    cluster go to one "Consolidated-db" cluster sized for minimum licensed cores; set `split_clusters: false` for a
+    strictly single cluster. This is the licensing best practice already in place, not a second consolidation.
+90. **One storage architecture and one array**: with `storage_architecture: auto`, the estate is external only if
+    every source cluster would be (RISC / all bare metal), otherwise HCI. With external storage, ONE PowerStore is
+    sized on the estate's total capacity and IOPS, connected to the hosts of every target cluster, and reported with
+    the main cluster; the DB cluster says it uses the shared array. HCI keeps storage in each target cluster's nodes.
+91. **Mixed sources** (e.g. x86 + AIX) are merged after their own adjustments; the Monte Carlo and the vCPU/NUMA
+    checks of the target use the platform type and workload class of the largest demand. Source licensing lines of
+    the merged clusters are added per product.
+92. **"SU" renamed "SPECrate-eq"**. "SU" was RefreshSizer's own term. "SPEC Score" was considered and rejected:
+    SPEC publishes many benchmarks (CPU int/fp, jbb, power...), so "SPEC score" does not say which scale; and a
+    derived figure (per-core result x cores x utilization) labelled "SPEC Score" reads like a published SPEC result,
+    which the SPEC fair-use rules ask to avoid - estimates must be identifiable as such. "SPECrate-eq" names the scale
+    (SPECrate2017_int_base) and says "equivalent". Formula symbols: SU_cap -> Cap, SU_host -> Cap_host. Field names
+    in project.json (su_cap_total, su_host...) are unchanged for compatibility; runs saved before this change keep
+    "SU" in their stored formula texts. The label is one constant (`refreshsizer/units.py`) plus `unit` in i18n.yaml.
+    A definition line is printed in the presales and full reports and on the Results page.

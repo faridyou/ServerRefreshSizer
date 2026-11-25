@@ -130,13 +130,13 @@ def _summary_table(ctx: dict[str, Any], t: Any) -> Block:
 
 def _chain(c: dict[str, Any], t: Any) -> Block:
     d, r, s = c["d"], c["rec"], c["src"]
-    rows = [[t("p_step_cap"), f"{fmt(d.su_cap_total)} SU", f"{s['cores']} cores x SPC {fmt(d.spc_source)}"],
-            [t("p_step_d0"), f"{fmt(d.d0)} SU", d.mode.value + (f", {s['util_basis']}" if s["util_basis"] else "")],
-            [t("p_step_adj"), f"{fmt(d.d0_adj)} SU", f"k_arch {fmt(d.k_arch)}, k_virt {fmt(d.k_virt)}"],
-            [t("p_step_growth"), f"{fmt(d.d_t)} SU", f"{fmt(d.growth_cpu_pct)} %/yr x {d.years} yr"],
-            [t("p_step_headroom"), f"{fmt(d.c_req)} SU", f"U_max {pct(d.u_max)}"]]
+    rows = [[t("p_step_cap"), f"{fmt(d.su_cap_total)} {t('unit')}", f"{s['cores']} cores x SPC {fmt(d.spc_source)}"],
+            [t("p_step_d0"), f"{fmt(d.d0)} {t('unit')}", d.mode.value + (f", {s['util_basis']}" if s["util_basis"] else "")],
+            [t("p_step_adj"), f"{fmt(d.d0_adj)} {t('unit')}", f"k_arch {fmt(d.k_arch)}, k_virt {fmt(d.k_virt)}"],
+            [t("p_step_growth"), f"{fmt(d.d_t)} {t('unit')}", f"{fmt(d.growth_cpu_pct)} %/yr x {d.years} yr"],
+            [t("p_step_headroom"), f"{fmt(d.c_req)} {t('unit')}", f"U_max {pct(d.u_max)}"]]
     if r:
-        rows += [[t("p_step_host"), f"{fmt(r.su_host_effective)} SU",
+        rows += [[t("p_step_host"), f"{fmt(r.su_host_effective)} {t('unit')}",
                   f"{r.config.cpu_count} x {r.config.cpu_name}, SPC {fmt(r.spc_target)}"],
                  [t("p_step_hosts"), str(r.n_total), f"{r.n_total - r.k_ha} + {r.k_ha} HA; {r.n_min_reason}"]]
     rows += [[t("memory"), f"{fmt(d.m_t)} GB", f"{d.mem_basis} {fmt(d.m0)} GB, +{fmt(d.growth_mem_pct)} %/yr"],
@@ -163,6 +163,14 @@ def _bom(c: dict[str, Any], t: Any, policy: dict[str, Any]) -> list[Block]:
     if c.get("dimm_diagram"):
         out.append(Block("pre", items=list(c["dimm_diagram"]), text=t("dimm_diagram")))
     return out
+
+
+def _sources(c: dict[str, Any], t: Any) -> list[Block]:
+    src = c["src"].get("sources") or []
+    if not src:
+        return []
+    return [Block("para", t("consolidated_from").replace("{n}", str(len(src))) + ": " + ", ".join(src),
+                  style="muted")]
 
 
 def _storage(c: dict[str, Any], t: Any) -> list[Block]:
@@ -247,7 +255,8 @@ def _build(ctx: dict[str, Any]) -> Outline:
         for c in clusters:
             name = c["d"].cluster
             banner = [Block("para", t(c["banner"]), style="warn")] if c["banner"] else []
-            ol.sections.append(Section(f"{name}: {t('c_current')}", banner + _current_env(c, t), name))
+            ol.sections.append(Section(f"{name}: {t('c_current')}", banner + _sources(c, t) + _current_env(c, t),
+                                       name))
             ol.sections.append(Section(f"{name}: {t('c_benchmarks')}", _benchmarks(c, t), name))
             ol.sections.append(Section(f"{name}: {t('c_result')}", _proposal(c, t, policy), name))
             if c.get("storage"):
@@ -278,9 +287,10 @@ def _build(ctx: dict[str, Any]) -> Outline:
                    f"{fmt(s['storage_used_tib'])} TiB.")
         if s["util_pct"] is not None:
             src_txt += f" {t('c_cpu_util')}: {s['util_pct']} % ({s['util_basis']})."
-        ol.sections.append(Section(f"{name}: {t('p_source')}", [Block("para", src_txt)] + _current_env(c, t)[:1]
+        ol.sections.append(Section(f"{name}: {t('p_source')}", _sources(c, t) + [Block("para", src_txt)] + _current_env(c, t)[:1]
                                    + _benchmarks(c, t)[1:], name))
-        ol.sections.append(Section(f"{name}: {t('p_chain')}", [_chain(c, t)], name))
+        ol.sections.append(Section(f"{name}: {t('p_chain')}", [_chain(c, t), Block("para", t("unit_def"),
+                                                                                    style="muted")], name))
         if c["rec"]:
             ol.sections.append(Section(f"{name}: {t('s8')}", _bom(c, t, policy), name))
             if c.get("storage"):

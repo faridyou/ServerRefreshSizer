@@ -24,6 +24,7 @@
 
 {% for c in clusters %}{% set d = c.d %}{% set r = c.rec %}{% set s = c.src %}
 <h2>{{ d.cluster }}</h2>
+{% if c.src.sources %}<p class="muted">{{ t('consolidated_from') | replace('{n}', c.src.sources | length | string) }}: {{ c.src.sources | join(', ') }}</p>{% endif %}
 <section class="card">
 <h3>{{ t('p_source') }}</h3>
 <p>{{ s.hosts }} {{ t('hosts') | lower }}, {{ s.cores }} {{ t('cores') | lower }} ({{ s.ghz_total | fmt }} GHz), {{ s.ram_gb | fmt }} GB RAM, {{ s.vms }} VMs / {{ s.vcpu | fmt }} vCPU, {{ s.storage_used_tib | fmt }} TiB {{ t('c_storage_used') | lower }}.
@@ -36,16 +37,17 @@
 
 <section class="card">
 <h3>{{ t('p_chain') }}</h3>
+<p class="small muted">{{ t('unit_def') }}</p>
 <table>
 {% set steps = [
-  (t('p_step_cap'), d.su_cap_total | fmt ~ ' SU', s.cores ~ ' cores x SPC ' ~ (d.spc_source | fmt)),
-  (t('p_step_d0'), d.d0 | fmt ~ ' SU', d.mode.value ~ (', ' ~ s.util_basis if s.util_basis else '')),
-  (t('p_step_adj'), d.d0_adj | fmt ~ ' SU', 'k_arch ' ~ (d.k_arch | fmt) ~ ', k_virt ' ~ (d.k_virt | fmt)),
-  (t('p_step_growth'), d.d_t | fmt ~ ' SU', (d.growth_cpu_pct | fmt) ~ ' %/yr x ' ~ d.years ~ ' yr'),
-  (t('p_step_headroom'), d.c_req | fmt ~ ' SU', 'U_max ' ~ (d.u_max | pct)),
+  (t('p_step_cap'), d.su_cap_total | fmt ~ ' ' ~ t('unit'), s.cores ~ ' cores x SPC ' ~ (d.spc_source | fmt)),
+  (t('p_step_d0'), d.d0 | fmt ~ ' ' ~ t('unit'), d.mode.value ~ (', ' ~ s.util_basis if s.util_basis else '')),
+  (t('p_step_adj'), d.d0_adj | fmt ~ ' ' ~ t('unit'), 'k_arch ' ~ (d.k_arch | fmt) ~ ', k_virt ' ~ (d.k_virt | fmt)),
+  (t('p_step_growth'), d.d_t | fmt ~ ' ' ~ t('unit'), (d.growth_cpu_pct | fmt) ~ ' %/yr x ' ~ d.years ~ ' yr'),
+  (t('p_step_headroom'), d.c_req | fmt ~ ' ' ~ t('unit'), 'U_max ' ~ (d.u_max | pct)),
 ] %}
 {% for label, val, how in steps %}<tr><td>{{ label }}</td><td class="num"><b>{{ val }}</b></td><td class="muted">{{ how }}</td></tr>{% endfor %}
-{% if r %}<tr><td>{{ t('p_step_host') }}</td><td class="num"><b>{{ r.su_host_effective | fmt }} SU</b></td><td class="muted">{{ r.config.cpu_count }} x {{ r.config.cpu_name }}, SPC {{ r.spc_target | fmt }}{% if r.su_host_effective < r.su_host %} ({{ t('p_after_reserve') }} {{ r.su_host | fmt }}){% endif %}</td></tr>
+{% if r %}<tr><td>{{ t('p_step_host') }}</td><td class="num"><b>{{ r.su_host_effective | fmt }} {{ t('unit') }}</b></td><td class="muted">{{ r.config.cpu_count }} x {{ r.config.cpu_name }}, SPC {{ r.spc_target | fmt }}{% if r.su_host_effective < r.su_host %} ({{ t('p_after_reserve') }} {{ r.su_host | fmt }}){% endif %}</td></tr>
 <tr><td>{{ t('p_step_hosts') }}</td><td class="num"><b>{{ r.n_total }}</b></td><td class="muted">{{ r.n_total - r.k_ha }} + {{ r.k_ha }} HA; {{ r.n_min_reason }}</td></tr>{% endif %}
 <tr><td>{{ t('memory') }}</td><td class="num"><b>{{ d.m_t | fmt }} GB</b></td><td class="muted">{{ d.mem_basis }} {{ d.m0 | fmt }} GB, +{{ d.growth_mem_pct | fmt }} %/yr</td></tr>
 <tr><td>{{ t('p_step_storage') }}</td><td class="num"><b>{{ d.storage_raw_tib | fmt }} TiB raw</b></td><td class="muted">{{ d.storage_used0_tib | fmt }} TiB used, +{{ d.growth_storage_pct | fmt }} %/yr, {{ d.protection }}</td></tr>

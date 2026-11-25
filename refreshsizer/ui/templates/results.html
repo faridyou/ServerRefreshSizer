@@ -9,10 +9,12 @@
 <a class="btn sec" href="/p/{{ name }}/whatif">{{ t('ui_tab_whatif') }}</a><a class="btn sec" href="/p/{{ name }}/reports">{{ t('ui_tab_reports') }}</a></div>
 {% if error %}<p class="err">{{ error }}</p>{% endif %}
 {% for w in r.run.warnings %}<p class="lowbanner small">{{ w }}</p>{% endfor %}
+<p class="small muted">{{ t('unit_def') }}</p>
 {% for c in r.clusters %}{% set cs = c.cs %}{% set d = c.d %}{% set rec = c.rec %}
 <h2>{{ d.cluster }} <span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(d.confidence.value, 'lo') }}">{{ d.mode.value }} / {{ d.confidence.value }}</span></h2>
 {% if c.banner %}<p class="{{ 'banner' if c.banner == 'very_low_banner' else 'lowbanner' }}">{{ t(c.banner) }}</p>{% endif %}
 <p class="small muted">{{ t('ui_target_used') }}: {{ cs.target_selection }}</p>
+{% if c.src.sources %}<p class="small">{{ t('consolidated_from') | replace('{n}', c.src.sources | length | string) }}: <b>{{ c.src.sources | join(', ') }}</b>{{ calc(d.explanations | selectattr('step_id', 'equalto', 'consolidation') | first, t) }}</p>{% endif %}
 {% for w in cs.warnings %}<p class="lowbanner small">{{ w }}</p>{% endfor %}
 {% if not rec %}<p class="err">no feasible configuration</p>{% else %}
 {% set ex = rec.explanations %}
@@ -21,7 +23,7 @@
 <div class="kpi"><div class="l">{{ t('hosts') }} (N+{{ rec.k_ha }})</div><div class="v">{{ rec.n_total }}</div>{{ calc(ex | selectattr('step_id', 'equalto', 'ha') | first, t) }}</div>
 <div class="kpi"><div class="l">{{ t('cores') }}</div><div class="v">{{ rec.n_total * rec.config.cpu_count * rec.config.cores_per_cpu }}</div>
 <details class="calc"><summary>{{ t('ui_show_calc') }}</summary><div class="box formula">{{ rec.n_total }} hosts x {{ rec.config.cpu_count }} CPU x {{ rec.config.cores_per_cpu }} cores</div></details></div>
-<div class="kpi"><div class="l">SU ({{ t('target_side') }} / C_req)</div><div class="v">{{ (rec.n_total * rec.su_host) | fmt }}</div><div class="small muted">C_req {{ d.c_req | fmt }} SU</div>{{ calcs(d.explanations | selectattr('step_id', 'in', ['src_capacity', 'd0', 'adjust', 'growth']) | list, t) }}</div>
+<div class="kpi"><div class="l">{{ t('unit') }} ({{ t('target_side') }} / C_req)</div><div class="v">{{ (rec.n_total * rec.su_host) | fmt }}</div><div class="small muted">C_req {{ d.c_req | fmt }} {{ t('unit') }}</div>{{ calcs(d.explanations | selectattr('step_id', 'in', ['src_capacity', 'd0', 'adjust', 'growth']) | list, t) }}</div>
 <div class="kpi"><div class="l">{{ t('headroom') }} / {{ t('util_failed') }}</div><div class="v">{{ rec.util_failed | pct }}</div><div class="small muted">U_max {{ d.u_max | pct }} · {{ t('util_normal') }} {{ rec.util_normal | pct }}</div>{{ calc(d.explanations | selectattr('step_id', 'equalto', 'headroom') | first, t) }}</div>
 <div class="kpi"><div class="l">{{ t('licensing_delta') }}</div><div class="v">{{ c.license_delta | money }}</div>
 <details class="calc"><summary>{{ t('ui_show_calc') }}</summary><div class="box"><table class="small">{% for l in rec.licenses %}<tr><td>{{ l.product }}</td><td>{{ l.quantity | fmt }} {{ l.metric }}</td><td class="num">{{ l.horizon_usd | money }}</td></tr>{% endfor %}
@@ -52,7 +54,7 @@
 {% set labels = cs.candidates | map(attribute='label') | list %}
 {% set cands = cs.candidates + (cs.pareto | rejectattr('label', 'in', labels) | list) %}
 <div class="card"><h3>{{ t('ui_candidates') }} <input type="text" data-filter="cand{{ loop.index }}" placeholder="{{ t('ui_filter') }}"></h3>
-<table id="cand{{ loop.index }}"><thead><tr><th class="sort">config</th><th class="sort num">SPC</th><th class="sort num">SU/host</th><th class="sort num">{{ t('hosts') }}</th><th class="sort num">{{ t('util_failed') }}</th><th class="sort num">RAM/host</th><th>{{ t('drives') }}</th><th class="sort num">W</th><th class="sort num">RU</th><th class="sort num">capex</th><th class="sort num">licenses</th><th class="sort num">TCO</th></tr></thead><tbody>
+<table id="cand{{ loop.index }}"><thead><tr><th class="sort">config</th><th class="sort num">SPC</th><th class="sort num">Cap/host</th><th class="sort num">{{ t('hosts') }}</th><th class="sort num">{{ t('util_failed') }}</th><th class="sort num">RAM/host</th><th>{{ t('drives') }}</th><th class="sort num">W</th><th class="sort num">RU</th><th class="sort num">capex</th><th class="sort num">licenses</th><th class="sort num">TCO</th></tr></thead><tbody>
 {% for x in cands %}<tr {% if x.label == rec.label %}style="background:#eef5fd"{% endif %}><td>{{ x.label }}{% if x.spc_flags %}<div class="small muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}{{ calcs(x.explanations, t) }}</td>
 <td class="num">{{ x.spc_target | fmt }}</td><td class="num" data-v="{{ x.su_host }}">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num" data-v="{{ x.util_failed }}">{{ x.util_failed | pct }}</td><td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td>
 <td class="num" data-v="{{ x.power_w_total }}">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num" data-v="{{ x.capex_total }}">{{ x.capex_total | money }}</td><td class="num" data-v="{{ x.license_total }}">{{ x.license_total | money }}</td><td class="num" data-v="{{ x.tco }}">{{ x.tco | money }}</td></tr>{% endfor %}

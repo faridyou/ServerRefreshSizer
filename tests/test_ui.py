@@ -492,3 +492,18 @@ def test_storage_architecture_selector_and_email(ui: UI, fixtures_dir: Path) -> 
     assert "attachment" in txt.headers["content-disposition"]
     ui.job(ui.c.post(f"/p/{name}/reports", data={"prompt": "1", "html": "1", "lang": "en", "level": "customer"}))
     assert (ui.store.reports_dir(name) / "refreshsizer_email_prompt.txt").exists()
+
+
+def test_consolidation_selector(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("consol")
+    ui.upload(name, fixtures_dir / "messy_customer_fr.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'name="consolidation"' in page
+    j = ui.size(name)
+    assert [c.demand.cluster for c in ui.sizing(name).clusters] == ["Consolidated"]
+    assert "Cluster-Paris, Cluster-Lyon" in ui.c.get(j.redirect).text
+    form = _target_form(INTEL + AMD, "both", {"from": "summary", "save_target": "1", "consolidation": "per_cluster"})
+    ui.job(ui.c.post(f"/p/{name}/size", data=form))
+    assert ui.store.policy_overrides(name)["consolidation"] == "per_cluster"
+    assert len(ui.sizing(name).clusters) == 2

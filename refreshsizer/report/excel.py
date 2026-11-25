@@ -12,6 +12,7 @@ import xlsxwriter
 from xlsxwriter.utility import xl_rowcol_to_cell
 
 from refreshsizer.engine.results import ClusterSizing
+from refreshsizer.units import UNIT
 
 
 class Book:
@@ -116,7 +117,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         # ---- 3 Source hosts (live per-host demand where host utilization drives D0) -----------------------
         ws3.write(r3, 0, d.cluster, bk.b)
         r3 += 1
-        bk.header(ws3, r3, ["host", "CPU", "cores", "SPC", "SU_cap", "U used %", "saturation k", "SU demand",
+        bk.header(ws3, r3, ["host", "CPU", "cores", "SPC", "Cap", "U used %", "saturation k", f"Demand ({UNIT})",
                             "basis"])
         r3 += 1
         first = r3
@@ -158,17 +159,17 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         ws5.write(r5, 0, f"{d.cluster} - {d.mode.value} ({d.confidence.value})", bk.b)
         r5 += 1
         share_note = ""
-        r5 = row(ws5, S5, r5, "su_cap_total", "Source capacity SU_cap (sum)", d.su_cap_total,
+        r5 = row(ws5, S5, r5, "su_cap_total", f"Source capacity Cap (sum, {UNIT})", d.su_cap_total,
                  f"={R['su_cap']}" if d.hosts else None, "SPC x cores per host (sheet 3)")
         if host_path:
             share = d.d0 / max(sum(h.demand_su or 0 for h in d.hosts), 1e-9)
             r5 = row(ws5, S5, r5, "share", "Share of host demand (DB split)", round(share, 6), None,
                      "1.0 unless per-core-licensed workloads were split into their own cluster")
-            r5 = row(ws5, S5, r5, "d0", "D0 demand (SU)", d.d0,
-                     f"=SUM('{S3}'!H{first + 1}:H{last + 1})*{R['share']}", "sum of host U x SU_cap (sheet 3)")
+            r5 = row(ws5, S5, r5, "d0", f"D0 demand ({UNIT})", d.d0,
+                     f"=SUM('{S3}'!H{first + 1}:H{last + 1})*{R['share']}", "sum of host U x Cap (sheet 3)")
         else:
             share_note = f"computed by the engine via path {', '.join(d.d0_by_path)} (see sheet 5 notes / report)"
-            r5 = row(ws5, S5, r5, "d0", "D0 demand (SU)", d.d0, None, share_note)
+            r5 = row(ws5, S5, r5, "d0", f"D0 demand ({UNIT})", d.d0, None, share_note)
         r5 = row(ws5, S5, r5, "k_arch", "k_arch", d.k_arch)
         r5 = row(ws5, S5, r5, "k_virt", "k_virt", d.k_virt)
         r5 = row(ws5, S5, r5, "d0_adj", "D0' = D0 x k_arch x k_virt", d.d0_adj,
@@ -186,7 +187,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         events = d.d_t - d.d0_adj * (1 + d.growth_cpu_pct / 100) ** d.years
         r6 = row(ws6, S6, r6, "g", "CPU growth %/yr", d.growth_cpu_pct)
         r6 = row(ws6, S6, r6, "T", "Horizon (years)", d.years)
-        r6 = row(ws6, S6, r6, "ev", "Step events (SU)", round(events, 6))
+        r6 = row(ws6, S6, r6, "ev", f"Step events ({UNIT})", round(events, 6))
         r6 = row(ws6, S6, r6, "d_t", "D_T = D0' x (1+g)^T + events", d.d_t,
                  f"={R['d0_adj']}*(1+{R['g']}/100)^{R['T']}+{R['ev']}")
         r6 = row(ws6, S6, r6, "umax", "U_max", d.u_max)
@@ -197,10 +198,10 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             r6 = row(ws6, S6, r6, "spc_t", "Target SPC", rec.spc_target, None, rec.label)
             r6 = row(ws6, S6, r6, "cores_t", "Target cores per CPU", rec.config.cores_per_cpu)
             r6 = row(ws6, S6, r6, "cpus_t", "CPUs per host", rec.config.cpu_count)
-            r6 = row(ws6, S6, r6, "su_red", "vSAN SU reserve factor", round(rec.su_host_effective / rec.su_host, 6))
-            r6 = row(ws6, S6, r6, "su_host", "SU per host (effective)", rec.su_host_effective,
+            r6 = row(ws6, S6, r6, "su_red", "vSAN capacity reserve factor", round(rec.su_host_effective / rec.su_host, 6))
+            r6 = row(ws6, S6, r6, "su_host", f"{UNIT} per host (effective)", rec.su_host_effective,
                      f"={R['spc_t']}*{R['cores_t']}*{R['cpus_t']}*{R['su_red']}")
-            r6 = row(ws6, S6, r6, "n_act", "N_active (CPU) = CEILING(C_req/SU_host)", rec.n_total - rec.k_ha,
+            r6 = row(ws6, S6, r6, "n_act", "N_active (CPU) = CEILING(C_req/Cap_host)", rec.n_total - rec.k_ha,
                      f"=CEILING({R['c_req']}/{R['su_host']}-1E-9,1)", fmt=bk.fi)
             r6 = row(ws6, S6, r6, "k_ha", "k_HA (N+1, N+2 above 16 hosts)", rec.k_ha,
                      f"=IF({R['n_act']}+1>16,2,1)", fmt=bk.fi)
@@ -323,7 +324,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         r10 += 3
 
     # ---- 1 Summary ---------------------------------------------------------------------------------------
-    bk.header(ws1, 3, [t("cluster"), t("recommended"), t("mode"), t("confidence"), "C_req SU", t("hosts"),
+    bk.header(ws1, 3, [t("cluster"), t("recommended"), t("mode"), t("confidence"), f"C_req {UNIT}", t("hosts"),
                        t("util_failed"), t("core_match"), t("ghz_match"), "P90", t("licensing_delta"), t("tco")])
     for i, c in enumerate(clusters):
         rr = 4 + i
@@ -412,7 +413,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
     for c in clusters:
         ws7.write(r, 1, c["d"].cluster, bk.b)
         r += 1
-        bk.header(ws7, r, ["#", "config", "SPC", "SU/host", "hosts", "util failed", "RAM/host GB", "drives",
+        bk.header(ws7, r, ["#", "config", "SPC", "Cap/host", "hosts", "util failed", "RAM/host GB", "drives",
                            "power W", "RU", "capex", "licenses", "TCO"])
         r += 1
         for i, x in enumerate(c["cs"].candidates, 1):

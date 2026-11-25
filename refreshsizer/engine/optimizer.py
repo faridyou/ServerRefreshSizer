@@ -19,6 +19,7 @@ from refreshsizer.engine.network import choose_nics
 from refreshsizer.engine.results import Candidate, ClusterDemand
 from refreshsizer.engine.storage import choose_drives
 from refreshsizer.model.entities import CpuModel, Explanation, TargetConfig, TargetPlatform
+from refreshsizer.units import UNIT
 
 WORKLOAD_SUITE = {"saps": "saps", "specjbb2015_maxjops": "specjbb2015"}
 
@@ -62,10 +63,10 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
     cvm_mem = float(policy.nutanix_cvm_memory_gb) if nutanix else 0.0
     expls.append(Explanation(
         step_id="target_su", title="Target host capacity",
-        formula_latex=r"SU_{host} = SPC_{target} \times cores \times CPUs",
-        formula_text=f"{spc.spc:.4f} x {cores} x {count} = {su_host:,.1f} SU ({kwl_note})",
+        formula_latex=r"Cap_{host} = SPC_{target} \times cores \times CPUs",
+        formula_text=f"{spc.spc:.4f} x {cores} x {count} = {su_host:,.1f} {UNIT} ({kwl_note})",
         inputs={"cpu": cpu.model, "SPC": round(spc.spc, 4), "cores_per_cpu": cores, "cpus": count},
-        output=round(su_host, 2), unit="SU", source_refs=spc.refs(), confidence=spc.confidence))
+        output=round(su_host, 2), unit=UNIT, source_refs=spc.refs(), confidence=spc.confidence))
     if nutanix:
         usable = max(host_cores - cvm_cores, 0)
         su_eff = su_host * usable / host_cores
@@ -76,18 +77,18 @@ def evaluate(d: ClusterDemand, platform: TargetPlatform, cpu: CpuModel, count: i
                          "per node: small nodes are inefficient for Nutanix")
         expls.append(Explanation(
             step_id="nutanix_cvm", title="Nutanix CVM reservation per node",
-            formula_latex=r"SU_{eff} = SU_{host} \times (cores - cores_{CVM}) / cores;\ M_{host} = M + M_{CVM}",
-            formula_text=(f"{su_host:,.1f} SU x ({host_cores} - {cvm_cores}) / {host_cores} = {su_eff:,.1f} SU usable "
+            formula_latex=r"Cap_{eff} = Cap_{host} \times (cores - cores_{CVM}) / cores;\ M_{host} = M + M_{CVM}",
+            formula_text=(f"{su_host:,.1f} {UNIT} x ({host_cores} - {cvm_cores}) / {host_cores} = {su_eff:,.1f} {UNIT} usable "
                           f"by workloads; CVM memory {cvm_mem:g} GB added to every node's memory requirement"),
             inputs={"cvm_vcpu_reserved_as_cores": cvm_cores, "cvm_memory_GB": cvm_mem, "node_cores": host_cores,
                     "stack": policy.target_stack},
-            output=round(su_eff, 2), unit="SU",
+            output=round(su_eff, 2), unit=UNIT,
             assumptions=["CVM vCPUs are reserved as physical cores (conservative); verify with Nutanix Sizer"]))
     u_check = d.u_max if d.apply_headroom else 1.0
     plan = ha.plan(d_t, c_req, su_eff, policy, d.protection, u_check=u_check)
     if vsan and plan.n_active and d.backend_iops_t / plan.n_total > policy.vsan_high_io_threshold_iops_per_host:
         su_eff = su_host * (1 - policy.vsan_cpu_reserve_high_io)
-        warns.append(f"high IO: {policy.vsan_cpu_reserve_high_io:.0%} of host SU reserved for vSAN ESA")
+        warns.append(f"high IO: {policy.vsan_cpu_reserve_high_io:.0%} of host capacity reserved for vSAN ESA")
         plan = ha.plan(d_t, c_req, su_eff, policy, d.protection, u_check=u_check)
     n_floor = plan.n_total
     dimm = None

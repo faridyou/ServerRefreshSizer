@@ -27,7 +27,7 @@
 <h2>{{ t('s1') }}</h2>
 <section class="card">
 <table><tr><th>{{ t('cluster') }}</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th><th>{{ t('recommended') }}</th>
-<th>{{ t('hosts') }}</th><th>{{ t('cores') }}</th><th>SU</th><th>{{ t('util_failed') }}</th><th>{{ t('core_match') }}</th>
+<th>{{ t('hosts') }}</th><th>{{ t('cores') }}</th><th>{{ t('unit') }}</th><th>{{ t('util_failed') }}</th><th>{{ t('core_match') }}</th>
 <th>{{ t('ghz_match') }}</th><th>P90</th><th>{{ t('licensing_delta') }}</th><th>{{ t('tco') }}</th></tr>
 {% for c in clusters %}{% set r = c.rec %}
 <tr><td>{{ c.d.cluster }}</td><td>{{ c.d.mode.value }}</td><td>{{ c.d.confidence.value }}</td>
@@ -67,17 +67,18 @@
 
 {% for c in clusters %}{% set d = c.d %}{% set r = c.rec %}
 <h2>{{ t('s3') }} - {{ d.cluster }}</h2>
+{% if c.src.sources %}<p class="muted">{{ t('consolidated_from') | replace('{n}', c.src.sources | length | string) }}: {{ c.src.sources | join(', ') }}</p>{% endif %}
 <section class="card">
 <div class="kpis">
 <div class="kpi"><div class="v">{{ d.source_hosts }}</div><div class="l">source {{ t('hosts') | lower }}</div></div>
 <div class="kpi"><div class="v">{{ d.source_cores }}</div><div class="l">source {{ t('cores') | lower }}</div></div>
-<div class="kpi"><div class="v">{{ d.su_cap_total | fmt }}</div><div class="l">SU capacity</div></div>
-<div class="kpi"><div class="v">{{ d.d0 | fmt }}</div><div class="l">D0 (SU)</div></div>
+<div class="kpi"><div class="v">{{ d.su_cap_total | fmt }}</div><div class="l">{{ t('p_step_cap') }} ({{ t('unit') }})</div></div>
+<div class="kpi"><div class="v">{{ d.d0 | fmt }}</div><div class="l">D0 ({{ t('unit') }})</div></div>
 <div class="kpi"><div class="v">{{ d.vm_count }}</div><div class="l">workloads</div></div>
 <div class="kpi"><div class="v">{{ d.m0 | fmt }}</div><div class="l">M0 (GB)</div></div>
 </div>
 {% if c.charts.demand %}<img class="chart" src="{{ c.charts.demand }}" alt="{{ t('host_demand') }}">{% endif %}
-<table><tr><th>host</th><th>CPU</th><th>{{ t('cores') }}</th><th>SPC</th><th>SU cap</th><th>U used</th><th>basis</th><th>SU demand</th><th>method</th></tr>
+<table><tr><th>host</th><th>CPU</th><th>{{ t('cores') }}</th><th>SPC</th><th>Cap</th><th>U used</th><th>basis</th><th>{{ t('demand') }} ({{ t('unit') }})</th><th>method</th></tr>
 {% for h in d.hosts[:60] %}<tr><td>{{ h.host_id }}</td><td>{{ h.cpu_name }}</td><td class="num">{{ h.cores }}</td><td class="num">{{ h.spc | fmt }}</td><td class="num">{{ h.su_cap | fmt }}</td><td class="num">{{ h.util_used_pct | fmt }}</td><td>{{ h.util_basis or '' }}</td><td class="num">{{ h.demand_su | fmt }}</td><td>{{ h.method }}</td></tr>{% endfor %}</table>
 {% if d.hosts | length > 60 %}<p class="muted">... {{ d.hosts | length - 60 }} more hosts in the Excel workbook.</p>{% endif %}
 </section>
@@ -91,6 +92,7 @@
 </section>
 
 <h2>{{ t('s5') }} - {{ d.cluster }}</h2>
+<p class="small muted">{{ t('unit_def') }}</p>
 <section class="card"><table><tr><th>step</th><th>{{ t('formula') }}</th><th>{{ t('result') }}</th></tr>
 {% for e in d.explanations if e.step_id in ('src_capacity', 'd0', 'adjust') %}{{ expl(e) }}{% endfor %}
 {% if r %}{% for e in r.explanations if e.step_id in ('target_su', 'nutanix_cvm') %}{{ expl(e) }}{% endfor %}{% endif %}
@@ -106,7 +108,7 @@
 <h2>{{ t('s7') }} - {{ d.cluster }}</h2>
 <section class="card">
 <p class="muted">Objective: {{ c.cs.objective }} · evaluated {{ c.cs.evaluated }} configs, {{ c.cs.infeasible }} infeasible.</p>
-<table><tr><th>#</th><th>config</th><th>SPC</th><th>SU/host</th><th>{{ t('hosts') }}</th><th>{{ t('util_failed') }}</th><th>RAM/host</th><th>{{ t('drives') }}</th><th>{{ t('power') }}</th><th>RU</th><th>{{ t('capex') }}</th><th>licenses</th><th>TCO</th></tr>
+<table><tr><th>#</th><th>config</th><th>SPC</th><th>Cap/host</th><th>{{ t('hosts') }}</th><th>{{ t('util_failed') }}</th><th>RAM/host</th><th>{{ t('drives') }}</th><th>{{ t('power') }}</th><th>RU</th><th>{{ t('capex') }}</th><th>licenses</th><th>TCO</th></tr>
 {% for x in c.cs.candidates %}<tr><td>{{ loop.index }}</td><td>{{ x.label }}{% if x.spc_flags %}<div class="muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.util_failed | pct }}</td>
 <td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num">{{ x.capex_total | money }}</td><td class="num">{{ x.license_total | money }}</td><td class="num">{{ x.tco | money }}</td></tr>{% endfor %}</table>
 {% if c.cs.scenarios %}<h3>{{ t('ui_scenarios') }}</h3>
@@ -167,7 +169,7 @@
 <table><tr><th>parameter</th><th>low</th><th>high</th><th>C_req low</th><th>C_req high</th><th>hosts low</th><th>hosts high</th></tr>
 {% for x in u.tornado %}<tr><td>{{ x.parameter }}</td><td>{{ x.low }}</td><td>{{ x.high }}</td><td class="num">{{ x.c_req_low | fmt }}</td><td class="num">{{ x.c_req_high | fmt }}</td><td class="num">{{ x.hosts_low }}</td><td class="num">{{ x.hosts_high }}</td></tr>{% endfor %}</table>{% endif %}
 {% if d.inventory_sensitivity %}<h3>{{ t('sensitivity') }}</h3>
-<table><tr><th>assumed utilization</th><th>D0 SU</th><th>D_T SU</th><th>C_req SU</th><th>{{ t('hosts') }}</th></tr>
+<table><tr><th>assumed utilization</th><th>D0</th><th>D_T</th><th>C_req</th><th>{{ t('hosts') }}</th></tr>
 {% for s in d.inventory_sensitivity %}<tr><td>{{ s.assumed_util | pct }}</td><td class="num">{{ s.d0 | fmt }}</td><td class="num">{{ s.d_t | fmt }}</td><td class="num">{{ s.c_req | fmt }}</td><td class="num">{{ s.hosts }}</td></tr>{% endfor %}</table>
 <p>{{ t('hosts') }}: {{ r.n_total if r else '-' }} ({{ t('with_headroom') if d.apply_headroom else t('without_headroom') }}) / {{ c.cs.inventory_no_headroom_hosts }} ({{ t('without_headroom') if d.apply_headroom else t('with_headroom') }}).</p>{% endif %}
 </section>

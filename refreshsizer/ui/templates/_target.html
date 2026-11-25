@@ -4,6 +4,10 @@
 {% for key, label in tgt.stacks %}<label><input type="radio" name="stack" value="{{ key }}" {{ 'checked' if tgt.stack == key else '' }}> {{ label }}</label>{% endfor %}
 </div>
 <p class="small muted" style="margin:0 0 6px">{{ t('ui_stack_hint') }} (CVM: {{ tgt.cvm[0] }} vCPU / {{ tgt.cvm[1] }} GB)</p>
+<div class="row" style="margin:8px 0"><b>{{ t('ui_consolidation') }}:</b>
+<label><input type="radio" name="consolidation" value="single" {{ 'checked' if tgt.consolidation == 'single' else '' }}> {{ t('ui_cons_single') }}</label>
+<label><input type="radio" name="consolidation" value="per_cluster" {{ 'checked' if tgt.consolidation == 'per_cluster' else '' }}> {{ t('ui_cons_per_cluster') }}</label>
+</div>
 <div class="row" style="margin:8px 0"><b>{{ t('ui_arch') }}:</b>
 {% for key, label in [('auto', t('ui_arch_auto')), ('hci', t('ui_arch_hci')), ('external', t('ui_arch_external'))] %}<label><input type="radio" name="arch" value="{{ key }}" data-arch="{{ key }}" {{ 'checked' if tgt.storage.arch == key else '' }}> {{ label }}</label>{% endfor %}
 </div>

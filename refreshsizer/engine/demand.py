@@ -1,4 +1,4 @@
-"""Cluster CPU demand in SPEC Units (sections 7.2-7.6) plus memory/storage demand assembly."""
+"""Cluster CPU demand in SPECrate-equivalent units (sections 7.2-7.6) plus memory/storage demand assembly."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from refreshsizer.model.entities import (
     SourceHost,
     SourceWorkload,
 )
+from refreshsizer.units import UNIT
 
 RISC = {"POWER", "SPARC", "Itanium", "PA-RISC"}
 LICENSED = {"oracle_ee", "oracle_se2", "sql_ent", "sql_std"}
@@ -32,6 +33,13 @@ def percentile_nearest_rank(values: list[float], p: float) -> float:
     s = sorted(values)
     k = max(1, math.ceil(p / 100.0 * len(s)))
     return s[k - 1]
+
+
+def auto_external(cluster: Cluster) -> bool:
+    """storage_architecture = auto: external storage for RISC or all-bare-metal sources, HCI otherwise."""
+    hosts = cluster.hosts
+    bare = [h for h in hosts if (h.hypervisor or "").lower() == "bare-metal"]
+    return cluster.platform_type in RISC or bool(hosts and len(bare) == len(hosts))
 
 
 def dominant(workloads: list[SourceWorkload]) -> tuple[str, str]:
@@ -107,12 +115,12 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
     threads = sum((h.cores or 0) * (h.threads_per_core or 2) for h in hosts)
     if hosts:
         expls.append(Explanation(
-            step_id="src_capacity", title="Source capacity in SPEC Units",
-            formula_latex=r"SU_{cap}(h) = SPC(cpu) \times cores(h)",
+            step_id="src_capacity", title="Source capacity in SPECrate-equivalent units",
+            formula_latex=r"Cap_{src}(h) = SPC(cpu) \times cores(h)",
             formula_text=" + ".join(f"{c.spc:.3f} x {c.cores}" for c in list(caps.values())[:6])
-            + (" + ..." if len(caps) > 6 else "") + f" = {su_total:,.1f} SU",
+            + (" + ..." if len(caps) > 6 else "") + f" = {su_total:,.1f} {UNIT}",
             inputs={"hosts": len(hosts), "cores": cores_total, "SPC_weighted": round(spc_src, 4)},
-            output=round(su_total, 3), unit="SU", source_refs=sorted(set(refs))[:20],
+            output=round(su_total, 3), unit=UNIT, source_refs=sorted(set(refs))[:20],
             confidence=Confidence.lowest(*[c.confidence for c in caps.values()])))
     ghz_used = 0.0
 
@@ -137,7 +145,7 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         series = list(by_ts.values())
         d = percentile_nearest_rank(series, policy.percentile)
         u = d / su_total if su_total else 0
-        txt = f"p{policy.percentile:g} (nearest rank, {len(series)} samples) of sum_h U_t(h) x SU_cap(h) = {d:,.1f} SU"
+        txt = f"p{policy.percentile:g} (nearest rank, {len(series)} samples) of sum_h U_t(h) x Cap(h) = {d:,.1f} {UNIT}"
         if u > policy.saturation_threshold:
             d *= policy.saturation_uplift
             txt += f"; cluster p95 utilization {u:.0%} > {sat:.0f} % -> x {policy.saturation_uplift}"
@@ -145,10 +153,10 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         paths["measured"] = d0
         ghz_used = sum((h.cores or 0) * (h.nominal_ghz or 0) for h in hosts) * u * share
         expls.append(Explanation(step_id="d0", title="Measured demand (time-aligned cluster p95)",
-                                 formula_latex=r"D_0 = P_{95}\left(\sum_h U_t(h) \cdot SU_{cap}(h)\right)",
+                                 formula_latex=r"D_0 = P_{95}\left(\sum_h U_t(h) \cdot Cap_{src}(h)\right)",
                                  formula_text=txt + (f" x share {share:.3f}" if share != 1 else ""),
                                  inputs={"samples": len(series), "cluster_util_p95": round(u, 4)},
-                                 output=round(d0, 3), unit="SU", confidence=Confidence.HIGH))
+                                 output=round(d0, 3), unit=UNIT, confidence=Confidence.HIGH))
     elif mode == SizingMode.SUMMARY and lpar:
         parts = []
         rperf_total = 0.0
@@ -177,8 +185,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         expls.append(Explanation(
             step_id="d0", title="POWER LPAR demand (physc p95 x rPerf/core x F)",
             formula_latex=r"D_0 = \sum_{lpar} physc_{p95} \times \frac{rPerf(smt)}{cores} \times F",
-            formula_text=" + ".join(parts) + f" = {d0:,.2f} SU (rPerf demand {rperf_total:,.1f})",
-            inputs={"lpars": len(lpar), "rperf_demand": round(rperf_total, 2)}, output=round(d0, 3), unit="SU",
+            formula_text=" + ".join(parts) + f" = {d0:,.2f} {UNIT} (rPerf demand {rperf_total:,.1f})",
+            inputs={"lpars": len(lpar), "rperf_demand": round(rperf_total, 2)}, output=round(d0, 3), unit=UNIT,
             confidence=Confidence.MEDIUM, assumptions=["rPerf->SPEC conversion factor F; cross-architecture"]))
     elif mode == SizingMode.SUMMARY and awr:
         parts = []
@@ -193,8 +201,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         paths["awr"] = d0
         expls.append(Explanation(step_id="d0", title="Oracle AWR demand (DB CPU p95 x SPC)",
                                  formula_latex=r"D_0 = \sum_{db} DBCPU_{p95} \times SPC",
-                                 formula_text=" + ".join(parts) + f" = {d0:,.2f} SU",
-                                 inputs={"databases": len(awr)}, output=round(d0, 3), unit="SU",
+                                 formula_text=" + ".join(parts) + f" = {d0:,.2f} {UNIT}",
+                                 inputs={"databases": len(awr)}, output=round(d0, 3), unit=UNIT,
                                  confidence=Confidence.MEDIUM,
                                  assumptions=["DB portion only: non-database host CPU is not included"]))
     elif mode == SizingMode.SUMMARY and host_sum:
@@ -227,11 +235,11 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         paths["host_summary"] = d0
         expls.append(Explanation(
             step_id="d0", title="Summary demand (sum of host p95/peak)",
-            formula_latex=r"D_0 = \sum_h U(h) \times SU_{cap}(h)",
+            formula_latex=r"D_0 = \sum_h U(h) \times Cap_{src}(h)",
             formula_text=" + ".join(parts[:8]) + (" + ..." if len(parts) > 8 else "")
-            + (f" x share {share:.3f}" if share != 1 else "") + f" = {d0:,.2f} SU",
+            + (f" x share {share:.3f}" if share != 1 else "") + f" = {d0:,.2f} {UNIT}",
             inputs={"basis": ", ".join(sorted(bases)), "hosts": len(hosts), "share": round(share, 4)},
-            output=round(d0, 3), unit="SU", confidence=Confidence.MEDIUM))
+            output=round(d0, 3), unit=UNIT, confidence=Confidence.MEDIUM))
     elif mode == SizingMode.SUMMARY and vm_ghz:
         coinc = policy.vm_peak_coincidence
         tot_cores = 0.0
@@ -250,11 +258,11 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
             ghz_used += ghz * c
         paths["vm_ghz"] = d0
         expls.append(Explanation(
-            step_id="d0", title="VM-level demand (GHz -> cores -> SU)",
+            step_id="d0", title="VM-level demand (GHz -> cores -> SPECrate-eq)",
             formula_latex=r"D_0 = \sum_{vm} \frac{GHz_{p95}}{GHz_{nominal}} \times SPC \times coincidence",
             formula_text=f"{len(vm_ghz)} VMs, {tot_cores:,.1f} equivalent cores, coincidence {coinc} (peaks) "
-                         f"-> {d0:,.2f} SU", inputs={"vms": len(vm_ghz), "coincidence": coinc},
-            output=round(d0, 3), unit="SU", confidence=Confidence.MEDIUM,
+                         f"-> {d0:,.2f} {UNIT}", inputs={"vms": len(vm_ghz), "coincidence": coinc},
+            output=round(d0, 3), unit=UNIT, confidence=Confidence.MEDIUM,
             assumptions=[f"per-VM peaks are not summed directly: x vm_peak_coincidence {coinc}"]))
     elif mode == SizingMode.SNAPSHOT:
         burst = policy.rvtools_burst_factor
@@ -292,9 +300,9 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         paths["snapshot"] = d0
         flags.append(f"SNAPSHOT mode: single point-in-time utilization x burst factor {burst}")
         expls.append(Explanation(step_id="d0", title="Snapshot demand (RVTools) x burst factor",
-                                 formula_latex=r"D_0 = \sum_h U_{snap}(h) \times k_{burst} \times SU_{cap}(h)",
-                                 formula_text=txt + f" = {d0:,.2f} SU", inputs={"burst": burst},
-                                 output=round(d0, 3), unit="SU", confidence=Confidence.LOW))
+                                 formula_latex=r"D_0 = \sum_h U_{snap}(h) \times k_{burst} \times Cap_{src}(h)",
+                                 formula_text=txt + f" = {d0:,.2f} {UNIT}", inputs={"burst": burst},
+                                 output=round(d0, 3), unit=UNIT, confidence=Confidence.LOW))
     else:  # INVENTORY_ONLY (or SUMMARY without usable data)
         if mode != SizingMode.INVENTORY_ONLY:
             flags.append("no usable utilization path found; inventory-only method applied")
@@ -312,11 +320,11 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         ghz_used = sum((h.cores or 0) * (h.nominal_ghz or 0) for h in hosts) * a * share
         expls.append(Explanation(
             step_id="d0", title="Inventory-only demand (no utilization data)",
-            formula_latex=r"D_0 = \min\left(\sum_h u_{assumed} \cdot SU_{cap}(h),\ \sum_{vm} vCPU \cdot SPC / r\right)",
+            formula_latex=r"D_0 = \min\left(\sum_h u_{assumed} \cdot Cap_{src}(h),\ \sum_{vm} vCPU \cdot SPC / r\right)",
             formula_text=f"min({a:g} x {su_total * share:,.1f}, {vcpu:,.0f} x {spc_for_vcpu:.3f} / "
-                         f"{policy.inventory_vcpu_ratio_assumed:g} = {vcpu_path:,.1f}) = {d0:,.1f} SU",
+                         f"{policy.inventory_vcpu_ratio_assumed:g} = {vcpu_path:,.1f}) = {d0:,.1f} {UNIT}",
             inputs={"assumed_util": a, "vcpu": vcpu, "vcpu_ratio": policy.inventory_vcpu_ratio_assumed},
-            output=round(d0, 3), unit="SU", confidence=Confidence.VERY_LOW,
+            output=round(d0, 3), unit=UNIT, confidence=Confidence.VERY_LOW,
             assumptions=["configured vCPUs above physical capacity were never real demand (min applies)"]))
         flags.append("INVENTORY_ONLY: VERY LOW confidence - run a 7-30 day Live Optics collection before final BoM")
 
@@ -337,10 +345,10 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
     expls.append(Explanation(
         step_id="adjust", title="Architecture / virtualization / workload adjustments",
         formula_latex=r"D_0' = D_0 \times k_{arch} \times k_{virt} \times k_{wl}",
-        formula_text=f"{d0:,.2f} x {k_arch:.4g} x {k_virt:.4g} x 1.0 = {d0_adj:,.2f} SU",
+        formula_text=f"{d0:,.2f} x {k_arch:.4g} x {k_virt:.4g} x 1.0 = {d0_adj:,.2f} {UNIT}",
         inputs={"k_arch": round(k_arch, 4), "k_arch_basis": k_arch_note, "k_virt": round(k_virt, 4),
                 "k_wl": "per target CPU (1.0 unless workload benchmark exists on both sides)"},
-        output=round(d0_adj, 3), unit="SU"))
+        output=round(d0_adj, 3), unit=UNIT))
 
     # ---- 7.5 growth ----------------------------------------------------------------
     overrides = [(w.growth_override_pct, w.vcpu or w.physc_p95 or 1.0) for w in wls if w.growth_override_pct is not None]
@@ -361,8 +369,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
     c_req = d_t / u_max if apply_h else d_t
     expls.append(Explanation(
         step_id="headroom", title="Headroom", formula_latex=r"C_{req} = D_T / U_{max}(class)",
-        formula_text=f"{d_t:,.2f} / {u_max} = {d_t / u_max:,.2f} SU" + ("" if apply_h else " (headroom disabled)"),
-        inputs={"D_T": round(d_t, 3), "U_max": u_max, "class": wl_class}, output=round(c_req, 3), unit="SU"))
+        formula_text=f"{d_t:,.2f} / {u_max} = {d_t / u_max:,.2f} {UNIT}" + ("" if apply_h else " (headroom disabled)"),
+        inputs={"D_T": round(d_t, 3), "U_max": u_max, "class": wl_class}, output=round(c_req, 3), unit=UNIT))
 
     # ---- memory / storage -------------------------------------------------------------
     gm = policy.growth.mem_pct
@@ -373,7 +381,7 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         external = False
     else:
         external = policy.storage_architecture == "external" or (
-            policy.storage_architecture == "auto" and (ptype in RISC or bool(hosts and len(bare) == len(hosts))))
+            policy.storage_architecture == "auto" and auto_external(cluster))
     if policy.nutanix:
         flags.append(f"target stack {policy.target_stack}: Nutanix CVM reserves {policy.nutanix_cvm_vcpu} cores and "
                      f"{policy.nutanix_cvm_memory_gb:g} GB per node; storage on Nutanix DSF")

@@ -251,7 +251,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
                 ov = target.merge_into_saved(ov, target.overrides_from_form(raw))
             else:  # keep the saved target selection (servers, stack, storage architecture and array choice)
                 ov.update({k: saved[k] for k in ("target_platforms", "target_cpu_vendors", "target_cpus",
-                                                 "target_stack", "storage_architecture") if k in saved})
+                                                 "target_stack", "storage_architecture", "consolidation")
+                           if k in saved})
                 kept = {k: v for k, v in (saved.get("external_storage") or {}).items()
                         if k in ("array", "protocol", "models")}
                 if kept:

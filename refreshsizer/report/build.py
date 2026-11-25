@@ -158,8 +158,9 @@ LEVELS = ("customer", "presales", "full")
 def source_view(project: Project, cs: ClusterSizing) -> dict[str, Any]:
     """Existing environment of one sized cluster, in customer terms (cores, GHz, CPU models, utilization)."""
     d = cs.demand
-    src = next((c for c in project.clusters if c.name == d.source_cluster), None)
-    hosts = src.hosts if src else []
+    names = d.source_clusters or [d.source_cluster]
+    srcs = [c for c in project.clusters if c.name in names]
+    hosts = [h for c in srcs for h in c.hosts]
     models: dict[str, dict[str, Any]] = {}
     for h in hosts:
         key = h.cpu_model or h.model or "unknown"
@@ -175,7 +176,8 @@ def source_view(project: Project, cs: ClusterSizing) -> dict[str, Any]:
         "vms": d.vm_count, "vcpu": d.total_vcpu, "storage_used_tib": d.storage_used0_tib,
         "util_pct": round(sum(u * s for u, s in util) / w, 1) if w else None,
         "util_basis": next((hc.util_basis for hc in d.hosts if hc.util_basis), None),
-        "collection_days": src.collection_days if src else None,
+        "collection_days": max((c.collection_days for c in srcs if c.collection_days), default=None),
+        "sources": names if len(names) > 1 else [],
         "perf_ratio": round(cs.recommended.spc_target / d.spc_source, 2)
         if cs.recommended and d.spc_source else None}
 

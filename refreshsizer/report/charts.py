@@ -13,6 +13,8 @@ from typing import Any
 
 import matplotlib
 
+from refreshsizer.units import UNIT
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
@@ -130,7 +132,7 @@ def tornado(rows: list[dict[str, Any]], base: float, title: str) -> bytes:
         ax.text(hi, i, f" {r['high']} ", va="center", ha="left" if hi >= 0 else "right", fontsize=7, color=INK2)
     ax.axvline(0, color=INK2, linewidth=0.8)
     ax.set_yticks(range(len(labels)), labels)
-    ax.set_xlabel(f"change in C_req vs base {base:,.0f} SU", fontsize=8, color=INK2)
+    ax.set_xlabel(f"change in C_req vs base {base:,.0f} {UNIT}", fontsize=8, color=INK2)
     ax.set_title(title, fontsize=10, color=INK, loc="left")
     return _png(fig)
 
@@ -140,10 +142,10 @@ def host_demand(names: list[str], cap: list[float], demand: list[float], title: 
     n = len(names)
     fig, ax = _fig(max(5.0, min(10.0, 0.35 * n + 2)), 2.8)
     x = list(range(n))
-    ax.bar(x, cap, color="#d9e6f6", width=0.7, label="SU capacity", edgecolor=SURFACE, linewidth=2)
-    ax.bar(x, demand, color=S1, width=0.7, label="SU demand", edgecolor=SURFACE, linewidth=2)
+    ax.bar(x, cap, color="#d9e6f6", width=0.7, label=f"{UNIT} capacity", edgecolor=SURFACE, linewidth=2)
+    ax.bar(x, demand, color=S1, width=0.7, label=f"{UNIT} demand", edgecolor=SURFACE, linewidth=2)
     ax.set_xticks(x, [s[:12] for s in names], rotation=60, ha="right", fontsize=6)
-    ax.set_ylabel("SU", fontsize=8, color=INK2)
+    ax.set_ylabel(UNIT, fontsize=8, color=INK2)
     ax.set_title(title, fontsize=10, color=INK, loc="left")
     ax.legend(fontsize=7, frameon=False, labelcolor=INK2)
     return _png(fig)

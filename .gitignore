@@ -13,3 +13,8 @@ data/*.sqlite-journal
 reports/
 out/
 *.log
+
+# local working data (customer projects, learned column mappings, logs) - never commit
+data/projects/
+data/mapping_profiles/
+data/logs/

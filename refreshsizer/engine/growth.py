@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from refreshsizer.config.schema import GrowthEvent
 from refreshsizer.model.entities import Explanation
+from refreshsizer.units import UNIT
 
 
 def growth_factor(pct: float, years: int) -> float:
@@ -11,7 +12,7 @@ def growth_factor(pct: float, years: int) -> float:
 
 
 def grow(value: float, pct: float, years: int, events: list[GrowthEvent] | None = None, kind: str = "su",
-         step_id: str = "growth", title: str = "Growth", unit: str = "SU") -> tuple[float, Explanation]:
+         step_id: str = "growth", title: str = "Growth", unit: str = UNIT) -> tuple[float, Explanation]:
     f = growth_factor(pct, years)
     added = 0.0
     for e in events or []:

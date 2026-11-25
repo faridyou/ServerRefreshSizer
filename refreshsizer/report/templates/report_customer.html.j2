@@ -13,6 +13,7 @@
 
 {% for c in clusters %}{% set d = c.d %}{% set r = c.rec %}{% set s = c.src %}
 <h2>{{ d.cluster }}</h2>
+{% if c.src.sources %}<p class="muted">{{ t('consolidated_from') | replace('{n}', c.src.sources | length | string) }}: {{ c.src.sources | join(', ') }}</p>{% endif %}
 {% if c.banner %}<p class="{{ 'banner' if c.banner == 'very_low_banner' else 'lowbanner' }}">{{ t(c.banner) }}</p>{% endif %}
 
 <section class="card">

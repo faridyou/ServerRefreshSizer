@@ -12,7 +12,8 @@ from refreshsizer.benchmarks.curated_db import ensure_db
 from refreshsizer.catalog.loader import load_cpus
 from refreshsizer.config.schema import Policy, load_prices
 from refreshsizer.engine import uncertainty
-from refreshsizer.engine.demand import LICENSED, compute_demand
+from refreshsizer.engine.consolidate import merge_demands, merge_license_lines
+from refreshsizer.engine.demand import LICENSED, auto_external, compute_demand
 from refreshsizer.engine.licensing import VMWARE_ORDER_WARNING, source_licensing
 from refreshsizer.engine.modes import select_mode
 from refreshsizer.engine.naive import naive
@@ -48,8 +49,55 @@ def split_cluster(c: Cluster, policy: Policy) -> list[tuple[str, list[SourceWork
     return [(f"{c.name}-db", lic, s_db, True), (c.name, rest, 1 - s_db, False)]
 
 
+def size_demand(d: ClusterDemand, policy: Policy, cache: BenchCache, prices: dict[str, Any],
+                progress: Callable[[float, str], None] | None = None) -> ClusterSizing:
+    """Optimizer, naive comparison, Monte Carlo and inventory sensitivity for one target-cluster demand."""
+    name, is_db = d.cluster, d.is_db_cluster
+    opt_progress = (lambda f, m: progress(0.05 + 0.5 * f, m)) if progress else None
+    top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache, opt_progress)
+    cs = ClusterSizing(demand=d, candidates=top, pareto=front, objective="db: min licensed cores, max SPC"
+                       if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf,
+                       all_points=[(c2.n_total, c2.tco) for c2 in feas],
+                       scenarios=cpu_scenarios(feas, policy.objective, is_db, policy.prefer_measured_spec,
+                                               policy.cpu_scenarios_max),
+                       target_selection=target_selection_text(policy))
+    if n_eval == 0:
+        cs.warnings.append(f"no target configuration matches the selection ({cs.target_selection})")
+    if top:
+        rec = top[0]
+        cs.recommended = rec
+        cpu = load_cpus()[rec.config.cpu_id]
+        cs.naive = naive(d, rec.config.total_cores, cpu.base_ghz, policy)
+        if progress:
+            progress(0.6, f"{name}: Monte Carlo ({policy.monte_carlo_runs} runs)")
+        cs.uncertainty = uncertainty.run(d, rec, policy)
+        if d.mode == SizingMode.INVENTORY_ONLY:
+            from refreshsizer.engine.optimizer import evaluate_named
+
+            d2 = d.model_copy(update={"apply_headroom": not d.apply_headroom,
+                                      "c_req": d.d_t / d.u_max if not d.apply_headroom else d.d_t})
+            cs.inventory_no_headroom_hosts = evaluate_named(d2, rec.config.platform, rec.config.cpu_id, policy,
+                                                            prices, cache).n_total
+            for row in d.inventory_sensitivity:
+                d3 = d.model_copy(update={"c_req": row["c_req"], "d_t": row["d_t"]})
+                row["hosts"] = evaluate_named(d3, rec.config.platform, rec.config.cpu_id, policy, prices,
+                                              cache).n_total
+        if cs.uncertainty.p90_hosts > rec.n_total:
+            cs.recommendations.append(
+                f"Monte Carlo P90 = {cs.uncertainty.p90_hosts} hosts (> deterministic {rec.n_total}): "
+                f"recommend P90 = {cs.uncertainty.p90_hosts} hosts for the final BoM")
+    else:
+        cs.warnings.append("no feasible configuration found; relax constraints or split the cluster")
+    return cs
+
+
+def _sub(progress: Callable[[float, str], None] | None, k: int, n: int) -> Callable[[float, str], None] | None:
+    return (lambda f, m: progress((k + f) / n, m)) if progress else None
+
+
 def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str, Any],
                  progress: Callable[[float, str], None] | None = None) -> list[ClusterSizing]:
+    """One source cluster -> one target cluster (+ its per-core-licensed database split)."""
     mode, _, why = select_mode(c)
     out = []
     parts = split_cluster(c, policy)
@@ -59,47 +107,66 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
         d: ClusterDemand = compute_demand(c, mode, policy, cache, name=name, workloads=wls, share=share,
                                           is_db_cluster=is_db)
         d.flags.insert(0, f"mode {d.mode.value}: {why}")
-        opt_progress = (lambda f, m, k=k: progress((k + 0.05 + 0.5 * f) / len(parts), m)) if progress else None
-        top, front, n_eval, n_inf, feas = optimize(d, policy, prices, cache, opt_progress)
-        cs = ClusterSizing(demand=d, candidates=top, pareto=front, objective="db: min licensed cores, max SPC"
-                           if is_db else policy.objective, evaluated=n_eval, infeasible=n_inf,
-                           all_points=[(c2.n_total, c2.tco) for c2 in feas],
-                           scenarios=cpu_scenarios(feas, policy.objective, is_db, policy.prefer_measured_spec,
-                                                   policy.cpu_scenarios_max),
-                           target_selection=target_selection_text(policy))
-        if n_eval == 0:
-            cs.warnings.append(f"no target configuration matches the selection ({cs.target_selection})")
-        if top:
-            rec = top[0]
-            cs.recommended = rec
-            cpu = load_cpus()[rec.config.cpu_id]
-            cs.naive = naive(d, rec.config.total_cores, cpu.base_ghz, policy)
-            if progress:
-                progress((k + 0.6) / len(parts), f"{name}: Monte Carlo ({policy.monte_carlo_runs} runs)")
-            cs.uncertainty = uncertainty.run(d, rec, policy)
-            if d.mode == SizingMode.INVENTORY_ONLY:
-                from refreshsizer.engine.optimizer import evaluate_named
-
-                d2 = d.model_copy(update={"apply_headroom": not d.apply_headroom,
-                                          "c_req": d.d_t / d.u_max if not d.apply_headroom else d.d_t})
-                cs.inventory_no_headroom_hosts = evaluate_named(d2, rec.config.platform, rec.config.cpu_id, policy,
-                                                                prices, cache).n_total
-                for row in d.inventory_sensitivity:
-                    d3 = d.model_copy(update={"c_req": row["c_req"], "d_t": row["d_t"]})
-                    row["hosts"] = evaluate_named(d3, rec.config.platform, rec.config.cpu_id, policy, prices,
-                                                  cache).n_total
-            if cs.uncertainty.p90_hosts > rec.n_total:
-                cs.recommendations.append(
-                    f"Monte Carlo P90 = {cs.uncertainty.p90_hosts} hosts (> deterministic {rec.n_total}): "
-                    f"recommend P90 = {cs.uncertainty.p90_hosts} hosts for the final BoM")
-        else:
-            cs.warnings.append("no feasible configuration found; relax constraints or split the cluster")
+        cs = size_demand(d, policy, cache, prices, _sub(progress, k, len(parts)))
         cs.storage = storage_design(d, cs.recommended, policy, prices, stack_label(policy, d.external_storage))
         cs.warnings += cs.storage.flags
         vp = sum(w.vcpu or 0 for w in wls if w.physc_p95 is not None)
         cs.source_licensing = source_licensing(d, c.hosts, vp, d.years, policy, prices)
         cs.recommendations += validation_plan(d)
         out.append(cs)
+    return out
+
+
+CONSOLIDATED = "Consolidated"
+
+
+def size_consolidated(todo: list[Cluster], policy: Policy, cache: BenchCache, prices: dict[str, Any],
+                      progress: Callable[[float, str], None] | None = None) -> list[ClusterSizing]:
+    """Every source cluster -> ONE target cluster (per-core-licensed databases keep their own cluster when
+    split_clusters is on) and, for external storage, ONE shared array."""
+    arch = policy.storage_architecture
+    if arch == "auto" and not policy.nutanix:  # one architecture for the whole target estate
+        arch = "external" if all(auto_external(c) for c in todo) else "hci"
+    p_parts = policy.model_copy(update={"growth_events": [], "storage_architecture": arch})
+    parts: list[tuple[ClusterDemand, Cluster, list[SourceWorkload]]] = []
+    for i, c in enumerate(todo):
+        if progress:
+            progress(0.05 * i / len(todo), f"{c.name}: demand")
+        mode, _, why = select_mode(c)
+        for name, wls, share, is_db in split_cluster(c, policy):
+            d = compute_demand(c, mode, p_parts, cache, name=name, workloads=wls, share=share, is_db_cluster=is_db)
+            d.flags.insert(0, f"mode {d.mode.value}: {why}")
+            parts.append((d, c, wls))
+    groups = [(f"{CONSOLIDATED}-db", [x for x in parts if x[0].is_db_cluster]),
+              (CONSOLIDATED, [x for x in parts if not x[0].is_db_cluster])]
+    groups = [(n, g) for n, g in groups if g]
+    out: list[ClusterSizing] = []
+    for k, (name, grp) in enumerate(groups):
+        if progress:
+            progress(0.05 + 0.95 * k / len(groups), f"{name}: optimizer")
+        d = merge_demands([x[0] for x in grp], name, policy, events=k == len(groups) - 1)  # events once
+        cs = size_demand(d, policy, cache, prices, _sub(progress, k, len(groups)))
+        cs.source_licensing = merge_license_lines([
+            source_licensing(pd, c.hosts, sum(w.vcpu or 0 for w in wls if w.physc_p95 is not None), pd.years,
+                             policy, prices) for pd, c, wls in grp])
+        cs.recommendations += list(dict.fromkeys(r for pd, _, _ in grp for r in validation_plan(pd)))
+        out.append(cs)
+    label = stack_label(policy, out[0].demand.external_storage) if out else ""
+    shared = len(out) > 1 and all(cs.demand.external_storage for cs in out)
+    if shared:  # one array for the whole estate, attached to the main cluster
+        d_all = merge_demands([x[0] for x in parts], CONSOLIDATED, policy)
+        main = out[-1]
+        n = sum(cs.recommended.n_total for cs in out if cs.recommended)
+        main.storage = storage_design(d_all, main.recommended, policy, prices, label, n_hosts=n)
+        main.storage.notes.insert(0, f"one array shared by {', '.join(cs.demand.cluster for cs in out)} "
+                                     f"({n} hosts)")
+        main.warnings += main.storage.flags
+        for cs in out[:-1]:
+            cs.warnings.append(f"storage on the array shared with {main.demand.cluster} (see its storage design)")
+    else:
+        for cs in out:
+            cs.storage = storage_design(cs.demand, cs.recommended, policy, prices, label)
+            cs.warnings += cs.storage.flags
     return out
 
 
@@ -124,9 +191,11 @@ def size_project(project: Project, policy: Policy, cache: BenchCache | None = No
     prices = prices or load_prices()
     clusters = []
     todo = [c for c in project.clusters if c.hosts or c.workloads]
-    for i, c in enumerate(todo):
-        sub = (lambda f, m, i=i: progress((i + f) / len(todo), m)) if progress else None
-        clusters += size_cluster(c, policy, cache, prices, sub)
+    if policy.consolidation == "single" and len(todo) > 1:
+        clusters = size_consolidated(todo, policy, cache, prices, progress)
+    else:
+        for i, c in enumerate(todo):
+            clusters += size_cluster(c, policy, cache, prices, _sub(progress, i, len(todo)))
     run = SizingRun(generated_at=datetime.now().isoformat(timespec="seconds"),
                     policy=policy.model_dump(mode="json"), clusters=clusters,
                     benchmark_db={"path": str(cache.path), "results": cache.count(),

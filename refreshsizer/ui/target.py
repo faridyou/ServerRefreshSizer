@@ -53,7 +53,7 @@ def context(policy: Policy | None) -> dict[str, Any]:
               for m in load_powerstore()["models"]]
     storage = {"arch": "hci" if arch == "vsan_esa" else arch, "array": es.array if es else "powerstore",
                "protocol": es.protocol if es else "fc32", "protocols": list(PROTOCOLS.items()), "models": arrays}
-    return {"storage": storage, "groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
+    return {"consolidation": policy.consolidation if policy else "single", "storage": storage, "groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,
             "stacks": list(STACK_LABELS.items()),
             "cvm": (policy.nutanix_cvm_vcpu, policy.nutanix_cvm_memory_gb) if policy else (12, 48)}
 
@@ -76,6 +76,9 @@ def overrides_from_form(form: Any) -> dict[str, Any]:
     stack = str(form.get("stack", "") or "")
     if stack:
         out["target_stack"] = None if stack == "vmware_vsan" else stack  # None = back to the default
+    cons = str(form.get("consolidation", "") or "")
+    if cons in ("single", "per_cluster"):
+        out["consolidation"] = None if cons == "single" else cons  # None = back to the default
     arch = str(form.get("arch", "") or "")
     if arch in ("auto", "hci", "external"):
         out["storage_architecture"] = None if arch == "auto" else arch

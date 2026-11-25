@@ -9,7 +9,7 @@ from refreshsizer.config.schema import deep_merge, default_policy_dict, load_pol
 GROUPS: list[tuple[str, list[str]]] = [
     ("ui_pg_growth", ["growth.*", "horizon_years"]),
     ("ui_pg_headroom", ["u_max.*"]),
-    ("ui_pg_ha", ["ha_policy", "ha_n2_threshold_hosts", "maintenance_reserve", "max_cluster_size",
+    ("ui_pg_ha", ["consolidation", "ha_policy", "ha_n2_threshold_hosts", "maintenance_reserve", "max_cluster_size",
                   "max_hosts_per_cluster_user", "stretched_cluster"]),
     ("ui_pg_memory", ["memory_basis", "hypervisor_mem_overhead", "mem_free_reserve", "memory_overcommit_ratio",
                       "active_memory_factor"]),
@@ -36,6 +36,7 @@ CHOICES: dict[str, list[str]] = {
     "vmware_edition": ["vcf", "vvf", "none"],
     "oracle_db_cluster_licensing": ["active_nodes", "all_nodes"],
     "split_clusters": ["auto", "false"],
+    "consolidation": ["single", "per_cluster"],
     "objective": ["min_tco", "min_hosts", "min_licensed_cores", "min_power", "max_headroom"],
     "rperf_factor_mode": ["conservative", "generation_matched"],
     "nutanix_protection": ["nutanix_rf2", "nutanix_rf3", "nutanix_rf2_ecx_4p1", "nutanix_rf3_ecx_4p2"],

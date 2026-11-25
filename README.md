@@ -72,7 +72,7 @@ What you see, page by page:
   ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
   fields are highlighted. *Save* writes only the differences to `policy.yaml`; *Reset to defaults* removes it.
-* **5 Results** – summary cards (recommended configuration, hosts, cores, SU vs C_req, headroom / failure-mode
+* **5 Results** – summary cards (recommended configuration, hosts, cores, capacity vs C_req in SPECrate-eq, headroom / failure-mode
   utilization, licensing delta, P50/P90, TCO), each with **Show calculation** expanders that reveal the formula,
   inputs, output, sources with clickable URLs and assumptions. Below: the bar chart of performance-normalized vs
   core-match vs GHz-match hosts, the Monte Carlo histogram, the Pareto chart, a sortable and filterable candidate
@@ -122,7 +122,7 @@ refreshsizer ingest <files...> --out project.json [--yes | --strict] [--no-llm]
 refreshsizer size project.json [--policy policy.yaml] [--growth 15] [--years 5] [--objective min_tco] [--p95-estimate]
                   [--cpu-vendor intel|amd] [--platforms R7725,R770] [--cpus "EPYC 9355,Xeon 6787P"]
                   [--stack vmware_vsan|nutanix_ahv|nutanix_esxi]
-                  [--storage auto|hci|external] [--array powerstore|existing]
+                  [--clusters single|per_cluster] [--storage auto|hci|external] [--array powerstore|existing]
                   [--protocol fc32|nvme_fc32|iscsi25|nvme_tcp25] [--array-drr 3]
 refreshsizer report project.json --format html,pdf,xlsx,docx,pptx,prompt --out reports/ [--lang fr] [--level customer|presales|full]
 refreshsizer email-prompt project.json [--lang fr] [--audience executive|technical] [--prices]
@@ -156,16 +156,25 @@ customer template is recognized next time. The ingest summary ends with a ready-
 
 ## Methodology (summary)
 
-1. **Source capacity** SU_cap(h) = SPC(cpu) × cores(h), SPC = SPECrate2017_int_base ÷ enabled cores.
+**Unit**: every CPU capacity and demand figure is in **SPECrate-eq** – throughput on the SPECrate2017_int_base
+scale (SPECrate2017_int_base per core × cores × utilization). It is an estimate derived from published results, not
+a SPEC result (the label is set in `refreshsizer/units.py` and `unit` in `report/i18n.yaml`).
+
+1. **Source capacity** Cap(h) = SPC(cpu) × cores(h), SPC = SPECrate2017_int_base ÷ enabled cores.
    POWER: rPerf/core(SMT) × cores × F (F = 0.425 conservative; S924 anchor 0.365, E1080 0.425).
    Missing CPU → other socket count (scaled), sibling SKU × clock ratio (ESTIMATE), user value, curated,
    generation average (LOW).
 2. **Mode per cluster** MEASURED (time-aligned cluster p95) / SUMMARY (Σ host p95, else peak) /
-   SNAPSHOT (× 1.4) / INVENTORY_ONLY (min(Σ assumed util × SU_cap, Σ vCPU × SPC)). Saturation > 80 % → × 1.10.
+   SNAPSHOT (× 1.4) / INVENTORY_ONLY (min(Σ assumed util × Cap, Σ vCPU × SPC)). Saturation > 80 % → × 1.10.
 3. **Adjustments** D0' = D0 × k_arch × k_virt × k_wl (RISC→x86: OLTP 1.25, SAP 1.15, other 1.10; bare metal →
    virtual 1.07).
 4. **Growth** D_T = D0' × (1+g)^T (+ step events). **Headroom** C_req = D_T ÷ U_max(class).
-5. **HA** N_active = ⌈C_req ÷ SU_host⌉, + N+1 (N+2 above 16 hosts); vSAN RAID-5 4+1 minimum 4 hosts; failure-mode
+   **Several source clusters** (default `consolidation: single`): each source cluster keeps its own demand
+   calculation and the target is ONE cluster sized on the sum (D_T, C_req = Σ D_T(c)/U_max(c), memory, storage;
+   growth step events once), with one HA reserve and, for external storage, one shared array. Per-core-licensed
+   databases keep their own target cluster while `split_clusters: auto`. `per_cluster` (UI: *Target clusters*, CLI
+   `--clusters per_cluster`) sizes one target cluster per source cluster as before.
+5. **HA** N_active = ⌈C_req ÷ Cap_host⌉, + N+1 (N+2 above 16 hosts); vSAN RAID-5 4+1 minimum 4 hosts; failure-mode
    utilization ≤ U_max.
 6. **Memory** M_T = M0 (1+g_m)^T (1+0.05) ÷ (1−0.05); balanced DIMMs, 1 DPC preferred.
    **Storage** HCI: Raw = Used0 (1+g_s)^T ÷ DRR × P_prot ÷ (1−slack). Disaggregated: Usable_req =

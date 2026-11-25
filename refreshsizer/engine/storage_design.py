@@ -93,7 +93,8 @@ def array_options(need_usable_tib: float, physical_today_tib: float, physical_t_
 
 
 def design(d: ClusterDemand, rec: Candidate | None, policy: Policy, prices: dict[str, Any],
-           stack_label: str) -> StorageDesign:
+           stack_label: str, n_hosts: int | None = None) -> StorageDesign:
+    """n_hosts: hosts attached to the array when it is shared by several target clusters (default rec.n_total)."""
     years = d.years
     drr = d.drr
     common: dict[str, Any] = dict(
@@ -101,7 +102,7 @@ def design(d: ClusterDemand, rec: Candidate | None, policy: Policy, prices: dict
         used0_tib=round(d.storage_used0_tib, 2), growth_pct=d.growth_storage_pct,
         used_t_tib=round(d.storage_used_t_tib, 2), iops0=d.iops0, iops_t=d.iops_t, backend_iops_t=d.backend_iops_t,
         read_pct=d.read_pct, mbps_t=d.mbps_t)
-    n = rec.n_total if rec else 0
+    n = n_hosts if n_hosts is not None else (rec.n_total if rec else 0)
     if not d.external_storage:
         phys_t = d.storage_effective_tib
         sd = StorageDesign(architecture="hci", solution=f"{stack_label} (HCI, storage on the server nodes)",

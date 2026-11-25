@@ -34,6 +34,7 @@ class HostCapacity(BaseModel):
 class ClusterDemand(BaseModel):
     cluster: str
     source_cluster: str
+    source_clusters: list[str] = Field(default_factory=list)  # consolidated target: every source cluster
     mode: SizingMode
     confidence: Confidence
     platform_type: str = "x86"
