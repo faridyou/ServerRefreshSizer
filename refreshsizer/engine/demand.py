@@ -209,14 +209,30 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
             d0 += su
             ka, _ = k_arch_for(ptype, w.workload_class, policy)
             k_arch_parts.append((su, ka))
-            ghz_used += (w.physc_p95 or 0) * (host.nominal_ghz if host and host.nominal_ghz else 3.5)
+            ghz_used += (w.physc_p95 or 0) * (host.nominal_ghz if host and host.nominal_ghz else
+                                              (3.5 if ptype in RISC else 2.5))
         paths["lpar"] = d0
+        # physc = physical cores BUSY at p95: more than the host has usually means core/vCPU counts were entered
+        busy: dict[str, float] = defaultdict(float)
+        for w in lpar:
+            busy[(w.host_id or "").lower()] += w.physc_p95 or 0
+        for h in hosts:
+            b = busy.get(h.host_id.lower(), 0.0)
+            if h.cores and b > h.cores:
+                flags.append(f"CHECK: workloads on host {h.host_id} declare {b:g} physical cores busy at p95 "
+                             f"(physc_p95) but the host has {h.cores} cores - physc_p95 is the MEASURED busy cores, "
+                             "not the core or vCPU count; leave it empty when usage is unknown (the P2V ratio then "
+                             "applies)")
+        risc = ptype in RISC
         expls.append(Explanation(
-            step_id="d0", title="POWER LPAR demand (physc p95 x rPerf/core x F)",
+            step_id="d0", title=("POWER LPAR demand (physc p95 x rPerf/core x F)" if risc else
+                                 "Workload demand (physical cores busy at p95 x SPC per core)"),
             formula_latex=r"D_0 = \sum_{lpar} physc_{p95} \times \frac{rPerf(smt)}{cores} \times F",
             formula_text=" + ".join(parts) + f" = {d0:,.2f} {UNIT} (rPerf demand {rperf_total:,.1f})",
             inputs={"lpars": len(lpar), "rperf_demand": round(rperf_total, 2)}, output=round(d0, 3), unit=UNIT,
-            confidence=Confidence.MEDIUM, assumptions=["rPerf->SPEC conversion factor F; cross-architecture"]))
+            confidence=Confidence.MEDIUM,
+            assumptions=(["rPerf->SPEC conversion factor F; cross-architecture"] if risc else
+                         ["physc_p95 = measured physical cores busy at p95 (100 % busy cores)"])))
     elif mode == SizingMode.SUMMARY and awr:
         parts = []
         for w in awr:
@@ -356,8 +372,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         d0 = min(cands) if cands else 0.0
         paths["inventory_host"] = host_path
         paths["inventory_vcpu"] = vcpu_path
-        ghz_used = sum((h.cores or 0) * (h.nominal_ghz or 0) * factor.get(h.host_id.lower(), a)
-                       for h in hosts) * share
+        ghz_used = sum((h.cores or 0) * (h.nominal_ghz or (3.5 if ptype in RISC else 2.5))  # unknown clock
+                       * factor.get(h.host_id.lower(), a) for h in hosts) * share
         n_phys = sum(len(v) for v in ratios.values())
         p2v_txt = "; ".join(f"{k}: {len(v)} server(s)" for k, v in ratios.items())
         if n_phys:
@@ -463,6 +479,7 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         spc_source_min=round(spc_lo, 4), spc_source_max=round(spc_hi, 4),
         source_cores=int(round(cores_total * share)), source_threads=int(round(threads * share)),
         source_ghz_used=round(ghz_used, 3), source_hosts=len(hosts),
+        used_cores_equiv=round(d0 / (spc_src or 5.0), 3),
         source_ghz_installed=round(sum((caps[h.host_id.lower()].cores if h.host_id.lower() in caps else (h.cores or 0))
                                        * (h.nominal_ghz or 0) for h in hosts) * share, 3), d0=round(d0, 4), d0_by_path=paths,
         k_arch=k_arch, k_virt=k_virt, d0_adj=round(d0_adj, 4), growth_cpu_pct=g, d_t=round(d_t, 4), u_max=u_max,

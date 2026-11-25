@@ -90,32 +90,28 @@ def test_reports_and_cli(fixtures_dir: Path, tmp_path: Path) -> None:
 
 
 def test_naive_core_and_ghz_match_are_consistent(fixtures_dir: Path) -> None:
-    """Regression: core match used INSTALLED cores while GHz match used USED GHz (e.g. 51 vs 6 hosts at ~16 % load).
-    Both now start from the same measured load, so they differ only by the clock ratio."""
+    """Regressions: (1) core match used INSTALLED cores while GHz match used USED GHz (51 vs 6 hosts at low load);
+    (2) on mixed estates (sources without clock speed, or without hosts) used GHz / installed GHz gave more used
+    cores than installed (40 instead of 27 hosts). Used cores now = measured demand / source SPEC per core."""
     import math
 
     from refreshsizer.catalog.loader import load_cpus
     from refreshsizer.engine.growth import growth_factor
-    from refreshsizer.engine.naive import naive, used_share
+    from refreshsizer.engine.ha import k_ha_for
+    from refreshsizer.engine.naive import naive
 
-    for files in ([MULTI], ["liveoptics_estate.xlsx"]):
-        _, run = _run(fixtures_dir, files)
+    for files, ov in (([MULTI], {}), (["liveoptics_estate.xlsx"], {}),
+                      (["liveoptics_estate.xlsx", "model_only_inventory.xlsx"], {"p2v_ratio": 3})):
+        _, run = _run(fixtures_dir, files, ov)
         cs = run.clusters[0]
         d, rec = cs.demand, cs.recommended
-        assert rec and d.source_ghz_installed > 0
-        share, _ = used_share(d)
-        assert 0 < share <= 1.0
+        assert rec and d.used_cores_equiv > 0
+        assert d.used_cores_equiv <= d.source_cores * 1.0001  # never more used cores than installed
+        assert d.used_cores_equiv == pytest.approx(d.d0 / d.spc_source, rel=0.02)
         cores_host = rec.config.total_cores
         ghz = load_cpus()[rec.config.cpu_id].base_ghz
         f = growth_factor(d.growth_cpu_pct, d.years)
-        core_need = d.source_cores * share * f / d.u_max
-        ghz_need = d.source_ghz_used * f / d.u_max
-        # used GHz = used cores x average source clock -> the two needs differ by the clock ratio only
-        avg_src_ghz = d.source_ghz_installed / d.source_cores
-        assert ghz_need / ghz == pytest.approx(core_need * avg_src_ghz / ghz, rel=1e-6)
+        n_act = max(1, math.ceil(d.used_cores_equiv * f / d.u_max / cores_host - 1e-9))
         nv = naive(d, cores_host, ghz, load_policy())
-        from refreshsizer.engine.ha import k_ha_for
-
-        n_act = max(1, math.ceil(core_need / cores_host - 1e-9))
         assert nv.core_match_hosts == n_act + k_ha_for(n_act, load_policy())
-        assert abs(nv.core_match_hosts - nv.ghz_match_hosts) <= max(2, nv.ghz_match_hosts)  # same order of magnitude
+        assert abs(nv.core_match_hosts - nv.ghz_match_hosts) <= max(2, nv.ghz_match_hosts)  # same order

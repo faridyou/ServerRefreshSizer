@@ -12,10 +12,14 @@ from refreshsizer.model.entities import Explanation
 
 
 def used_share(d: ClusterDemand) -> tuple[float, str]:
-    """Share of the installed source capacity actually used: used GHz / installed GHz (1.0 when unknown).
+    """Share of the installed source cores actually used (1.0 when unknown).
 
-    The same measured load as the recommended sizing, so both naive methods differ from it only by ignoring the
-    per-core performance gain (not by also ignoring utilization on one side)."""
+    Preferred: the measured demand expressed in today's cores (D0 / source SPEC per core), summed per source
+    cluster - correct even when some sources have no clock speed (unknown CPU) or no hosts (new VMs). Fallback:
+    used GHz / installed GHz. The same measured load as the recommended sizing, so both naive methods differ from it
+    only by ignoring the per-core performance gain."""
+    if d.used_cores_equiv > 0 and d.source_cores > 0:
+        return d.used_cores_equiv / d.source_cores, "measured demand / source SPEC per core"
     if d.source_ghz_installed > 0 and d.source_ghz_used > 0:
         return min(d.source_ghz_used / d.source_ghz_installed, 1.5), "used GHz / installed GHz"
     return 1.0, "no GHz data: installed cores"
@@ -24,7 +28,7 @@ def used_share(d: ClusterDemand) -> tuple[float, str]:
 def naive(d: ClusterDemand, target_cores_per_host: int, target_base_ghz: float, policy: Policy) -> NaiveResult:
     f = growth_factor(d.growth_cpu_pct, d.years)
     share, basis = used_share(d)
-    cores_used = d.source_cores * share
+    cores_used = d.used_cores_equiv if d.used_cores_equiv > 0 else d.source_cores * share
     core_need = cores_used * f / d.u_max
     n_c = max(1, math.ceil(core_need / target_cores_per_host - 1e-9))
     k_c = k_ha_for(n_c, policy)
@@ -34,7 +38,7 @@ def naive(d: ClusterDemand, target_cores_per_host: int, target_base_ghz: float, 
     e1 = Explanation(step_id="naive_core", title="Naive core match",
                      formula_latex=r"N = \lceil cores_{src} \times \frac{GHz_{used}}{GHz_{installed}} (1+g)^T / U_{max} "
                                    r"/ cores_{host} \rceil + k_{HA}",
-                     formula_text=(f"used cores {d.source_cores} x {share:.3f} ({basis}) = {cores_used:,.1f}; "
+                     formula_text=(f"used cores {cores_used:,.1f} of {d.source_cores} installed ({basis}); "
                                    f"ceil({cores_used:,.1f} x {f:.4f} / {d.u_max} / {target_cores_per_host}) + {k_c} "
                                    f"= {n_c} + {k_c} = {n_c + k_c} hosts"),
                      inputs={"source_cores": d.source_cores, "used_share": round(share, 4), "used_cores":

@@ -56,6 +56,17 @@ ENUMS = {
     "platform_type": PLATFORM_TYPES, "hypervisor": HYPERVISORS, "workload_class": WORKLOAD_CLASSES,
     "licensing": LICENSING, "criticality": CRITICALITY,
 }
+COMMENTS = {
+    "physc_p95": ("MEASURED physical cores busy at p95 (IBM POWER physc or measured x86 usage). NOT the core or vCPU "
+                  "count - leave empty if usage is unknown.",
+                  "Coeurs physiques MESURES occupes au p95 (physc POWER ou usage x86 mesure). PAS le nombre de coeurs "
+                  "ou de vCPU - laisser vide si inconnu."),
+    "db_cpu_p95_cores": ("Database CPU (AWR) in cores busy at p95 - measured, not licensed cores.",
+                         "CPU base de donnees (AWR) en coeurs occupes au p95 - mesure, pas coeurs licencies."),
+    "p2v_ratio": ("Physical server without utilization: pCore:vCore ratio (3 = 3 of today's cores per new core).",
+                  "Serveur physique sans utilisation : ratio coeur physique / coeur virtuel (3 = 3 coeurs actuels "
+                  "par coeur neuf)."),
+}
 REQUIRED_HOST = ("host_id",)
 REQUIRED_WL = ("workload_id",)
 
@@ -74,12 +85,20 @@ def generate_template(out: Path, lang: str = "en") -> Path:
          "Fill one row per physical host (Hosts) and per VM/LPAR/database (Workloads).",
          "Utilization in % (0-100). Memory in GB (GiB). Storage in GiB/TiB as labelled.",
          "cpu_model: exact string, e.g. 'Intel Xeon E5-2680 v4' or 'IBM POWER9'.",
+         "physc_p95 (Workloads): MEASURED physical cores busy at the 95th percentile (IBM POWER 'physc', or measured "
+         "x86 usage). It is NOT the core or vCPU count: leave it empty when usage is unknown.",
+         "p2v_ratio (Hosts): for physical servers without utilization, pCore:vCore ratio (3 = three of today's "
+         "cores per new core). Empty = the project-wide ratio.",
          "Policy: key/value overrides (dotted keys allowed, e.g. growth.cpu_pct = 12)."]
         if lang != "fr" else
         ["Modele de saisie RefreshSizer", "",
          "Une ligne par serveur physique (Hotes) et par VM/LPAR/base (Charges).",
          "Utilisation en % (0-100). Memoire en Go (Gio). Stockage en Gio/Tio selon l'en-tete.",
          "modele_cpu : chaine exacte, ex. 'Intel Xeon E5-2680 v4' ou 'IBM POWER9'.",
+         "physc_p95 (Charges) : coeurs physiques MESURES occupes au 95e percentile (physc IBM POWER, ou usage x86 "
+         "mesure). Ce n'est PAS le nombre de coeurs ou de vCPU : laisser vide si l'usage est inconnu.",
+         "ratio_p2v (Hotes) : serveurs physiques sans utilisation, ratio coeur physique / coeur virtuel (3 = trois "
+         "coeurs actuels par coeur neuf). Vide = ratio global du projet.",
          "Politique : surcharges cle/valeur (cles pointees, ex. growth.cpu_pct = 12)."]
     )
     for i, line in enumerate(lines, 1):
@@ -102,6 +121,10 @@ def generate_template(out: Path, lang: str = "en") -> Path:
             cell = ws.cell(row=1, column=c, value=_hdr(f, lang))
             cell.font = bold
             cell.fill = fill
+            if f in COMMENTS:
+                from openpyxl.comments import Comment
+
+                cell.comment = Comment(COMMENTS[f][1 if lang == "fr" else 0], "RefreshSizer")
             ws.column_dimensions[cell.column_letter].width = max(12, len(str(cell.value)) + 2)
             if f in list_refs:
                 dv = DataValidation(type="list", formula1=f"={list_refs[f]}", allow_blank=True)

@@ -237,3 +237,21 @@ def test_nutanix_min_nodes_and_validation() -> None:
     assert ha.plan(10, 13.3, 100, load_policy(VSAN), "nutanix_rf2").n_total == 3
     with pytest.raises(ValueError, match="target_stack"):
         load_policy(VSAN, {"target_stack": "hyperv"})
+
+
+def test_physc_above_host_cores_is_flagged_and_x86_wording() -> None:
+    """physc_p95 = MEASURED busy cores; 28 busy cores on a 20-core x86 server is flagged (likely a core/vCPU count)."""
+    from refreshsizer.benchmarks.curated_db import ensure_db
+    from refreshsizer.engine.demand import compute_demand
+    from refreshsizer.engine.modes import select_mode
+    from refreshsizer.model.entities import Cluster, SourceHost, SourceWorkload
+
+    c = Cluster(name="BDN", hosts=[SourceHost(host_id="srv1", cluster="BDN", sockets=2, cores_per_socket=10,
+                                              hypervisor="bare-metal")],
+                workloads=[SourceWorkload(workload_id="w1", host_id="srv1", cluster="BDN", vcpu=28, physc_p95=28)])
+    mode, _, _ = select_mode(c)
+    d = compute_demand(c, mode, load_policy(VSAN), ensure_db())
+    assert any("declare 28 physical cores busy" in f and "has 20 cores" in f for f in d.flags)
+    e = next(x for x in d.explanations if x.step_id == "d0")
+    assert e.title.startswith("Workload demand") and "POWER" not in e.title
+    assert d.source_ghz_used == pytest.approx(28 * 2.5)  # unknown x86 clock: 2.5 GHz, not POWER's 3.5

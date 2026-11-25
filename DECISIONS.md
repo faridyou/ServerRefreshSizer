@@ -419,3 +419,13 @@ Each entry: **decision** – reason – how to change it.
      demand. Ratios are set on the Ingest summary (global, per cluster, per server, patterns) and saved in
      policy.yaml (`p2v_ratio`, `p2v_overrides`); the Policy page keeps them when saved. The vCPU:pCore check does
      not apply to these servers (they have no VM list).
+111. **Naive core match on mixed estates** (bug, field report: 40 hosts): used cores were installed cores x (used GHz
+     / installed GHz). With sources lacking a clock speed (unknown CPU) or hosts (new VMs), used GHz included them
+     but installed GHz did not, giving more "used" cores than installed (819 of 546). Used cores are now each source
+     cluster's measured demand expressed in its own cores (D0 / source SPEC per core), summed when consolidating
+     (`used_cores_equiv`). Same estate: 27 hosts.
+112. **physc_p95 on x86**: it means MEASURED physical cores busy at p95. The demand step is now titled "Workload
+     demand" for x86 (was "POWER LPAR demand"), an unknown x86 clock is 2.5 GHz for the GHz comparison (3.5 stays
+     for POWER), and a CHECK flag is raised when a host's workloads declare more busy cores than the host has -
+     the usual sign that core or vCPU counts were typed in. The manual template README and header comments say
+     to leave it empty when usage is unknown, so the P2V ratio applies.
