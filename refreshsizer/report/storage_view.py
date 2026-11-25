@@ -28,6 +28,8 @@ def storage_view(sd: StorageDesign | None, t: Any, level: str) -> dict[str, Any]
         (t("st_protection"), (f"PowerStore DRE, {sd.parity} parity" if ext and sd.array else
                               "-" if ext else sd.protection_label)),
         (t("st_used0"), _tib(sd.used0_tib)),
+        *([(t("st_inactive"), t("st_inactive_val").replace("{n}", str(sd.inactive_vms))
+            .replace("{s}", _tib(sd.inactive_tib)))] if sd.inactive_tib else []),
         (t("st_growth"), f"{sd.growth_pct:g} %/yr x {y} yr -> {_tib(sd.used_t_tib)}"),
         (t("st_drr"), f"{sd.drr:.2f}:1"),
         (t("st_physical").replace("{y}", str(y)), _tib(sd.physical_t_tib)),

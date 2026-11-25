@@ -105,7 +105,7 @@ def size_cluster(c: Cluster, policy: Policy, cache: BenchCache, prices: dict[str
         if progress:
             progress(k / len(parts), f"{name}: demand, optimizer")
         d: ClusterDemand = compute_demand(c, mode, policy, cache, name=name, workloads=wls, share=share,
-                                          is_db_cluster=is_db)
+                                          is_db_cluster=is_db, include_inactive=not is_db or len(parts) == 1)
         d.flags.insert(0, f"mode {d.mode.value}: {why}")
         cs = size_demand(d, policy, cache, prices, _sub(progress, k, len(parts)))
         cs.storage = storage_design(d, cs.recommended, policy, prices, stack_label(policy, d.external_storage))
@@ -133,8 +133,10 @@ def size_consolidated(todo: list[Cluster], policy: Policy, cache: BenchCache, pr
         if progress:
             progress(0.05 * i / len(todo), f"{c.name}: demand")
         mode, _, why = select_mode(c)
-        for name, wls, share, is_db in split_cluster(c, policy):
-            d = compute_demand(c, mode, p_parts, cache, name=name, workloads=wls, share=share, is_db_cluster=is_db)
+        split = split_cluster(c, policy)
+        for name, wls, share, is_db in split:
+            d = compute_demand(c, mode, p_parts, cache, name=name, workloads=wls, share=share, is_db_cluster=is_db,
+                               include_inactive=not is_db or len(split) == 1)
             d.flags.insert(0, f"mode {d.mode.value}: {why}")
             parts.append((d, c, wls))
     groups = [(f"{CONSOLIDATED}-db", [x for x in parts if x[0].is_db_cluster]),
@@ -190,7 +192,7 @@ def size_project(project: Project, policy: Policy, cache: BenchCache | None = No
     cache = cache or ensure_db()
     prices = prices or load_prices()
     clusters = []
-    todo = [c for c in project.clusters if c.hosts or c.workloads]
+    todo = [c for c in project.clusters if c.hosts or c.workloads]  # a cluster with only powered-off VMs: no compute
     if policy.consolidation == "single" and len(todo) > 1:
         clusters = size_consolidated(todo, policy, cache, prices, progress)
     else:

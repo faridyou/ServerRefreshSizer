@@ -128,6 +128,7 @@ class Policy(BaseModel):
     mapping_strict_threshold: float = 0.9
     exclude_templates: bool = True
     exclude_powered_off: bool = True
+    storage_include_powered_off: bool = True
     report_lang: str = "en"
 
     @model_validator(mode="after")

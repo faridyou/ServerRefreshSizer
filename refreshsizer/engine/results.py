@@ -89,6 +89,8 @@ class ClusterDemand(BaseModel):
     mbps_t: float = 0.0
     # workloads
     vm_count: int = 0
+    inactive_vms: int = 0  # powered-off VMs / templates excluded from CPU and memory
+    inactive_storage_tib: float = 0.0  # their storage, included when storage_include_powered_off
     total_vcpu: float = 0.0
     largest_vm_vcpu: float = 0.0
     licensing: dict[str, dict[str, float]] = Field(default_factory=dict)
@@ -204,6 +206,8 @@ class StorageDesign(BaseModel):
     years: int
     used0_tib: float
     growth_pct: float
+    inactive_vms: int = 0
+    inactive_tib: float = 0.0  # part of used0_tib from powered-off VMs / templates
     used_t_tib: float
     drr: float
     physical_t_tib: float                  # after data reduction

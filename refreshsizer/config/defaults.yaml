@@ -89,4 +89,5 @@ mapping_yes_threshold: 0.6
 mapping_strict_threshold: 0.9
 exclude_templates: true
 exclude_powered_off: true
+storage_include_powered_off: true   # storage of excluded powered-off VMs / templates is still sized (their disks migrate)
 report_lang: en

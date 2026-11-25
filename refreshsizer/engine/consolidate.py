@@ -117,7 +117,8 @@ def merge_demands(parts: list[ClusterDemand], name: str, policy: Policy, events:
         backend_iops_t=round(_sum(parts, "backend_iops_t"), 1),
         read_pct=round(sum(p.read_pct * p.iops_t for p in parts) / iops_t, 2) if iops_t else main.read_pct,
         mbps0=round(_sum(parts, "mbps0"), 1), mbps_t=round(_sum(parts, "mbps_t"), 1),
-        vm_count=int(_sum(parts, "vm_count")), total_vcpu=_sum(parts, "total_vcpu"),
+        vm_count=int(_sum(parts, "vm_count")), inactive_vms=int(_sum(parts, "inactive_vms")),
+        inactive_storage_tib=round(_sum(parts, "inactive_storage_tib"), 4), total_vcpu=_sum(parts, "total_vcpu"),
         largest_vm_vcpu=max(p.largest_vm_vcpu for p in parts), licensing={k: dict(v) for k, v in lic.items()},
         hosts=[h for p in parts for h in p.hosts], explanations=expls,
         flags=list(dict.fromkeys([f"consolidated from {len(sources)} source clusters: {', '.join(sources)}"]

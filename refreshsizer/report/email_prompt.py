@@ -174,6 +174,9 @@ def _cluster_facts(c: dict[str, Any], t: Any, x: dict[str, str], prices: bool) -
     if st:
         line = f"- {x['storage']}: {st.solution}; {st.used0_tib:,.1f} TiB used today -> {st.used_t_tib:,.1f} TiB " \
                f"in year {st.years} ({st.growth_pct:g} %/yr), data reduction {st.drr:.1f}:1"
+        if st.inactive_tib:
+            line += f" (today's figure includes {st.inactive_tib:,.1f} TiB of {st.inactive_vms} powered-off VMs / " \
+                    "templates, kept because their disks migrate; ask whether they can be deleted)"
         if st.usable_tib:
             line += f"; {st.usable_tib:,.1f} TiB usable / {st.effective_tib:,.1f} TiB effective, fill " \
                     f"{st.fill_today:.0%} today and {st.fill_t:.0%} in year {st.years}"

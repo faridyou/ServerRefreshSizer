@@ -23,6 +23,8 @@ class ParseResult:
     file: str
     hosts: list[SourceHost] = field(default_factory=list)
     workloads: list[SourceWorkload] = field(default_factory=list)
+    # powered-off VMs and templates: excluded from CPU/memory, their disks still need capacity on the target
+    inactive_workloads: list[SourceWorkload] = field(default_factory=list)
     storage: list[StorageArray] = field(default_factory=list)
     timeseries: list[TimeSeriesPoint] = field(default_factory=list)
     mappings: list[MappingEntry] = field(default_factory=list)
@@ -86,10 +88,14 @@ def assemble(results: list[ParseResult], name: str = "RefreshSizer project") -> 
             c.workloads.append(w)
             if r.utilization_source:
                 c.utilization_source = c.utilization_source or r.utilization_source
+        for w in r.inactive_workloads:
+            if w.host_id and w.host_id.lower() in host_index:
+                w.cluster = host_index[w.host_id.lower()].cluster
+            proj.cluster(w.cluster).inactive_workloads.append(w)
         for s in r.storage:
             proj.cluster(s.cluster).storage.append(s)
         for p in r.timeseries:
             h2 = host_index.get(p.host_id.lower())
             proj.cluster(h2.cluster if h2 else "default").timeseries.append(p)
-    proj.clusters = [c for c in proj.clusters if c.hosts or c.workloads or c.storage]
+    proj.clusters = [c for c in proj.clusters if c.hosts or c.workloads or c.storage or c.inactive_workloads]
     return proj

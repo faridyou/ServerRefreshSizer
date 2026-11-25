@@ -242,17 +242,16 @@ def universal_ingest(files: list[Path], *, policy: Policy, review_mode: str = "y
                 name = d.get("vm_name")
                 if not name:
                     continue
-                if d.get("powerstate") is False and policy.exclude_powered_off:
-                    continue
+                off = d.get("powerstate") is False and policy.exclude_powered_off
                 wc = str(d.get("workload_class") or "general_virt").lower()
                 lic = str(d.get("licensing") or "none").lower()
-                vms.append(SourceWorkload(
+                (res.inactive_workloads if off else vms).append(SourceWorkload(
                     workload_id=str(name), name=str(name), host_id=d.get("host_ref"),
                     cluster=d.get("cluster") or "default", vcpu=d.get("vcpu"),
                     ram_gb_configured=d.get("ram_gb_configured"), storage_used_gib=d.get("storage_used"),
                     storage_provisioned_gib=d.get("storage_provisioned"), os=d.get("os"),
                     iops_p95=d.get("iops_p95"), workload_class=wc if wc in WORKLOAD_CLASSES else "general_virt",
-                    licensing=lic if lic in LICENSING else "none"))
+                    licensing=lic if lic in LICENSING else "none", powered_on=not off))
         elif cls == "performance_timeseries":
             for row in t.rows:
                 d = _row_values(t, row, maps, fracs)

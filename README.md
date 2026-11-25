@@ -70,6 +70,9 @@ What you see, page by page:
   can be ticked); drive media TLC by default (`external_storage.media: qlc` or `any` for capacity-optimized QLC).
   **Nutanix AHV + PowerStore** (NCI 7.6+) is supported: NVMe/TCP only, a single-appliance PowerStore cluster, at least
   3 compute nodes, CVM still reserved on each node, Nutanix NCI licensing; Nutanix on ESXi stays HCI only.
+* **Powered-off VMs and templates** are not counted for CPU and memory, but their **storage is kept** (their
+  disks migrate) unless you turn off `storage_include_powered_off` (Policy, Storage). The Ingest summary lists them per
+  cluster and adds a customer question asking whether they will be deleted.
 * **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
   HA, memory, storage (protection, slack, DRR), external storage (DRE parity, max fill, array data reduction,
   ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization

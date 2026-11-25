@@ -9,6 +9,16 @@
 <td>{{ r.mode }}</td><td><span class="tag {{ {'HIGH':'hi','MEDIUM':'mid'}.get(r.confidence, 'lo') }}">{{ r.confidence }}</span></td></tr>{% endfor %}
 <tr><th>{{ t('ui_overall') }}</th><th class="num">{{ total.hosts }}</th><th class="num">{{ total.sockets }}</th><th class="num">{{ total.cores }}</th><th class="num">{{ total.ram_gb | fmt }}</th><th class="num">{{ total.vms }}</th><th class="num">{{ total.vcpu | fmt }}</th><th class="num">{{ total.vram_gb | fmt }}</th><th class="num">{{ total.storage_prov_tib | fmt }}</th><th class="num">{{ total.storage_used_tib | fmt }}</th><th class="num">{{ total.iops | fmt }}</th><th></th><th></th></tr>
 </tbody></table></div>
+{% set offrows = rows | selectattr('off.count') | list %}{% if offrows %}
+<div class="card" id="powered-off"><h3>{{ t('ui_off_title') }}</h3>
+{% for r in offrows %}{% set o = r.off %}<p><b>{{ r.cluster }}</b>: {{ t('ui_off_line') | replace('{n}', o.powered_off | string) | replace('{k}', o.templates | string) | replace('{v}', o.vcpu | fmt) | replace('{m}', o.vram_gb | fmt) | replace('{s}', o.used_tib | fmt) }}
+{% if not policy_keeps_off %}<span class="tag mid">{{ t('ui_off_storage_excluded') }}</span>{% endif %}</p>
+<details><summary class="small">{{ t('ui_off_list') }} ({{ o.count }})</summary>
+<table class="small"><thead><tr><th>VM</th><th>{{ t('ui_off_state') }}</th><th class="num">vCPU</th><th class="num">RAM GB</th><th class="num">{{ t('ui_off_used') }}</th><th class="num">{{ t('ui_off_prov') }}</th><th>OS</th></tr></thead><tbody>
+{% for w in o.list %}<tr><td>{{ w.name }}</td><td>{{ t('ui_off_template') if w.is_template else t('ui_off_powered_off') }}</td><td class="num">{{ w.vcpu | fmt }}</td><td class="num">{{ w.ram_gb_configured | fmt }}</td>
+<td class="num">{{ ((w.storage_used_gib or 0) / 1024) | round(2) }}</td><td class="num">{{ ((w.storage_provisioned_gib or 0) / 1024) | round(2) }}</td><td class="small">{{ w.os or '' }}</td></tr>{% endfor %}
+</tbody></table></details>{% endfor %}
+<p class="small muted">{{ t('ui_off_hint') }}</p></div>{% endif %}
 <div class="cols2">
 <div class="card"><h3>{{ t('questions') }} (EN) <button class="sec" data-copy="q_en" data-done="{{ t('ui_copied') }}">{{ t('ui_copy') }}</button></h3>
 <ol id="q_en">{% for q in project.customer_questions %}<li>{{ q }}</li>{% endfor %}</ol></div>

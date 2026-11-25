@@ -80,7 +80,9 @@ def _host_util(h: SourceHost, policy: Policy) -> tuple[float | None, str, list[s
 
 def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: BenchCache, *,
                    name: str | None = None, workloads: list[SourceWorkload] | None = None, share: float = 1.0,
-                   is_db_cluster: bool = False) -> ClusterDemand:
+                   is_db_cluster: bool = False, include_inactive: bool = True) -> ClusterDemand:
+    """include_inactive: this target part carries the storage of the cluster's powered-off VMs / templates
+    (policy storage_include_powered_off); with a database split only the non-database part does."""
     wls = list(cluster.workloads if workloads is None else workloads)
     hosts = list(cluster.hosts)
     years = policy.horizon_years
@@ -387,7 +389,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
                      f"{policy.nutanix_cvm_memory_gb:g} GB per node; storage "
                      + ("on an external array" if external else "on Nutanix DSF"))
     prot, prot_note = resolve_protection(policy, bool(external))
-    sd = storage_demand(wls, hosts, cluster.storage, share, policy, mode, years, prot)
+    inactive = list(cluster.inactive_workloads) if include_inactive and policy.storage_include_powered_off else []
+    sd = storage_demand(wls, hosts, cluster.storage, share, policy, mode, years, prot, inactive)
     expls += sd["explanations"]
     flags += sd["flags"]
     if external:
@@ -421,7 +424,8 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
         p_prot=sd["p_prot"], drr=round(sd["drr"], 4), growth_storage_pct=policy.growth.storage_pct,
         iops0=round(sd["iops0"], 1), iops_t=round(sd["iops_t"], 1), backend_iops_t=round(sd["backend"], 1),
         read_pct=sd["read_pct"], mbps0=round(sd["mbps0"], 1), mbps_t=round(sd["mbps_t"], 1),
-        vm_count=len(wls), total_vcpu=sum(w.vcpu or 0 for w in x86_vms),
+        vm_count=len(wls), inactive_vms=len(cluster.inactive_workloads) if include_inactive else 0,
+        inactive_storage_tib=round(sd["inactive_tib"], 4), total_vcpu=sum(w.vcpu or 0 for w in x86_vms),
         largest_vm_vcpu=max((w.vcpu or 0 for w in x86_vms), default=0), licensing=lic, hosts=hcs,
         explanations=expls, flags=list(dict.fromkeys(flags)), source_refs=sorted(set(refs)))
     if mode == SizingMode.INVENTORY_ONLY:

@@ -44,6 +44,11 @@ Q: dict[str, dict[str, str]] = {
                 "fr": "[{c}] Capacité de stockage utilisée par VM ou par datastore ?"},
     "vms": {"en": "[{c}] VM/workload list with vCPU, configured memory and used storage?",
             "fr": "[{c}] Liste des VM/charges avec vCPU, mémoire configurée et stockage utilisé ?"},
+    "off": {"en": "[{c}] {n} powered-off VMs and {k} templates ({s:.1f} TiB used storage) are not counted for CPU "
+                  "and memory; their storage is kept in the sizing. Will they be migrated, or can they be deleted?",
+            "fr": "[{c}] {n} VM éteintes et {k} modèles ({s:.1f} To utilisés) ne sont pas comptés pour le CPU et la "
+                  "mémoire ; leur stockage est conservé dans le dimensionnement. Seront-ils migrés ou peuvent-ils être "
+                  "supprimés ?"},
     "growth": {"en": "Expected annual growth (CPU, memory, storage) and planning horizon? (default 15/10/20 %, "
                      "5 years)",
                "fr": "Croissance annuelle attendue (CPU, mémoire, stockage) et horizon de planification ? (défaut "
@@ -78,7 +83,23 @@ def cluster_questions(c: Cluster, mode: SizingMode) -> list[tuple[str, str]]:
         qs.append(_q("storage", c=c.name))
     if not c.workloads:
         qs.append(_q("vms", c=c.name))
+    off = inactive_stats(c)
+    if off["count"]:
+        qs.append(_q("off", c=c.name, n=off["powered_off"], k=off["templates"], s=off["used_tib"]))
     return list(dict.fromkeys(qs))
+
+
+def inactive_stats(c: Cluster) -> dict[str, Any]:
+    """Powered-off VMs and templates kept aside at ingest (not in CPU/memory; storage kept by policy)."""
+    ws = c.inactive_workloads
+    return {"count": len(ws), "templates": sum(1 for w in ws if w.is_template),
+            "powered_off": sum(1 for w in ws if not w.is_template),
+            "vcpu": round(sum(w.vcpu or 0 for w in ws), 1),
+            "vram_gb": round(sum(w.ram_gb_configured or 0 for w in ws), 1),
+            "used_tib": round(sum((w.storage_used_gib if w.storage_used_gib is not None else
+                                   (w.storage_provisioned_gib or 0)) for w in ws) / 1024, 2),
+            "prov_tib": round(sum(w.storage_provisioned_gib or 0 for w in ws) / 1024, 2),
+            "list": sorted(ws, key=lambda w: -(w.storage_used_gib or w.storage_provisioned_gib or 0))}
 
 
 def finalize_project(project: Project, policy: Policy) -> Project:
@@ -130,7 +151,8 @@ def estate_summary(project: Project) -> list[dict[str, Any]]:
             "storage_used_tib": round(sum(w.storage_used_gib or 0 for w in c.workloads) / 1024, 2),
             "iops": round(sum((h.iops_p95 or h.iops_peak or 0) for h in c.hosts)
                           or sum((w.iops_p95 or 0) for w in c.workloads)),
-            "mode": d.mode.value if d else "", "confidence": d.confidence.value if d else ""})
+            "mode": d.mode.value if d else "", "confidence": d.confidence.value if d else "",
+            "off": inactive_stats(c)})
     return rows
 
 
@@ -165,6 +187,12 @@ def render_ingest_summary(project: Project, console: Console | None = None, lang
                    str(r["vms"]), f"{r['vcpu']:,.0f}", f"{r['vram_gb']:,.0f}", f"{r['storage_prov_tib']:,.1f}",
                    f"{r['storage_used_tib']:,.1f}", f"{r['iops']:,}", r["mode"], r["confidence"])
     con.print(et)
+    for r in rows:
+        o = r["off"]
+        if o["count"]:
+            con.print(f"  [{r['cluster']}] {o['powered_off']} powered-off VMs and {o['templates']} templates not counted "
+                      f"for CPU/memory ({o['vcpu']:,.0f} vCPU, {o['vram_gb']:,.0f} GB); their {o['used_tib']:,.2f} TiB "
+                      "used storage is kept (storage_include_powered_off)", markup=False)
     for r in rows:
         for cpu, bench in r["cpu_models"].items():
             con.print(f"  [{r['cluster']}] {cpu} -> {bench}", markup=False)

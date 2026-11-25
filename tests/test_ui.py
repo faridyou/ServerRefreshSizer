@@ -559,3 +559,12 @@ def test_reports_list_sorted_zip_and_delete(ui: UI, fixtures_dir: Path) -> None:
     r = ui.c.post(f"/p/{name}/reports/selection", data={"action": "delete", "f": [old.name]})
     assert r.status_code == 200 and "1 file(s) deleted" in r.text
     assert not old.exists() and new.exists()
+
+
+def test_powered_off_card_on_summary(ui: UI, fixtures_dir: Path) -> None:
+    name = ui.new("off")
+    ui.upload(name, fixtures_dir / "rvtools_estate.xlsx")
+    ui.ingest(name)
+    page = ui.c.get(f"/p/{name}/summary").text
+    assert 'id="powered-off"' in page and "5 powered-off VMs and 3 templates" in page
+    assert "storage excluded by policy" not in page

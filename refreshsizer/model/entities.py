@@ -203,6 +203,7 @@ class Cluster(BaseModel):
     name: str
     hosts: list[SourceHost] = Field(default_factory=list)
     workloads: list[SourceWorkload] = Field(default_factory=list)
+    inactive_workloads: list[SourceWorkload] = Field(default_factory=list)  # powered-off VMs / templates
     storage: list[StorageArray] = Field(default_factory=list)
     timeseries: list[TimeSeriesPoint] = Field(default_factory=list)
     utilization_source: str | None = None  # rvtools | liveoptics | manual | nmon | awr | universal

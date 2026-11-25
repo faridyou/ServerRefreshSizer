@@ -43,7 +43,9 @@ def resolve_protection(policy: Policy, external: bool) -> tuple[str, str]:
 
 
 def storage_demand(workloads: list[SourceWorkload], hosts: list[SourceHost], arrays: list[StorageArray],
-                   share: float, policy: Policy, mode: SizingMode, years: int, protection: str) -> dict[str, Any]:
+                   share: float, policy: Policy, mode: SizingMode, years: int, protection: str,
+                   inactive: list[SourceWorkload] | None = None) -> dict[str, Any]:
+    """inactive: powered-off VMs / templates - their disks are added (they occupy capacity and migrate)."""
     flags: list[str] = []
     by_class: dict[str, float] = {}
     inventory = mode == SizingMode.INVENTORY_ONLY
@@ -61,6 +63,17 @@ def storage_demand(workloads: list[SourceWorkload], hosts: list[SourceHost], arr
         if tot:
             by_class["default"] = tot
             basis = "array/datastore used"
+    inactive_tib = 0.0
+    for w in (list(inactive or []) if basis != "array/datastore used" else []):  # datastores include them
+        v = w.storage_used_gib if w.storage_used_gib is not None else w.storage_provisioned_gib
+        if inventory and w.storage_provisioned_gib is not None:
+            v = w.storage_provisioned_gib
+        if v:
+            inactive_tib += v / 1024.0
+            by_class[w.workload_class] = by_class.get(w.workload_class, 0.0) + v / 1024.0
+    if inactive_tib:
+        flags.append(f"storage includes {inactive_tib:,.2f} TiB of {len(inactive or [])} powered-off VMs / templates "
+                     "(excluded from CPU and memory; set storage_include_powered_off: false if they will be deleted)")
     if not by_class:
         flags.append("ASSUMPTION: no storage capacity data; storage sized at 0 - customer question raised")
     used0 = sum(by_class.values())
@@ -77,7 +90,7 @@ def storage_demand(workloads: list[SourceWorkload], hosts: list[SourceHost], arr
         formula_latex=r"Raw = \frac{Used_0 (1+g_s)^T / DRR \times P_{prot}}{1 - slack}",
         formula_text=(f"{used0:,.2f} TiB x (1 + {g:g} %)^{years} = {used_t:,.2f} TiB; / DRR {drr_eff:.2f} = "
                       f"{eff:,.2f} TiB; x {pp} / (1 - {policy.slack}) = {raw:,.2f} TiB raw"),
-        inputs={"Used0_TiB": round(used0, 3), "basis": basis, "g_s_pct": g, "T": years, "DRR": round(drr_eff, 3),
+        inputs={"Used0_TiB": round(used0, 3), "of_which_powered_off_TiB": round(inactive_tib, 3), "basis": basis, "g_s_pct": g, "T": years, "DRR": round(drr_eff, 3),
                 "P_prot": pp, "protection": protection, "slack": policy.slack, "by_class_TiB":
                 {k: round(v, 2) for k, v in by_class.items()}},
         output=round(raw, 3), unit="TiB", assumptions=flags)
@@ -114,7 +127,7 @@ def storage_demand(workloads: list[SourceWorkload], hosts: list[SourceHost], arr
     if not mbps0:
         mbps0 = sum((a.mbps_p95 or 0) for a in arrays) * share
     mbps_t = mbps0 * growth_factor(gi, years)
-    return {"used0": used0, "used_t": used_t, "effective": eff, "raw": raw, "p_prot": pp, "drr": drr_eff,
+    return {"inactive_tib": inactive_tib, "used0": used0, "used_t": used_t, "effective": eff, "raw": raw, "p_prot": pp, "drr": drr_eff,
             "iops0": iops0, "iops_t": iops_t, "backend": backend, "read_pct": read_pct, "mbps0": mbps0,
             "mbps_t": mbps_t, "explanations": [expl, iexpl], "flags": flags}
 

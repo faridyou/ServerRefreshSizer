@@ -397,3 +397,14 @@ Each entry: **decision** – reason – how to change it.
      (one .zip built in memory, named `<project>_reports_<date>.zip`) and "Delete selected" (browser confirmation;
      only files of the project's own reports folder can be selected - other names give 404). The `project.json` in
      that list is an export copy; deleting it does not affect the project.
+109. **Powered-off VMs and templates**: still excluded from CPU, memory, vCPU ratios, VM counts and licensing
+     (`exclude_powered_off`, `exclude_templates`), but no longer dropped at import - every parser (RVTools, Live
+     Optics, universal) keeps them in `Cluster.inactive_workloads`. Their disks occupy capacity and migrate, so the
+     storage sizing adds their used capacity (provisioned in inventory-only mode) by default
+     (`storage_include_powered_off: true`); turn it off when the customer confirms they will be deleted. When the
+     storage basis falls back to datastore/array totals they are not added (those totals already include them).
+     With a database split, only the non-database target part carries them. The Ingest summary lists them per
+     cluster (count, vCPU, RAM, storage, VM list), a customer question asks whether they will be migrated or
+     deleted, the storage design shows "of which powered-off VMs / templates", and the email prompt mentions it.
+     Live Optics imports now also state how many VMs were excluded (only RVTools did). Example (real Live Optics
+     VMware file): 48 of 94 VMs powered off / templates, 6.1 TiB of 15.3 TiB used storage that was missing.

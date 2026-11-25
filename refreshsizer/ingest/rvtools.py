@@ -156,12 +156,9 @@ def parse(path: Path, exclude_templates: bool = True, exclude_powered_off: bool 
                 continue
             tmpl = to_bool(m.get(row, "template"), False)
             on = to_bool(m.get(row, "powerstate"), True)
-            if tmpl and exclude_templates:
-                excluded["template"] += 1
-                continue
-            if not on and exclude_powered_off:
-                excluded["off"] += 1
-                continue
+            inactive = (tmpl and exclude_templates) or (not on and exclude_powered_off)
+            if inactive:
+                excluded["template" if tmpl else "off"] += 1
             host = to_str(m.get(row, "host"))
             cluster = to_str(m.get(row, "cluster"))
             if not cluster and host and host.lower() in hosts:
@@ -182,11 +179,12 @@ def parse(path: Path, exclude_templates: bool = True, exclude_powered_off: bool 
             )
             if w.os and "windows" in w.os.lower():
                 w.licensing = "none"
-            res.workloads.append(w)
+            (res.inactive_workloads if inactive else res.workloads).append(w)
         res.transformations.append("vInfo: Memory/Provisioned/In Use MiB -> GiB")
         if excluded["template"] or excluded["off"]:
             res.transformations.append(
-                f"vInfo: excluded {excluded['template']} templates and {excluded['off']} powered-off VMs")
+                f"vInfo: excluded {excluded['template']} templates and {excluded['off']} powered-off VMs from "
+                "CPU/memory (their storage is kept, see storage_include_powered_off)")
 
     for name in sheets:
         res.sheets.append(SheetUse(file=path.name, sheet=name, used=name in used,

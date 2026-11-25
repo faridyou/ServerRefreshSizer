@@ -13,7 +13,7 @@ GROUPS: list[tuple[str, list[str]]] = [
                   "max_hosts_per_cluster_user", "stretched_cluster"]),
     ("ui_pg_memory", ["memory_basis", "hypervisor_mem_overhead", "mem_free_reserve", "memory_overcommit_ratio",
                       "active_memory_factor"]),
-    ("ui_pg_storage", ["protection", "slack", "drr.*", "min_drives_per_host"]),
+    ("ui_pg_storage", ["storage_include_powered_off", "protection", "slack", "drr.*", "min_drives_per_host"]),
     ("ui_pg_external", ["external_storage.media", "external_storage.parity", "external_storage.max_fill", "external_storage.drr",
                         "external_storage.host_ports", "external_storage.iops_max_util"]),
     ("ui_pg_vcpu", ["vcpu_ratio_max.*", "numa_nps"]),

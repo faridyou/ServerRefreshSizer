@@ -374,3 +374,16 @@ ui_delete_confirm: {en: "Delete the selected report files? This cannot be undone
 ui_files_deleted: {en: "{n} file(s) deleted.", fr: "{n} fichier(s) supprimé(s)."}
 ui_select_all: {en: "Select all", fr: "Tout sélectionner"}
 ui_date: {en: "Date", fr: "Date"}
+h_storage_include_powered_off: {en: "Keep the disks of powered-off VMs and templates in the storage sizing (they still occupy capacity and migrate). Turn off only if the customer confirms they will be deleted. CPU and memory never count them.", fr: "Conserver les disques des VM éteintes et des modèles dans le dimensionnement du stockage (ils occupent de la capacité et seront migrés). Désactiver seulement si le client confirme leur suppression. CPU et mémoire ne les comptent jamais."}
+ui_off_title: {en: "Powered-off VMs and templates", fr: "VM éteintes et modèles"}
+ui_off_line: {en: "{n} powered-off VMs and {k} templates are not counted for CPU and memory ({v} vCPU, {m} GB RAM); their {s} TiB of used storage is kept in the storage sizing.", fr: "{n} VM éteintes et {k} modèles ne sont pas comptés pour le CPU et la mémoire ({v} vCPU, {m} Go de RAM) ; leurs {s} To de stockage utilisé sont conservés dans le dimensionnement du stockage."}
+ui_off_storage_excluded: {en: "storage excluded by policy", fr: "stockage exclu par la politique"}
+ui_off_list: {en: "List", fr: "Liste"}
+ui_off_state: {en: "State", fr: "État"}
+ui_off_template: {en: "template", fr: "modèle"}
+ui_off_powered_off: {en: "powered off", fr: "éteinte"}
+ui_off_used: {en: "Used TiB", fr: "To utilisés"}
+ui_off_prov: {en: "Provisioned TiB", fr: "To provisionnés"}
+ui_off_hint: {en: "Ask the customer which of these will be deleted before the migration. If all of them will, turn off storage_include_powered_off on the Policy page (Storage group); to count them for CPU and memory too, turn off exclude_powered_off / exclude_templates and re-import.", fr: "Demandez au client lesquelles seront supprimées avant la migration. Si toutes le seront, désactivez storage_include_powered_off dans les Paramètres (groupe Stockage) ; pour les compter aussi en CPU et mémoire, désactivez exclude_powered_off / exclude_templates et réimportez."}
+st_inactive: {en: "of which powered-off VMs / templates", fr: "dont VM éteintes / modèles"}
+st_inactive_val: {en: "{s} ({n} VMs, kept: their disks migrate)", fr: "{s} ({n} VM, conservés : leurs disques sont migrés)"}

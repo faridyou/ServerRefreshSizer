@@ -251,7 +251,8 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
         total = {k: round(sum(r[k] for r in rows), 2) for k in keys}
         return render(request, "summary.html", {"name": n, "meta": meta, "tab": "summary", "project": project,
                                                 "rows": rows, "total": total, "error": error, "tgt": target_ctx(n),
-                                                "open_target": True})
+                                                "open_target": True,
+                                                "policy_keeps_off": getattr(effective_policy(n), "storage_include_powered_off", True)})
 
     # ---------------------------------------------------------------- 4 policy
     @app.get("/p/{name}/policy", response_class=HTMLResponse)

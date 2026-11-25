@@ -291,6 +291,7 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
         name, df = inv
         used.add(name)
         m = ColumnMapper(df, VM_INV, name, str(path))
+        n_off = [0, 0]  # powered off, templates
         res.add_mappings(m.mapping_entries())
         res.unmapped += [f"{name}/{c}" for c in m.unmapped]
         for _, row in df.iterrows():
@@ -300,8 +301,9 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
             running = m.get(row, "running")
             on = to_bool(running, True) if running is not None else to_bool(m.get(row, "power"), True)
             tmpl = to_bool(m.get(row, "template"), False)
-            if (tmpl and exclude_templates) or (not on and exclude_powered_off):
-                continue
+            inactive = (tmpl and exclude_templates) or (not on and exclude_powered_off)
+            if inactive:
+                n_off[1 if tmpl else 0] += 1
             host = to_str(m.get(row, "host"))
             cluster = to_str(m.get(row, "cluster"))
             if not cluster and host and host.lower() in hosts:
@@ -316,7 +318,7 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
             if prov_gib is None:
                 prov_gib = gib("guest_cap")
             perf = vm_perf.get(vm.lower(), {})
-            res.workloads.append(SourceWorkload(
+            (res.inactive_workloads if inactive else res.workloads).append(SourceWorkload(
                 workload_id=vm, name=vm, host_id=host, cluster=cluster or "default",
                 vcpu=to_float(m.get(row, "vcpu")), ram_gb_configured=gib("prov_mem"),
                 ram_gb_active=gib("active_mem"), ram_gb_consumed=gib("consumed_mem"),
@@ -326,6 +328,10 @@ def parse(path: Path, timeseries: Path | None = None, exclude_templates: bool = 
                 os=to_str(m.get(row, "os")), powered_on=on, is_template=tmpl,
             ))
         res.transformations.append(f"{name}: MiB -> GiB (base-2)")
+        if n_off[0] or n_off[1]:
+            res.transformations.append(
+                f"{name}: excluded {n_off[1]} templates and {n_off[0]} powered-off VMs from CPU/memory (their "
+                "storage is kept, see storage_include_powered_off)")
 
     if timeseries is not None:
         res.timeseries = parse_timeseries_csv(timeseries)
