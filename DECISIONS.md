@@ -312,3 +312,7 @@ Each entry: **decision** – reason – how to change it.
     in project.json (su_cap_total, su_host...) are unchanged for compatibility; runs saved before this change keep
     "SU" in their stored formula texts. The label is one constant (`refreshsizer/units.py`) plus `unit` in i18n.yaml.
     A definition line is printed in the presales and full reports and on the Results page.
+93. **Label changed to "SPEC Score"** at the user's request (supersedes the label chosen in 92). To keep within
+    the SPEC fair-use rules, the presales and full reports (and their Word/PowerPoint versions) and the Results page carry the definition line: "SPEC Score
+    (RefreshSizer estimate): CPU throughput on the SPECrate2017_int_base scale ... an estimate derived from published
+    results, not a SPEC result", and the SPEC trademark disclaimer is unchanged. French: "Score SPEC".

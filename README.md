@@ -72,7 +72,7 @@ What you see, page by page:
   ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
   fields are highlighted. *Save* writes only the differences to `policy.yaml`; *Reset to defaults* removes it.
-* **5 Results** – summary cards (recommended configuration, hosts, cores, capacity vs C_req in SPECrate-eq, headroom / failure-mode
+* **5 Results** – summary cards (recommended configuration, hosts, cores, capacity vs C_req in SPEC Score, headroom / failure-mode
   utilization, licensing delta, P50/P90, TCO), each with **Show calculation** expanders that reveal the formula,
   inputs, output, sources with clickable URLs and assumptions. Below: the bar chart of performance-normalized vs
   core-match vs GHz-match hosts, the Monte Carlo histogram, the Pareto chart, a sortable and filterable candidate
@@ -156,7 +156,7 @@ customer template is recognized next time. The ingest summary ends with a ready-
 
 ## Methodology (summary)
 
-**Unit**: every CPU capacity and demand figure is in **SPECrate-eq** – throughput on the SPECrate2017_int_base
+**Unit**: every CPU capacity and demand figure is in **SPEC Score** – throughput on the SPECrate2017_int_base
 scale (SPECrate2017_int_base per core × cores × utilization). It is an estimate derived from published results, not
 a SPEC result (the label is set in `refreshsizer/units.py` and `unit` in `report/i18n.yaml`).
 

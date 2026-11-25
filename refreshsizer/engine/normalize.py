@@ -1,4 +1,4 @@
-"""Source capacity in SPECrate-equivalent units: Cap(h) = SPC(cpu) x cores(h); POWER via rPerf x F (section 7.1)."""
+"""Source capacity in SPEC Score: Cap(h) = SPC(cpu) x cores(h); POWER via rPerf x F (section 7.1)."""
 
 from __future__ import annotations
 

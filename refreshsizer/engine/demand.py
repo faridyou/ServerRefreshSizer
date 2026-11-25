@@ -1,4 +1,4 @@
-"""Cluster CPU demand in SPECrate-equivalent units (sections 7.2-7.6) plus memory/storage demand assembly."""
+"""Cluster CPU demand in SPEC Score (sections 7.2-7.6) plus memory/storage demand assembly."""
 
 from __future__ import annotations
 
@@ -115,7 +115,7 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
     threads = sum((h.cores or 0) * (h.threads_per_core or 2) for h in hosts)
     if hosts:
         expls.append(Explanation(
-            step_id="src_capacity", title="Source capacity in SPECrate-equivalent units",
+            step_id="src_capacity", title="Source capacity in SPEC Score",
             formula_latex=r"Cap_{src}(h) = SPC(cpu) \times cores(h)",
             formula_text=" + ".join(f"{c.spc:.3f} x {c.cores}" for c in list(caps.values())[:6])
             + (" + ..." if len(caps) > 6 else "") + f" = {su_total:,.1f} {UNIT}",
@@ -258,7 +258,7 @@ def compute_demand(cluster: Cluster, mode: SizingMode, policy: Policy, cache: Be
             ghz_used += ghz * c
         paths["vm_ghz"] = d0
         expls.append(Explanation(
-            step_id="d0", title="VM-level demand (GHz -> cores -> SPECrate-eq)",
+            step_id="d0", title="VM-level demand (GHz -> cores -> SPEC Score)",
             formula_latex=r"D_0 = \sum_{vm} \frac{GHz_{p95}}{GHz_{nominal}} \times SPC \times coincidence",
             formula_text=f"{len(vm_ghz)} VMs, {tot_cores:,.1f} equivalent cores, coincidence {coinc} (peaks) "
                          f"-> {d0:,.2f} {UNIT}", inputs={"vms": len(vm_ghz), "coincidence": coinc},

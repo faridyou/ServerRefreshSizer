@@ -1,4 +1,4 @@
-"""Several source clusters -> one target cluster (+ one shared array); SPECrate-eq naming."""
+"""Several source clusters -> one target cluster (+ one shared array); SPEC Score naming."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def test_reports_and_cli(fixtures_dir: Path, tmp_path: Path) -> None:
     out = write_reports(p, tmp_path, ["html"], level="presales")
     html = out[0].read_text(encoding="utf-8")
     assert "consolidating 2 source clusters: Cluster-Paris, Cluster-Lyon" in html
-    assert "SPECrate-eq" in html and " SU<" not in html and "SPEC Units" not in html
+    assert "SPEC Score" in html and " SU<" not in html and "SPEC Units" not in html
     assert "not a SPEC result" in html  # unit definition
     pj = tmp_path / "p.json"
     runner.invoke(app, ["ingest", str(fixtures_dir / MULTI), "--yes", "--no-llm", "--out", str(pj)])

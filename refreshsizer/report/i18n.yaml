@@ -21,8 +21,8 @@ confidence: {en: "Confidence", fr: "Confiance"}
 recommended: {en: "Recommended configuration", fr: "Configuration recommandée"}
 hosts: {en: "Hosts", fr: "Hôtes"}
 cores: {en: "Cores", fr: "Cœurs"}
-unit: {en: "SPECrate-eq", fr: "éq. SPECrate"}
-unit_def: {en: "SPECrate-eq: CPU throughput on the SPECrate2017_int_base scale (SPECrate2017_int_base per core x cores x utilization). It is an estimate derived from published results, not a SPEC result. SPC = SPECrate2017_int_base per core; Cap = SPC x cores (capacity of a host).", fr: "éq. SPECrate : débit processeur sur l'échelle SPECrate2017_int_base (SPECrate2017_int_base par cœur x cœurs x utilisation). C'est une estimation dérivée de résultats publiés, pas un résultat SPEC. SPC = SPECrate2017_int_base par cœur ; Cap = SPC x cœurs (capacité d'un hôte)."}
+unit: {en: "SPEC Score", fr: "Score SPEC"}
+unit_def: {en: "SPEC Score (RefreshSizer estimate): CPU throughput on the SPECrate2017_int_base scale (SPECrate2017_int_base per core x cores x utilization). It is an estimate derived from published results, not a SPEC result. SPC = SPECrate2017_int_base per core; Cap = SPC x cores (capacity of a host).", fr: "Score SPEC (estimation RefreshSizer) : débit processeur sur l'échelle SPECrate2017_int_base (SPECrate2017_int_base par cœur x cœurs x utilisation). C'est une estimation dérivée de résultats publiés, pas un résultat SPEC. SPC = SPECrate2017_int_base par cœur ; Cap = SPC x cœurs (capacité d'un hôte)."}
 headroom: {en: "Headroom", fr: "Marge"}
 util_normal: {en: "Utilization (all hosts up)", fr: "Utilisation (tous hôtes actifs)"}
 util_failed: {en: "Utilization (HA hosts failed)", fr: "Utilisation (hôtes HA en panne)"}
@@ -83,7 +83,7 @@ gpu_placeholder: {en: "GPU / AI training sizing is out of scope (placeholder). M
 validation_steps: {en: "Validation steps", fr: "Étapes de validation"}
 host_comparison: {en: "Hosts: recommended vs naive methods", fr: "Hôtes : recommandé vs méthodes naïves"}
 mc_hist: {en: "Monte Carlo host count distribution", fr: "Distribution Monte Carlo du nombre d'hôtes"}
-host_demand: {en: "Demand per source host (SPECrate-eq)", fr: "Demande par hôte source (éq. SPECrate)"}
+host_demand: {en: "Demand per source host (SPEC Score)", fr: "Demande par hôte source (Score SPEC)"}
 naive_note: {en: "Naive methods ignore per-core performance differences between generations; they are shown for comparison only.",
   fr: "Les méthodes naïves ignorent les écarts de performance par cœur entre générations ; elles sont données à titre de comparaison."}
 # ---------------------------------------------------------------- web UI strings
