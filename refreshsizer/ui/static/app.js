@@ -88,3 +88,27 @@ document.addEventListener("click", function (e) {
   if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(ta.value).then(done); }
   else { ta.select(); document.execCommand("copy"); done(); }
 });
+
+// Reports list: select all, selection count, buttons enabled only with a selection, confirm before delete
+(function () {
+  function sync() {
+    var form = document.getElementById("repsel"); if (!form) return;
+    var boxes = form.querySelectorAll("input[name=f]"), n = 0;
+    Array.prototype.forEach.call(boxes, function (b) { if (b.checked) n++; });
+    Array.prototype.forEach.call(form.querySelectorAll("[data-needs-selection]"), function (b) { b.disabled = n === 0; });
+    var all = document.getElementById("repsel-all");
+    if (all) { all.checked = n > 0 && n === boxes.length; all.indeterminate = n > 0 && n < boxes.length; }
+    var c = document.getElementById("repsel-count"); if (c) c.textContent = n ? n + " / " + boxes.length : "";
+  }
+  document.addEventListener("change", function (e) {
+    if (e.target.id === "repsel-all") {
+      Array.prototype.forEach.call(document.querySelectorAll("#repsel input[name=f]"), function (b) { b.checked = e.target.checked; });
+    }
+    if (e.target.id === "repsel-all" || e.target.name === "f") sync();
+  });
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("#repsel [data-confirm]");
+    if (b && !window.confirm(b.getAttribute("data-confirm"))) e.preventDefault();
+  });
+  document.addEventListener("DOMContentLoaded", sync);
+})();

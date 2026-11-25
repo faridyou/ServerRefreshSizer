@@ -390,12 +390,37 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
     def reports_page(name: str, request: Request) -> HTMLResponse:
         n, meta = proj(name)
         d = S().reports_dir(n)
-        files = sorted((p for p in d.iterdir() if p.is_file()), key=lambda p: p.name)
+        # newest first (same time: by name)
+        files = sorted((p for p in d.iterdir() if p.is_file()), key=lambda p: (-p.stat().st_mtime, p.name))
         return render(request, "reports.html", {"name": n, "meta": meta, "tab": "reports", "runs": S().runs(n),
                                                 "files": [{"name": p.name, "kb": f"{p.stat().st_size / 1024:,.0f}",
                                                            "time": datetime.fromtimestamp(p.stat().st_mtime)
-                                                           .strftime("%Y-%m-%d %H:%M")} for p in files],
-                                                "sized": bool(S().runs(n))})
+                                                           .strftime("%Y-%m-%d %H:%M:%S")} for p in files],
+                                                "sized": bool(S().runs(n)),
+                                                "deleted": request.query_params.get("deleted", "")})
+
+    @app.post("/p/{name}/reports/selection")
+    async def reports_selection(name: str, request: Request) -> Response:
+        """Selected report files: action=zip downloads them in one .zip, action=delete removes them."""
+        n, _ = proj(name)
+        form = await request.form()
+        picked = [_report_file(n, str(f)) for f in form.getlist("f")]
+        if not picked:
+            return go(f"/p/{n}/reports")
+        if str(form.get("action")) == "delete":
+            for p in picked:
+                p.unlink(missing_ok=True)
+            return go(f"/p/{n}/reports?deleted={len(picked)}")
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for p in picked:
+                z.write(p, arcname=p.name)
+        fn = f"{n}_reports_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+        return Response(buf.getvalue(), media_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
     @app.post("/p/{name}/reports")
     async def reports_make(name: str, request: Request) -> RedirectResponse:

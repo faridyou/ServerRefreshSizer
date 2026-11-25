@@ -393,3 +393,7 @@ Each entry: **decision** – reason – how to change it.
      business workloads; base (not vendor-tuned peak) for cross-vendor comparability; coverage of old and new CPUs;
      why not cores/GHz, consumer tests or application-specific benchmarks. A rule asks the AI for one or two plain
      sentences (a short paragraph for a technical audience) built only from those facts.
+108. **Reports list**: newest first (modification time, then name), checkboxes with select-all, "Download selected"
+     (one .zip built in memory, named `<project>_reports_<date>.zip`) and "Delete selected" (browser confirmation;
+     only files of the project's own reports folder can be selected - other names give 404). The `project.json` in
+     that list is an export copy; deleting it does not affect the project.

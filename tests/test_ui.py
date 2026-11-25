@@ -533,3 +533,29 @@ def test_cpu_hover_works_without_cache_or_script(ui: UI, fixtures_dir: Path) -> 
     assert "/static/cpu_tip.js?v=" in page and "/static/app.js?v=" in page  # versioned: no stale script
     r = ui.c.get("/static/cpu_tip.js")
     assert r.status_code == 200 and r.headers["cache-control"] == "no-cache" and "cpu-tip" in r.text
+
+
+def test_reports_list_sorted_zip_and_delete(ui: UI, fixtures_dir: Path) -> None:
+    import io
+    import os
+    import zipfile
+
+    name = ui.new("replist")
+    ui.upload(name, fixtures_dir / "liveoptics_estate.xlsx")
+    ui.ingest(name)
+    ui.size(name)
+    ui.job(ui.c.post(f"/p/{name}/reports", data={"html": "1", "xlsx": "1", "lang": "en", "level": "customer"}))
+    d = ui.store.reports_dir(name)
+    old, new = d / "refreshsizer_report_customer.xlsx", d / "refreshsizer_report_customer.html"
+    os.utime(old, (1_700_000_000, 1_700_000_000))  # older file
+    page = ui.c.get(f"/p/{name}/reports").text
+    assert page.index(new.name) < page.index(old.name)  # newest first
+    assert 'name="f"' in page and 'id="repsel-all"' in page
+    z = ui.c.post(f"/p/{name}/reports/selection", data={"action": "zip", "f": [new.name, old.name]})
+    assert z.status_code == 200 and z.headers["content-type"] == "application/zip"
+    assert sorted(zipfile.ZipFile(io.BytesIO(z.content)).namelist()) == sorted([new.name, old.name])
+    bad = ui.c.post(f"/p/{name}/reports/selection", data={"action": "zip", "f": ["../../projects.json"]})
+    assert bad.status_code == 404  # only files of this project's reports folder
+    r = ui.c.post(f"/p/{name}/reports/selection", data={"action": "delete", "f": [old.name]})
+    assert r.status_code == 200 and "1 file(s) deleted" in r.text
+    assert not old.exists() and new.exists()

@@ -94,7 +94,8 @@ What you see, page by page:
   5 runs are kept with their label and overrides; pick two (A/B) to see them side by side (D0, D_T, C_req,
   recommendation, hosts, P50/P90, naive counts, TCO, licensing delta).
 * **7 Reports** – generate HTML, Excel, PDF, Word (.docx) and PowerPoint (.pptx) in English or French for any kept run, at one of three
-  **levels**, then download them or open the HTML report in a new tab:
+  **levels**, then download them or open the HTML report in a new tab. The file list is newest first; tick files
+  (or the header box for all) to **download them as one .zip** or **delete** them (with a confirmation):
   * **Customer** – simple, no calculations or internal prices: current environment (CPU models, cores, GHz,
     memory, VMs, storage, measured utilization), the SPEC CPU comparison (per-core performance of current vs
     proposed CPU), the proposed configuration with the "servers needed" chart against like-for-like core/GHz

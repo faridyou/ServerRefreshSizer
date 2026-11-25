@@ -9,8 +9,16 @@
 <button>{{ t('ui_generate') }}</button></form>
 <p class="small muted"><a href="/p/{{ name }}/email">{{ t('ui_tab_email') }}</a>: {{ t('ui_email_short') }}</p></div>
 {% endif %}
-{% if files %}<div class="card"><table><thead><tr><th>{{ t('files') }}</th><th>kB</th><th></th><th></th></tr></thead><tbody>
-{% for f in files %}<tr><td>{{ f.name }}</td><td class="num">{{ f.kb }}</td><td class="small muted">{{ f.time }}</td><td><a href="/p/{{ name }}/reports/{{ f.name }}">{{ t('ui_download') }}</a>
+{% if deleted %}<p class="okmsg small">{{ t('ui_files_deleted') | replace('{n}', deleted) }}</p>{% endif %}
+{% if files %}<div class="card"><form method="post" action="/p/{{ name }}/reports/selection" id="repsel">
+<div class="row" style="margin-bottom:8px">
+<button name="action" value="zip" data-needs-selection>{{ t('ui_download_selected') }}</button>
+<button name="action" value="delete" class="danger" data-needs-selection data-confirm="{{ t('ui_delete_confirm') }}">{{ t('ui_delete_selected') }}</button>
+<span class="small muted" id="repsel-count"></span></div>
+<table><thead><tr><th style="width:28px"><input type="checkbox" id="repsel-all" title="{{ t('ui_select_all') }}" aria-label="{{ t('ui_select_all') }}"></th>
+<th>{{ t('files') }}</th><th>{{ t('ui_date') }}</th><th class="num">kB</th><th></th></tr></thead><tbody>
+{% for f in files %}<tr><td><input type="checkbox" name="f" value="{{ f.name }}" aria-label="{{ f.name }}"></td><td>{{ f.name }}</td>
+<td class="small">{{ f.time }}</td><td class="num">{{ f.kb }}</td><td><a href="/p/{{ name }}/reports/{{ f.name }}">{{ t('ui_download') }}</a>
 {% if f.name.endswith('.html') %} · <a href="/p/{{ name }}/reports/{{ f.name }}/view" target="_blank" rel="noopener">{{ t('ui_open_tab') }}</a>{% endif %}</td></tr>{% endfor %}
-</tbody></table></div>{% endif %}
+</tbody></table></form></div>{% endif %}
 {% endblock %}
