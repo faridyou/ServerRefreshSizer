@@ -23,6 +23,7 @@ PROT_LABELS = {
     "vsan_esa_raid5_2p1": "vSAN ESA RAID-5 2+1 (FTT=1)", "vsan_esa_raid6_4p2": "vSAN ESA RAID-6 4+2 (FTT=2)",
     "nutanix_rf2": "Nutanix RF2", "nutanix_rf3": "Nutanix RF3", "nutanix_rf2_ecx_4p1": "Nutanix RF2 + EC-X 4+1",
     "nutanix_rf3_ecx_4p2": "Nutanix RF3 + EC-X 4+2", "external": "external array",
+    "external_nutanix": "external array (Nutanix AHV)",
 }
 
 
@@ -48,6 +49,21 @@ def _price_drive(prices: dict[str, Any], media: str, tb: float) -> float:
     return float({float(k): v for k, v in table.items()}.get(tb, 170.0))
 
 
+def allowed_models(policy: Policy) -> list[dict[str, Any]]:
+    """PowerStore models the optimizer may use: the ticked ones, else the current generation(s)."""
+    cat = load_powerstore()
+    es = policy.external_storage
+    if es.models:
+        return [m for m in cat["models"] if m["model"] in es.models]
+    gens = set(cat.get("default_generations") or [])
+    return [m for m in cat["models"] if not gens or m.get("generation") in gens]
+
+
+def max_appliances(policy: Policy) -> int:
+    """Nutanix AHV with PowerStore (NCI 7.6) supports a single-appliance PowerStore cluster only."""
+    return 1 if policy.nutanix else int(load_powerstore()["max_appliances"])
+
+
 def array_options(need_usable_tib: float, physical_today_tib: float, physical_t_tib: float, drr: float,
                   iops_t: float, policy: Policy, prices: dict[str, Any]) -> list[ArrayOption]:
     """Cheapest layout per PowerStore model that meets capacity (max fill) and the indicative IOPS check."""
@@ -55,14 +71,14 @@ def array_options(need_usable_tib: float, physical_today_tib: float, physical_t_
     es = policy.external_storage
     slots = int(cat["expansion_slots"])
     out: list[ArrayOption] = []
-    for m in cat["models"]:
-        if es.models and m["model"] not in es.models:
-            continue
+    for m in allowed_models(policy):
         best: ArrayOption | None = None
         min_d = max(int(m["min_drives"]), 7 if es.parity == "double" else 0)
         appl_iops = math.ceil(iops_t / (float(m["indicative_iops"]) * es.iops_max_util)) if iops_t else 1
-        for tb in cat["drive_tb"][m["media"]]:
-            for appl in range(max(1, appl_iops), int(cat["max_appliances"]) + 1):
+        sizes = [(media, tb) for media, tbs in (m.get("drives") or {m["media"]: cat["drive_tb"][m["media"]]}).items()
+                 for tb in tbs if es.media == "any" or media.lower() == es.media]
+        for media, tb in sizes:
+            for appl in range(max(1, appl_iops), max_appliances(policy) + 1):
                 n = next((k for k in range(min_d, int(m["max_drives"]) + 1)
                           if appl * usable_tib(k, tb, es.parity, cat) >= need_usable_tib), None)
                 if n is None:
@@ -70,11 +86,11 @@ def array_options(need_usable_tib: float, physical_today_tib: float, physical_t_
                 exp = math.ceil(max(0, n - int(m["base_slots"])) / slots)
                 cost = appl * (float((prices.get("powerstore_base_usd") or {}).get(m["model"], 100000))
                                + exp * float(prices.get("powerstore_expansion_usd", 15000))
-                               + n * tb * _price_drive(prices, m["media"], tb))
+                               + n * tb * _price_drive(prices, media, tb))
                 use = appl * usable_tib(n, tb, es.parity, cat)
                 ind = appl * float(m["indicative_iops"])
                 opt = ArrayOption(
-                    model=m["model"], media=m["media"], appliances=appl, drives_per_appliance=n, drive_tb=tb,
+                    model=m["model"], media=media, appliances=appl, drives_per_appliance=n, drive_tb=tb,
                     expansions_per_appliance=exp, raw_tb=round(appl * n * tb, 2),
                     raw_tib=round(appl * n * tb * TB_TO_TIB, 2), usable_tib=round(use, 2),
                     effective_tib=round(use * drr, 2), fill_today=round(physical_today_tib / use, 4) if use else 0,
@@ -135,9 +151,12 @@ def design(d: ClusterDemand, rec: Candidate | None, policy: Policy, prices: dict
     phys_t = d.storage_used_t_tib / drr if drr else d.storage_used_t_tib
     phys_0 = d.storage_used0_tib / drr if drr else d.storage_used0_tib
     need = phys_t / es.max_fill
+    proto = es.protocol
+    if policy.nutanix and proto != "nvme_tcp25":  # Nutanix AHV + external storage: NVMe/TCP only (NCI 7.6)
+        proto = "nvme_tcp25"
     sd = StorageDesign(architecture="external", solution="", drr=round(drr, 2), physical_t_tib=round(phys_t, 2),
-                       max_fill=es.max_fill, array_kind=es.array, parity=es.parity, protocol=es.protocol,
-                       protocol_label=PROTOCOLS[es.protocol], hosts=n, **common)
+                       max_fill=es.max_fill, array_kind=es.array, parity=es.parity, protocol=proto,
+                       protocol_label=PROTOCOLS[proto], hosts=n, **common)
     sd.host_boot = "BOSS (2 x M.2, RAID-1) for the hypervisor; no data drives in the servers"
     if es.drr is not None:
         sd.notes.append(f"array data reduction {drr:g}:1 set in external_storage.drr (per-class drr not used)")
@@ -150,13 +169,20 @@ def design(d: ClusterDemand, rec: Candidate | None, policy: Policy, prices: dict
         inputs={"Used0_TiB": round(d.storage_used0_tib, 3), "g_s_pct": d.growth_storage_pct, "T": years,
                 "DRR": round(drr, 3), "max_fill": es.max_fill}, output=round(need, 2), unit="TiB"))
     # connectivity (independent of the array model)
-    fc = es.protocol in ("fc32", "nvme_fc32")
+    fc = proto in ("fc32", "nvme_fc32")
     sd.fabrics = 2
     sd.host_ports = es.host_ports
     sd.host_adapter = (f"{math.ceil(es.host_ports / 2)} x dual-port 32 Gb FC HBA" if fc else
                        f"{math.ceil(es.host_ports / 2)} x dual-port 25 GbE NIC dedicated to storage")
     sd.adapters_capex_usd = n * math.ceil(es.host_ports / 2) * float(
-        (prices.get("storage_adapter_usd") or {}).get(es.protocol, 1000))
+        (prices.get("storage_adapter_usd") or {}).get(proto, 1000))
+    if policy.nutanix:
+        sd.notes.append("Nutanix AHV with external storage (NCI 7.6 or later): NVMe/TCP only on dedicated, "
+                        "non-aggregated 10 GbE+ ports with one IP per host, single-appliance PowerStore cluster, "
+                        "PowerStoreOS 5.0.0.2+, AOS 7.6 / AHV 11.2; check the Dell PowerStore support matrix")
+        if es.protocol != proto:
+            sd.notes.append(f"protocol {PROTOCOLS[es.protocol]} is not supported by Nutanix with PowerStore: "
+                            "NVMe/TCP used instead")
     if es.array == "existing":
         sd.solution = f"{stack_label.split(' + ')[0]} + existing external array ({sd.protocol_label})"
         sd.notes.append("existing array kept: confirm free capacity, performance headroom, support end date and "
@@ -168,7 +194,7 @@ def design(d: ClusterDemand, rec: Candidate | None, policy: Policy, prices: dict
     opts = array_options(need, phys_0, phys_t, drr, d.iops_t, policy, prices)
     if not opts:
         sd.flags.append(f"no PowerStore layout meets {need:,.1f} TiB usable and {d.iops_t:,.0f} IOPS within "
-                        f"{load_powerstore()['max_appliances']} appliances: split the estate or review the demand")
+                        f"{max_appliances(policy)} appliance(s): split the estate or review the demand")
         sd.solution = f"{stack_label.split(' + ')[0]} + Dell PowerStore (not sized)"
         return sd
     a = opts[0]

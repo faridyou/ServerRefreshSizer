@@ -48,9 +48,12 @@ def context(policy: Policy | None) -> dict[str, Any]:
 
     es = policy.external_storage if policy else None
     arch = policy.storage_architecture if policy else "auto"
-    arrays = [{"model": m["model"], "media": m["media"],
-               "checked": not (es and es.models) or m["model"] in (es.models or [])}
-              for m in load_powerstore()["models"]]
+    cat = load_powerstore()
+    gens = set(cat.get("default_generations") or [])
+    arrays = [{"model": m["model"], "media": "/".join((m.get("drives") or {m["media"]: []}).keys()),
+               "gen": m.get("generation"),
+               "checked": m["model"] in es.models if es and es.models else (not gens or m.get("generation") in gens)}
+              for m in cat["models"]]
     storage = {"arch": "hci" if arch == "vsan_esa" else arch, "array": es.array if es else "powerstore",
                "protocol": es.protocol if es else "fc32", "protocols": list(PROTOCOLS.items()), "models": arrays}
     return {"consolidation": policy.consolidation if policy else "single", "storage": storage, "groups": groups, "vendor": vendor, "any_cpu": not sel_c, "text": text, "stack": stack,

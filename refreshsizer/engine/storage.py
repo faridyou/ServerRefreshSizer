@@ -18,17 +18,19 @@ from refreshsizer.model.entities import (
 )
 
 P_PROT = {"vsan_esa_raid1": 2.0, "vsan_esa_raid5_4p1": 1.25, "vsan_esa_raid5_2p1": 1.5, "vsan_esa_raid6_4p2": 1.5,
-          "external": 1.0,
+          "external": 1.0, "external_nutanix": 1.0,
           # Nutanix DSF: replication factor; EC-X (erasure coding) applies to write-cold data - the
           # strip overhead is used as if all data were encoded, so prefer RF unless the data is mostly cold
           "nutanix_rf2": 2.0, "nutanix_rf3": 3.0, "nutanix_rf2_ecx_4p1": 1.25, "nutanix_rf3_ecx_4p2": 1.5}
 MIN_HOSTS = {"vsan_esa_raid1": 3, "vsan_esa_raid5_4p1": 4, "vsan_esa_raid5_2p1": 3, "vsan_esa_raid6_4p2": 6,
-             "external": 2, "nutanix_rf2": 3, "nutanix_rf3": 5, "nutanix_rf2_ecx_4p1": 6, "nutanix_rf3_ecx_4p2": 7}
+             "external": 2, "external_nutanix": 3, "nutanix_rf2": 3, "nutanix_rf3": 5, "nutanix_rf2_ecx_4p1": 6, "nutanix_rf3_ecx_4p2": 7}
 TB_TO_TIB = 0.9095
 
 
 def resolve_protection(policy: Policy, external: bool) -> tuple[str, str]:
-    if policy.nutanix:  # Nutanix is always HCI (DSF) on the target nodes
+    if external and policy.nutanix:  # Nutanix AHV compute nodes + external array (NCI 7.6+): 3-node cluster minimum
+        return "external_nutanix", "Nutanix AHV with external storage (min 3 nodes)"
+    if policy.nutanix:  # Nutanix HCI: storage on the nodes (DSF)
         prot = policy.nutanix_protection
         return prot, f"Nutanix DSF {prot} (min {MIN_HOSTS[prot]} nodes)"
     if external:

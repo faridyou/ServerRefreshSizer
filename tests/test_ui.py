@@ -480,10 +480,10 @@ def test_storage_architecture_selector_and_email(ui: UI, fixtures_dir: Path) -> 
     ui.c.post(f"/p/{name}/policy", data={"external_storage.max_fill": "0.7", "then": "save"})
     saved = ui.store.policy_overrides(name)
     assert saved["external_storage"]["max_fill"] == 0.7 and saved["storage_architecture"] == "external"
-    # Nutanix + external is refused with a clear message
+    # Nutanix on ESXi + external is refused with a clear message (AHV is supported)
     bad = ui.c.post(f"/p/{name}/size", data=_target_form(INTEL + AMD, "both", {
-        "from": "whatif", "stack": "nutanix_ahv", "arch": "external"}))
-    assert "HCI only" in bad.text
+        "from": "whatif", "stack": "nutanix_esxi", "arch": "external"}))
+    assert "with AHV only" in bad.text
     # customer email prompt page + download
     e = ui.c.get(f"/p/{name}/email", params={"recipient": "Jane", "lang": "en"})
     assert e.status_code == 200 and "Use ONLY the facts" in e.text and "Jane" in e.text

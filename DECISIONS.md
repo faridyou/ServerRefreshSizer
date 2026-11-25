@@ -316,3 +316,21 @@ Each entry: **decision** – reason – how to change it.
     the SPEC fair-use rules, the presales and full reports (and their Word/PowerPoint versions) and the Results page carry the definition line: "SPEC Score
     (RefreshSizer estimate): CPU throughput on the SPECrate2017_int_base scale ... an estimate derived from published
     results, not a SPEC result", and the SPEC trademark disclaimer is unchanged. French: "Score SPEC".
+
+## PowerStore Gen 3 and Nutanix with PowerStore (change request 8)
+
+94. **PowerStore Gen 3** (1500 / 5500 / 9500, PowerStoreOS 5, released July 2026) added to `catalog/powerstore.yaml`
+    and offered by default (`default_generations: [3]`); Gen 2 models stay selectable. Gen 3 data used: 3U two-node
+    appliances, E3 NVMe; 24 drive slots (1500) and 40 (5500/9500) per Dell's InfoHub and shop pages (one Dell spec
+    sheet extract lists 24 for all three - to verify); no expansion enclosures yet (announced for a later release),
+    so capacity is limited to the base enclosure; TLC 3.84/7.68/15.36 TB and QLC 30.72 TB drive sizes (public review,
+    to verify); minimum drives 7 / 11 from Dell's capacity tables. Prices, power and indicative IOPS are placeholders.
+95. **Drive media**: `external_storage.media` = tlc (default) | qlc | any. Without it the cheapest-per-TB rule picked
+    30.72 TB QLC for general virtualization, which is not a safe default.
+96. **Nutanix AHV with external storage** is supported (NCI 7.6, Dell PowerStore Gen 1/2/3 except X): protection
+    `external_nutanix` with a 3-node minimum (Nutanix cluster minimum; one source states 3 compute nodes), NVMe/TCP
+    forced (any other protocol is replaced, with a note), single PowerStore appliance, software minimums listed in
+    the report (PowerStoreOS 5.0.0.2+, AOS 7.6, AHV 11.2). Nutanix on ESXi with external storage is refused (AHV
+    only). The CVM reservation is kept on every compute node (conservative: the CVM still runs the Nutanix services;
+    its size with external storage may be smaller - adjust nutanix_cvm_vcpu / nutanix_cvm_memory_gb). Licensing: NCI
+    per core, no VMware, no extra storage licence. This supersedes decision 83.

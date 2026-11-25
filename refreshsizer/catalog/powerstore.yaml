@@ -1,16 +1,26 @@
 # Dell PowerStore appliance models used for disaggregated (external storage) sizing.
-# Drive slots and drive sizes follow the public PowerStore T/Q spec sheets (base enclosure + up to three
-# 24-drive NVMe expansion enclosures per appliance, up to 4 appliances per PowerStore cluster).
-# indicative_iops are EDITABLE PLACEHOLDERS for a relative performance check only (8 KiB, 70/30 read/write
-# mix) - they are NOT Dell figures. Always validate the final array with Dell's PowerStore sizing tools.
+#
+# Gen 3 (PowerStoreOS 5.x, released July 2026, "PowerStore Elite"): 1500 / 5500 / 9500, 3U two-node appliances,
+#   E3 NVMe drives. Base enclosure: 24 drive slots (1500), up to 40 (5500 / 9500). Expansion enclosures are announced
+#   for a future release, so max_drives = base slots here. Drive sizes per public reviews (TLC 3.84/7.68/15.36 TB,
+#   QLC 30.72 TB); minimum drive counts from Dell's capacity tables (7 / 11). Verify on the current Dell spec sheet.
+# Gen 2 (500T ... 9200T): 2U base enclosure + up to three 24-slot NVMe expansion enclosures per appliance.
+# Up to 4 appliances per PowerStore cluster (Nutanix AHV: single-appliance cluster only, see storage_design.py).
+#
+# indicative_iops are EDITABLE PLACEHOLDERS for a relative performance check only (8 KiB, 70/30 read/write mix) -
+# they are NOT Dell figures. Always validate the final array with Dell's PowerStore sizing tools.
 models:
-  - {model: PowerStore 500T,  media: TLC, base_slots: 25, max_drives: 97, min_drives: 6,  indicative_iops: 150000, rack_units_base: 2, power_w_base: 900}
-  - {model: PowerStore 1200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 250000, rack_units_base: 2, power_w_base: 1200}
-  - {model: PowerStore 3200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 400000, rack_units_base: 2, power_w_base: 1400}
-  - {model: PowerStore 3200Q, media: QLC, base_slots: 21, max_drives: 93, min_drives: 11, indicative_iops: 300000, rack_units_base: 2, power_w_base: 1400}
-  - {model: PowerStore 5200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 600000, rack_units_base: 2, power_w_base: 1700}
-  - {model: PowerStore 9200T, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 900000, rack_units_base: 2, power_w_base: 2100}
-drive_tb: {TLC: [1.92, 3.84, 7.68, 15.36], QLC: [15.36, 30.72]}
+  - {model: PowerStore 1500,  generation: 3, media: TLC, drives: {TLC: [3.84, 7.68, 15.36], QLC: [30.72]}, base_slots: 24, max_drives: 24, min_drives: 7,  indicative_iops: 400000,  rack_units_base: 3, power_w_base: 1000}
+  - {model: PowerStore 5500,  generation: 3, media: TLC, drives: {TLC: [3.84, 7.68, 15.36], QLC: [30.72]}, base_slots: 40, max_drives: 40, min_drives: 11, indicative_iops: 800000,  rack_units_base: 3, power_w_base: 1900}
+  - {model: PowerStore 9500,  generation: 3, media: TLC, drives: {TLC: [3.84, 7.68, 15.36], QLC: [30.72]}, base_slots: 40, max_drives: 40, min_drives: 11, indicative_iops: 1100000, rack_units_base: 3, power_w_base: 2300}
+  - {model: PowerStore 500T,  generation: 2, media: TLC, base_slots: 25, max_drives: 97, min_drives: 6,  indicative_iops: 150000, rack_units_base: 2, power_w_base: 900}
+  - {model: PowerStore 1200T, generation: 2, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 250000, rack_units_base: 2, power_w_base: 1200}
+  - {model: PowerStore 3200T, generation: 2, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 400000, rack_units_base: 2, power_w_base: 1400}
+  - {model: PowerStore 3200Q, generation: 2, media: QLC, base_slots: 21, max_drives: 93, min_drives: 11, indicative_iops: 300000, rack_units_base: 2, power_w_base: 1400}
+  - {model: PowerStore 5200T, generation: 2, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 600000, rack_units_base: 2, power_w_base: 1700}
+  - {model: PowerStore 9200T, generation: 2, media: TLC, base_slots: 21, max_drives: 93, min_drives: 6,  indicative_iops: 900000, rack_units_base: 2, power_w_base: 2100}
+default_generations: [3]   # models offered when external_storage.models is null (Gen 2 can still be ticked)
+drive_tb: {TLC: [1.92, 3.84, 7.68, 15.36], QLC: [15.36, 30.72]}   # Gen 2 (U.2) drive sizes
 expansion_slots: 24
 expansion_rack_units: 2
 expansion_power_w: 450

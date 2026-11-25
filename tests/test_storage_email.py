@@ -79,8 +79,11 @@ def test_dre_usable_grows_with_drives() -> None:
 
 
 def test_policy_validation() -> None:
-    with pytest.raises(ValueError, match="Nutanix targets are HCI only"):
-        load_policy({"target_stack": "nutanix_ahv", "storage_architecture": "external"})
+    with pytest.raises(ValueError, match="with AHV only"):
+        load_policy({"target_stack": "nutanix_esxi", "storage_architecture": "external"})
+    load_policy({"target_stack": "nutanix_ahv", "storage_architecture": "external"})  # supported (NCI 7.6+)
+    with pytest.raises(ValueError, match="external_storage.media"):
+        load_policy({"external_storage": {"media": "tape"}})
     with pytest.raises(ValueError, match="external_storage.protocol"):
         load_policy({"external_storage": {"protocol": "smoke-signals"}})
     with pytest.raises(ValueError, match="unknown"):
@@ -138,3 +141,32 @@ def test_cli_storage_and_prompt(fixtures_dir: Path, tmp_path: Path) -> None:
     r = runner.invoke(app, ["report", str(pj), "--format", "prompt", "--out", str(tmp_path / "rep")])
     assert r.exit_code == 0 and (tmp_path / "rep" / "refreshsizer_email_prompt.txt").exists()
     SizingRun.model_validate(json.loads(pj.read_text())["sizing"])  # round-trips
+
+
+def test_gen3_default_models_and_media(fixtures_dir: Path) -> None:
+    _, run = _sized(fixtures_dir, {"storage_architecture": "external"})
+    st = run.clusters[0].storage
+    assert st and st.array
+    models = [st.array.model] + [o.model for o in st.alternatives]
+    assert set(models) <= {"PowerStore 1500", "PowerStore 5500", "PowerStore 9500"}  # current generation by default
+    assert st.array.media == "TLC" and st.array.rack_units == 3 and st.array.expansions_per_appliance == 0
+    _, q = _sized(fixtures_dir, {"storage_architecture": "external", "external_storage": {"media": "qlc"}})
+    assert q.clusters[0].storage.array.media == "QLC"  # type: ignore[union-attr]
+    _, g2 = _sized(fixtures_dir, {"storage_architecture": "external",
+                                  "external_storage": {"models": ["PowerStore 500T"]}})
+    assert g2.clusters[0].storage.array.model == "PowerStore 500T"  # type: ignore[union-attr]
+
+
+def test_nutanix_ahv_with_powerstore(fixtures_dir: Path) -> None:
+    _, run = _sized(fixtures_dir, {"storage_architecture": "external", "target_stack": "nutanix_ahv",
+                                   "external_storage": {"protocol": "fc32"}})
+    cs = run.clusters[0]
+    d, rec, st = cs.demand, cs.recommended, cs.storage
+    assert d.external_storage and d.protection == "external_nutanix" and rec and rec.drives is None
+    assert rec.n_total >= 3  # Nutanix cluster minimum
+    assert any(e.step_id == "nutanix_cvm" for e in rec.explanations)  # CVM still reserved on the compute nodes
+    assert [ln.product for ln in rec.licenses if "Nutanix" in ln.product] and not any(
+        "VMware" in ln.product for ln in rec.licenses)
+    assert st and st.array and st.array.appliances == 1 and st.protocol == "nvme_tcp25"
+    assert any("not supported by Nutanix" in n for n in st.notes)
+    assert cs.target_selection.startswith("Nutanix AHV + external storage")

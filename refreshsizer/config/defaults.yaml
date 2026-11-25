@@ -29,6 +29,7 @@ external_storage:            # used when storage_architecture = external (disagg
   drr: null                  # array data reduction ratio (null = drr per class above; PowerStore often 3-5:1 on reducible data)
   max_fill: 0.80             # usable capacity filled at the end of the horizon
   parity: single             # single | double (PowerStore Dynamic Resiliency Engine)
+  media: tlc                 # tlc (performance, default) | qlc (capacity-optimized, read-mostly data) | any (cheapest per TB)
   protocol: fc32             # fc32 | nvme_fc32 | iscsi25 | nvme_tcp25
   host_ports: 2              # storage ports per host (one per fabric)
   iops_max_util: 0.70        # share of the indicative appliance IOPS used at the horizon
@@ -43,7 +44,7 @@ slack: 0.30
 min_drives_per_host: 4
 vsan_cpu_reserve_high_io: 0.10
 vsan_high_io_threshold_iops_per_host: 100000
-write_penalty: {vsan_esa_raid1: 2, vsan_esa_raid5_4p1: 2, vsan_esa_raid5_2p1: 2, vsan_esa_raid6_4p2: 3, external: 1}
+write_penalty: {vsan_esa_raid1: 2, vsan_esa_raid5_4p1: 2, vsan_esa_raid5_2p1: 2, vsan_esa_raid6_4p2: 3, external: 1, external_nutanix: 1}
 iops_profile_per_class: {general_virt: 50, oltp_db: 2000, vdi: 20, ms_apps: 100, default: 50}
 percentile: 95
 percentile_method: nearest_rank

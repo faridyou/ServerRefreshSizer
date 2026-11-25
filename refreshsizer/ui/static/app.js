@@ -62,7 +62,7 @@ document.addEventListener("change", function (e) {
 function syncArch(box) {
   if (!box) return;
   var arch = box.querySelector("input[name=arch]:checked"), opts = box.querySelector("[data-external-opts]");
-  var stack = box.querySelector("input[name=stack]:checked"), nutanix = stack && stack.value.indexOf("nutanix") === 0;
+  var stack = box.querySelector("input[name=stack]:checked"), nutanix = stack && stack.value === "nutanix_esxi";  // external storage: VMware or Nutanix AHV
   var ext = box.querySelector("input[name=arch][value=external]");
   if (ext) { ext.disabled = nutanix; if (nutanix && ext.checked) box.querySelector("input[name=arch][value=hci]").checked = true; }
   arch = box.querySelector("input[name=arch]:checked");

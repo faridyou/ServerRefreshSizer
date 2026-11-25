@@ -66,7 +66,10 @@ What you see, page by page:
   boot drives only, no vSAN licence add-on and no vSAN minimum host count; the array is either a **Dell
   PowerStore sized by the tool** (tick the allowed models; protocol FC 32 Gb, NVMe/FC, iSCSI or NVMe/TCP 25 GbE)
   or the **customer's existing array** (connectivity only). *Auto* keeps the previous behaviour (HCI, external for
-  RISC/bare-metal sources). Nutanix is HCI only here (Nutanix disaggregated runs on PowerFlex, not modeled).
+  RISC/bare-metal sources). PowerStore models: Gen 3 **1500 / 5500 / 9500** are offered by default (Gen 2 500T-9200T
+  can be ticked); drive media TLC by default (`external_storage.media: qlc` or `any` for capacity-optimized QLC).
+  **Nutanix AHV + PowerStore** (NCI 7.6+) is supported: NVMe/TCP only, a single-appliance PowerStore cluster, at least
+  3 compute nodes, CVM still reserved on each node, Nutanix NCI licensing; Nutanix on ESXi stays HCI only.
 * **4 Policy** – a form generated from the configuration schema, grouped as growth and horizon, U_max per class,
   HA, memory, storage (protection, slack, DRR), external storage (DRE parity, max fill, array data reduction,
   ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization

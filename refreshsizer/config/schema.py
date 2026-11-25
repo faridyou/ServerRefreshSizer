@@ -36,6 +36,7 @@ class ExternalStorage(BaseModel):
     drr: float | None = None           # array data reduction ratio; null = the per-class drr above
     max_fill: float = 0.80             # usable capacity filled at the end of the horizon
     parity: str = "single"             # single | double (PowerStore DRE)
+    media: str = "tlc"                 # tlc (performance) | qlc (capacity) | any (cheapest per TB)
     protocol: str = "fc32"             # fc32 | nvme_fc32 | iscsi25 | nvme_tcp25
     host_ports: int = 2                # storage ports per host (one per fabric)
     iops_max_util: float = 0.70        # share of the indicative appliance IOPS used at the horizon
@@ -169,12 +170,14 @@ class Policy(BaseModel):
             bad.append(f"consolidation = {self.consolidation}: use single or per_cluster")
         if self.storage_architecture not in ("auto", "hci", "vsan_esa", "external"):
             bad.append(f"storage_architecture = {self.storage_architecture}: use auto, hci or external")
-        if self.nutanix and self.storage_architecture == "external":
-            bad.append("Nutanix targets are HCI only in RefreshSizer (Nutanix disaggregated runs on Dell PowerFlex, "
-                       "not PowerStore): choose VMware for a PowerStore design")
+        if self.target_stack == "nutanix_esxi" and self.storage_architecture == "external":
+            bad.append("Nutanix supports external storage (PowerStore, NCI 7.6+) with AHV only: choose Nutanix AHV "
+                       "or VMware for a disaggregated design")
         es = self.external_storage
         if es.array not in ("powerstore", "existing"):
             bad.append(f"external_storage.array = {es.array}: use powerstore or existing")
+        if es.media not in ("tlc", "qlc", "any"):
+            bad.append(f"external_storage.media = {es.media}: use tlc, qlc or any")
         if es.parity not in ("single", "double"):
             bad.append(f"external_storage.parity = {es.parity}: use single or double")
         if es.protocol not in PROTOCOLS:

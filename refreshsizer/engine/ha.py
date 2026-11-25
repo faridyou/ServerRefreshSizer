@@ -31,7 +31,12 @@ def k_ha_for(n_active: int, policy: Policy) -> int:
 
 def min_hosts(protection: str, policy: Policy) -> tuple[int, str]:
     n = MIN_HOSTS.get(protection, 2)
-    return n, (f"minimum {n} hosts for {protection}" if protection != "external" else "minimum 2 hosts for HA")
+    if protection == "external":
+        return n, "minimum 2 hosts for HA"
+    if protection == "external_nutanix":
+        return n, f"minimum {n} nodes for a Nutanix cluster"
+    return n, f"minimum {n} hosts for {protection}"
+    # external_nutanix -> "minimum 3 hosts for external_nutanix" (Nutanix cluster minimum)
 
 
 def plan(d_t: float, c_req: float, su_host: float, policy: Policy, protection: str, n_floor: int = 0,

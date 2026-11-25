@@ -16,7 +16,7 @@
 <label><input type="radio" name="es_array" value="powerstore" {{ 'checked' if tgt.storage.array == 'powerstore' else '' }}> {{ t('ui_es_powerstore') }}</label>
 <label><input type="radio" name="es_array" value="existing" {{ 'checked' if tgt.storage.array == 'existing' else '' }}> {{ t('ui_es_existing') }}</label>
 <label>{{ t('ui_es_protocol') }} <select name="es_protocol">{% for k, label in tgt.storage.protocols %}<option value="{{ k }}" {{ 'selected' if tgt.storage.protocol == k else '' }}>{{ label }}</option>{% endfor %}</select></label></div>
-<div class="row small">{% for m in tgt.storage.models %}<label><input type="checkbox" name="ps_model" value="{{ m.model }}" {{ 'checked' if m.checked else '' }}> {{ m.model }} <span class="muted">({{ m.media }})</span></label>{% endfor %}</div>
+<div class="row small">{% for m in tgt.storage.models %}<label><input type="checkbox" name="ps_model" value="{{ m.model }}" {{ 'checked' if m.checked else '' }}> {{ m.model }} <span class="muted">(Gen {{ m.gen }}, {{ m.media }})</span></label>{% endfor %}</div>
 <p class="small muted" style="margin:4px 0 0">{{ t('ui_arch_hint') }}</p>
 </div>
 <div class="row" style="margin:8px 0">
