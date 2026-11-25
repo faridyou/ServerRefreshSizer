@@ -31,7 +31,7 @@
 <th>{{ t('ghz_match') }}</th><th>P90</th><th>{{ t('licensing_delta') }}</th><th>{{ t('tco') }}</th></tr>
 {% for c in clusters %}{% set r = c.rec %}
 <tr><td>{{ c.d.cluster }}</td><td>{{ c.d.mode.value }}</td><td>{{ c.d.confidence.value }}</td>
-<td>{{ r.label if r else 'none feasible' }}</td><td class="num">{{ r.n_total if r else '-' }}</td>
+<td>{{ r | cfg if r else 'none feasible' }}</td><td class="num">{{ r.n_total if r else '-' }}</td>
 <td class="num">{{ (r.n_total * r.config.cpu_count * r.config.cores_per_cpu) if r else '-' }}</td>
 <td class="num">{{ (r.n_total * r.su_host) | fmt if r else '-' }}</td><td class="num">{{ r.util_failed | pct if r else '-' }}</td>
 <td class="num">{{ c.cs.naive.core_match_hosts if c.cs.naive else '-' }}</td><td class="num">{{ c.cs.naive.ghz_match_hosts if c.cs.naive else '-' }}</td>
@@ -56,7 +56,7 @@
 {% for m in um %}<tr><td>{{ m.sheet }}</td><td>{{ m.column }}</td><td>{{ m.target or '-' }}</td><td>{{ m.unit or '' }}</td><td class="num">{{ '%.2f' % m.confidence }}</td><td>{{ m.method }}</td><td>{{ m.sample or '' }}</td><td>{{ m.transformed or '' }}</td></tr>{% endfor %}</table>{% endif %}
 <h3>{{ t('estate') }}</h3>
 <table><tr><th>{{ t('cluster') }}</th><th>{{ t('hosts') }}</th><th>sockets</th><th>{{ t('cores') }}</th><th>CPU / benchmark</th><th>RAM GB</th><th>VMs</th><th>vCPU</th><th>vRAM GB</th><th>prov. TiB</th><th>used TiB</th><th>IOPS</th><th>{{ t('mode') }}</th><th>{{ t('confidence') }}</th></tr>
-{% for e in estate %}<tr><td>{{ e.cluster }}</td><td class="num">{{ e.hosts }}</td><td class="num">{{ e.sockets }}</td><td class="num">{{ e.cores }}</td><td>{% for k, v in e.cpu_models.items() %}{{ k }} -> {{ v }}<br>{% endfor %}</td>
+{% for e in estate %}<tr><td>{{ e.cluster }}</td><td class="num">{{ e.hosts }}</td><td class="num">{{ e.sockets }}</td><td class="num">{{ e.cores }}</td><td>{% for k, v in e.cpu_models.items() %}{{ k }} -> {{ v | cpu }}<br>{% endfor %}</td>
 <td class="num">{{ e.ram_gb | fmt }}</td><td class="num">{{ e.vms }}</td><td class="num">{{ e.vcpu | fmt }}</td><td class="num">{{ e.vram_gb | fmt }}</td><td class="num">{{ e.storage_prov_tib | fmt }}</td><td class="num">{{ e.storage_used_tib | fmt }}</td><td class="num">{{ e.iops | fmt }}</td><td>{{ e.mode }}</td><td>{{ e.confidence }}</td></tr>{% endfor %}</table>
 <h3>{{ t('assumptions') }}</h3><ul>{% for a in project.ingest.assumptions %}<li>{{ a.category }}: {{ a.text }}</li>{% endfor %}
 {% for c in clusters %}{% for f in c.d.flags %}<li>[{{ c.d.cluster }}] {{ f }}</li>{% endfor %}{% endfor %}</ul>
@@ -79,7 +79,7 @@
 </div>
 {% if c.charts.demand %}<img class="chart" src="{{ c.charts.demand }}" alt="{{ t('host_demand') }}">{% endif %}
 <table><tr><th>host</th><th>CPU</th><th>{{ t('cores') }}</th><th>SPC</th><th>Cap</th><th>U used</th><th>basis</th><th>{{ t('demand') }} ({{ t('unit') }})</th><th>method</th></tr>
-{% for h in d.hosts[:60] %}<tr><td>{{ h.host_id }}</td><td>{{ h.cpu_name }}</td><td class="num">{{ h.cores }}</td><td class="num">{{ h.spc | fmt }}</td><td class="num">{{ h.su_cap | fmt }}</td><td class="num">{{ h.util_used_pct | fmt }}</td><td>{{ h.util_basis or '' }}</td><td class="num">{{ h.demand_su | fmt }}</td><td>{{ h.method }}</td></tr>{% endfor %}</table>
+{% for h in d.hosts[:60] %}<tr><td>{{ h.host_id }}</td><td>{{ h.cpu_name | cpu((h.cores / h.sockets) if h.sockets else h.cores) }}</td><td class="num">{{ h.cores }}</td><td class="num">{{ h.spc | fmt }}</td><td class="num">{{ h.su_cap | fmt }}</td><td class="num">{{ h.util_used_pct | fmt }}</td><td>{{ h.util_basis or '' }}</td><td class="num">{{ h.demand_su | fmt }}</td><td>{{ h.method }}</td></tr>{% endfor %}</table>
 {% if d.hosts | length > 60 %}<p class="muted">... {{ d.hosts | length - 60 }} more hosts in the Excel workbook.</p>{% endif %}
 </section>
 
@@ -87,7 +87,7 @@
 <section class="card">
 <p>{{ t('base_vs_peak') }}</p>
 <table><tr><th>side</th><th>CPU</th><th>{{ t('metric') }}</th><th>{{ t('value') }}</th><th>cores</th><th>SPC</th><th>{{ t('system') }}</th><th>{{ t('sponsor') }}</th><th>{{ t('test_date') }}</th><th>URL</th><th>{{ t('retrieved') }}</th><th>source</th></tr>
-{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu }}</td><td>{{ b.metric }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.sponsor }}</td><td>{{ b.date }}</td><td>{{ b.url }}</td><td>{{ b.retrieved }}</td><td>{{ b.source }}{% if b.note %}<div class="muted">{{ b.note }}</div>{% endif %}</td></tr>{% endfor %}</table>
+{% for b in c.benchmarks %}<tr><td>{{ b.side }}</td><td>{{ b.cpu | cpu }}</td><td>{{ b.metric }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.cores }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td>{{ b.sponsor }}</td><td>{{ b.date }}</td><td>{{ b.url }}</td><td>{{ b.retrieved }}</td><td>{{ b.source }}{% if b.note %}<div class="muted">{{ b.note }}</div>{% endif %}</td></tr>{% endfor %}</table>
 {% if d.rperf_factor %}<p>rPerf → SPEC factor used: <b>{{ d.rperf_factor }}</b> (generation-matched value: {{ d.rperf_factor_matched if d.rperf_factor_matched else 'no anchor' }}; conservative value 0.425; anchors: S924 213/583.1 = 0.365, E1080 1,700/3,999.3 = 0.425).</p>{% endif %}
 </section>
 
@@ -109,12 +109,12 @@
 <section class="card">
 <p class="muted">Objective: {{ c.cs.objective }} · evaluated {{ c.cs.evaluated }} configs, {{ c.cs.infeasible }} infeasible.</p>
 <table><tr><th>#</th><th>config</th><th>SPC</th><th>Cap/host</th><th>{{ t('hosts') }}</th><th>{{ t('util_failed') }}</th><th>RAM/host</th><th>{{ t('drives') }}</th><th>{{ t('power') }}</th><th>RU</th><th>{{ t('capex') }}</th><th>licenses</th><th>TCO</th></tr>
-{% for x in c.cs.candidates %}<tr><td>{{ loop.index }}</td><td>{{ x.label }}{% if x.spc_flags %}<div class="muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.util_failed | pct }}</td>
+{% for x in c.cs.candidates %}<tr><td>{{ loop.index }}</td><td>{{ x | cfg }}{% if x.spc_flags %}<div class="muted">{{ x.spc_flags | join('; ') }}</div>{% endif %}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.su_host | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.util_failed | pct }}</td>
 <td class="num">{{ x.dimm.total_gb if x.dimm else '-' }}</td><td>{{ (x.drives.count ~ ' x ' ~ x.drives.drive_tb ~ ' TB') if x.drives else 'external' }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.rack_units }}</td><td class="num">{{ x.capex_total | money }}</td><td class="num">{{ x.license_total | money }}</td><td class="num">{{ x.tco | money }}</td></tr>{% endfor %}</table>
 {% if c.cs.scenarios %}<h3>{{ t('ui_scenarios') }}</h3>
 <p class="muted">{{ t('ui_target_used') }}: {{ c.cs.target_selection }}</p>
 <table><tr><th>CPU / platform</th><th>{{ t('ui_spec_basis') }}</th><th>SPC</th><th>{{ t('hosts') }}</th><th>{{ t('cores') }}</th><th>{{ t('util_failed') }}</th><th>{{ t('power') }}</th><th>TCO</th><th>{{ t('ui_vs_rec') }}</th><th></th></tr>
-{% for x in c.cs.scenarios %}<tr><td>{{ x.label }}</td><td>{{ c.scenario_basis[x.label] }}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.tco | money }}</td><td class="num">{{ (x.tco - c.rec.tco) | money if c.rec else '' }}</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}</table>
+{% for x in c.cs.scenarios %}<tr><td>{{ x | cfg }}</td><td>{{ c.scenario_basis[x.label] }}</td><td class="num">{{ x.spc_target | fmt }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ x.power_w_total | fmt }}</td><td class="num">{{ x.tco | money }}</td><td class="num">{{ (x.tco - c.rec.tco) | money if c.rec else '' }}</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}</table>
 <p class="muted">{{ t('ui_scenarios_note') }}</p>{% endif %}
 {% if c.charts.pareto %}<img class="chart" src="{{ c.charts.pareto }}" alt="{{ t('pareto') }}">{% endif %}
 </section>
@@ -124,7 +124,7 @@
 <section class="card">
 <table><tr><th>item</th><th>{{ t('value') }}</th></tr>
 <tr><td>Platform</td><td>Dell PowerEdge {{ r.config.platform }} ({{ c.platform.form_factor_u }}U) x {{ r.n_total }}</td></tr>
-<tr><td>{{ t('cpu') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_name }} ({{ r.config.cores_per_cpu }} cores, {{ c.cpu.base_ghz }} GHz base, {{ c.cpu.tdp_w }} W)</td></tr>
+<tr><td>{{ t('cpu') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_id | cpu }} · TDP {{ c.cpu.tdp_w }} W</td></tr>
 <tr><td>{{ t('memory') }}</td><td>{% if r.dimm %}{{ r.dimm.dimm_count }} x {{ r.dimm.dimm_size_gb }} GB DDR5 = {{ r.dimm.total_gb }} GB, {{ r.dimm.dpc }} DPC @ {{ r.dimm.speed_mt_s }} MT/s{% endif %}</td></tr>
 <tr><td>{{ t('drives') }}</td><td>{% if r.drives %}{{ r.drives.count }} x {{ r.drives.drive_tb }} TB NVMe ({{ r.drives.raw_tib }} TiB raw){% else %}boot only (BOSS); data on external storage{% endif %}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ r.nics }} (OCP 3.0)</td></tr>
@@ -186,7 +186,7 @@
 <h3>{{ t('raw_data') }}</h3>
 {% for cl in project.clusters %}<details {% if pdf %}open{% endif %}><summary>{{ cl.name }}: {{ cl.hosts | length }} hosts, {{ cl.workloads | length }} workloads</summary>
 <table><tr><th>host</th><th>model</th><th>CPU</th><th>sockets</th><th>cores</th><th>GHz</th><th>RAM</th><th>p95</th><th>peak</th><th>avg</th><th>snapshot</th></tr>
-{% for h in cl.hosts[:200] %}<tr><td>{{ h.host_id }}</td><td>{{ h.model or '' }}</td><td>{{ h.cpu_model or '' }}</td><td>{{ h.sockets or '' }}</td><td>{{ h.total_cores or '' }}</td><td>{{ h.nominal_ghz or '' }}</td><td>{{ h.ram_gb | fmt }}</td><td>{{ h.cpu_util_p95_pct | fmt }}</td><td>{{ h.cpu_util_peak_pct | fmt }}</td><td>{{ h.cpu_util_avg_pct | fmt }}</td><td>{{ h.cpu_util_snapshot_pct | fmt }}</td></tr>{% endfor %}</table>
+{% for h in cl.hosts[:200] %}<tr><td>{{ h.host_id }}</td><td>{{ h.model or '' }}</td><td>{{ h.cpu_model | cpu((h.total_cores / h.sockets) if h.sockets and h.total_cores else None, h.nominal_ghz) if h.cpu_model else '' }}</td><td>{{ h.sockets or '' }}</td><td>{{ h.total_cores or '' }}</td><td>{{ h.nominal_ghz or '' }}</td><td>{{ h.ram_gb | fmt }}</td><td>{{ h.cpu_util_p95_pct | fmt }}</td><td>{{ h.cpu_util_peak_pct | fmt }}</td><td>{{ h.cpu_util_avg_pct | fmt }}</td><td>{{ h.cpu_util_snapshot_pct | fmt }}</td></tr>{% endfor %}</table>
 {% if not pdf %}<table><tr><th>workload</th><th>host</th><th>class</th><th>vCPU</th><th>RAM GB</th><th>used GiB</th><th>prov GiB</th><th>licensing</th></tr>
 {% for w in cl.workloads[:500] %}<tr><td>{{ w.workload_id }}</td><td>{{ w.host_id or '' }}</td><td>{{ w.workload_class }}</td><td>{{ w.vcpu | fmt }}</td><td>{{ w.ram_gb_configured | fmt }}</td><td>{{ w.storage_used_gib | fmt }}</td><td>{{ w.storage_provisioned_gib | fmt }}</td><td>{{ w.licensing }}</td></tr>{% endfor %}</table>{% endif %}
 </details>{% endfor %}

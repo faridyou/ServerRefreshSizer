@@ -42,6 +42,9 @@ def create_app(store: ProjectStore | None = None, jobs: JobManager | None = None
     templates = Jinja2Templates(directory=str(UI_DIR / "templates"))
     env = templates.env
     env.filters.update({"fmt": fmt, "money": money, "pct": pct, "linkify": _linkify})
+    from refreshsizer.catalog.cpu_info import register as register_cpu_filters
+
+    register_cpu_filters(env)
 
     def S() -> ProjectStore:
         return app.state.store  # type: ignore[no-any-return]

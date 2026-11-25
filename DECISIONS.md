@@ -336,3 +336,14 @@ Each entry: **decision** – reason – how to change it.
     per core, no VMware, no extra storage licence. This supersedes decision 83.
 97. **Gen 3 data confirmed by the user**: 40 drive slots on the 1500, 5500 and 9500, and drive sizes TLC
     3.84 / 7.68 / 15.36 TB and QLC 30.72 TB. The 1500 is updated from 24 to 40 slots (supersedes that part of 94).
+
+## CPU display (change request 9)
+
+98. **Every CPU is shown as "Name (cores, GHz)"** - cores per CPU and base clock - in the app, the HTML/PDF,
+    Word, PowerPoint and Excel reports, the email prompt and the CLI. One helper (`catalog/cpu_info.py`) looks the
+    CPU up by catalog id, catalog name or the CPU matcher (exact/pattern or fuzzy >= 0.9 only, to avoid showing
+    another CPU's data); a CPU missing from the catalog keeps the cores/GHz from the input data.
+99. **Hover details** (cores/threads, base and turbo GHz, L3 cache, TDP, codename): in the app and the HTML report a
+    small inline script shows one floating popup (position: fixed, so cards that scroll sideways cannot clip it),
+    with a pure-CSS popup as the no-JavaScript fallback; also on keyboard focus. Excel shows the same details as a
+    cell note on hover. PDF, Word and PowerPoint cannot show hover popups, so they carry the "(cores, GHz)" text only.

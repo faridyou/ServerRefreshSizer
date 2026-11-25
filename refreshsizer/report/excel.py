@@ -11,6 +11,7 @@ from typing import Any
 import xlsxwriter
 from xlsxwriter.utility import xl_rowcol_to_cell
 
+from refreshsizer.catalog.cpu_info import config_label, cpu_label, cpu_tip
 from refreshsizer.engine.results import ClusterSizing
 from refreshsizer.units import UNIT
 
@@ -47,6 +48,21 @@ class Book:
 
 def _abs(sheet: str, row: int, col: int) -> str:
     return f"'{sheet}'!{xl_rowcol_to_cell(row, col, row_abs=True, col_abs=True)}"
+
+
+def _cpu_note(ws: Any, r: int, c: int, key: str | None, t: Any, cores: float | None = None,
+              ghz: float | None = None) -> None:
+    """Excel shows a cell note when the mouse is over the cell: CPU cores/threads, GHz, L3 cache, TDP."""
+    if key:
+        ws.write_comment(r, c, cpu_tip(key, cores, ghz, getattr(t, "lang", "en")), {"x_scale": 1.8, "y_scale": 1.3})
+
+
+def _cpu(t: Any, key: str | None, cores: float | None = None, ghz: float | None = None) -> str:
+    return cpu_label(key, cores, ghz, getattr(t, "lang", "en"))
+
+
+def _cfg(t: Any, x: Any) -> str:
+    return config_label(x, getattr(t, "lang", "en"))
 
 
 def _storage_block(bk: Any, ws: Any, r: int, st: dict[str, Any] | None, t: Any) -> int:
@@ -127,7 +143,9 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         sat_up = float(run.policy.get("saturation_uplift", 1.1))
         for h in d.hosts:
             ws3.write(r3, 0, h.host_id)
-            ws3.write(r3, 1, h.cpu_name)
+            per_cpu = (h.cores / h.sockets) if h.sockets else h.cores
+            ws3.write(r3, 1, _cpu(t, h.cpu_name, per_cpu))
+            _cpu_note(ws3, r3, 1, h.cpu_name, t, per_cpu)
             ws3.write_number(r3, 2, h.cores, bk.inp)
             ws3.write_number(r3, 3, h.spc, bk.inp)
             ws3.write_formula(r3, 4, f"=C{r3 + 1}*D{r3 + 1}", bk.f, h.su_cap)
@@ -333,7 +351,9 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         rec = cs.recommended
         R = refs[d.cluster]
         ws1.write(rr, 0, d.cluster)
-        ws1.write(rr, 1, rec.label if rec else "none feasible")
+        ws1.write(rr, 1, _cfg(t, rec) if rec else "none feasible")
+        if rec:
+            _cpu_note(ws1, rr, 1, rec.config.cpu_id, t)
         ws1.write(rr, 2, d.mode.value)
         ws1.write(rr, 3, d.confidence.value)
         ws1.write_formula(rr, 4, f"={R['c_req']}", bk.f, d.c_req)
@@ -417,7 +437,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
                            "power W", "RU", "capex", "licenses", "TCO"])
         r += 1
         for i, x in enumerate(c["cs"].candidates, 1):
-            vals = [i, x.label, x.spc_target, x.su_host, x.n_total, x.util_failed,
+            vals = [i, _cfg(t, x), x.spc_target, x.su_host, x.n_total, x.util_failed,
                     x.dimm.total_gb if x.dimm else 0,
                     f"{x.drives.count} x {x.drives.drive_tb} TB" if x.drives else "external", x.power_w_total,
                     x.rack_units, x.capex_total, x.license_total]
@@ -443,7 +463,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
             tags = c["scenario_tags"].get(x.label, [])
             if "recommended" in tags:
                 rec_row = r
-            vals = [i, x.label, c["scenario_basis"][x.label], x.spc_target, x.n_total, x.util_failed,
+            vals = [i, _cfg(t, x), c["scenario_basis"][x.label], x.spc_target, x.n_total, x.util_failed,
                     x.n_total * x.config.total_cores, "", x.power_w_total, x.rack_units, x.capex_total,
                     x.license_total]
             for j, v in enumerate(vals):
@@ -467,7 +487,7 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
         ws8.write(r, 0, c["d"].cluster, bk.b)
         r += 1
         items = [("Platform", f"Dell PowerEdge {rec.config.platform} x {rec.n_total}"),
-                 ("CPU", f"{rec.config.cpu_count} x {rec.config.cpu_name}"),
+                 ("CPU", f"{rec.config.cpu_count} x {_cpu(t, rec.config.cpu_id)}"),
                  ("Memory", f"{rec.dimm.dimm_count} x {rec.dimm.dimm_size_gb} GB = {rec.dimm.total_gb} GB, "
                             f"{rec.dimm.dpc} DPC @ {rec.dimm.speed_mt_s} MT/s" if rec.dimm else "-"),
                  ("Drives", f"{rec.drives.count} x {rec.drives.drive_tb} TB NVMe" if rec.drives else "external"),
@@ -549,8 +569,11 @@ def write_excel(ctx: dict[str, Any], out: Path) -> Path:
     r += 1
     for cl in project.clusters:
         for h in cl.hosts:
-            ws14.write_row(r, 0, [cl.name, h.host_id, h.cpu_model or "", h.sockets or "", h.total_cores or "",
+            per_cpu2: float | None = (h.total_cores / h.sockets) if h.sockets and h.total_cores else None
+            ws14.write_row(r, 0, [cl.name, h.host_id, _cpu(t, h.cpu_model, per_cpu2, h.nominal_ghz) if h.cpu_model
+                                  else "", h.sockets or "", h.total_cores or "",
                                   h.ram_gb or "", h.cpu_util_p95_pct or "", h.cpu_util_peak_pct or ""])
+            _cpu_note(ws14, r, 2, h.cpu_model, t, per_cpu2, h.nominal_ghz)
             r += 1
     bk.wb.close()
     return Path(out)
@@ -574,7 +597,9 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
     r = 4
     for c in clusters:
         rec, s = c["rec"], c["src"]
-        ws1.write_row(r, 0, [c["d"].cluster, rec.label if rec else "-", rec.n_total if rec else "-",
+        if rec:
+            _cpu_note(ws1, r, 1, rec.config.cpu_id, t)
+        ws1.write_row(r, 0, [c["d"].cluster, _cfg(t, rec) if rec else "-", rec.n_total if rec else "-",
                              rec.n_total * rec.config.total_cores if rec else "-"])
         if rec:
             ws1.write_number(r, 4, rec.util_failed, bk.pct)
@@ -596,7 +621,9 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
         bk.header(ws2, r, [t("cpu"), t("hosts"), t("c_sockets"), t("cores"), "GHz"])
         r += 1
         for m in s["models"]:
-            ws2.write_row(r, 0, [m["cpu"], m["hosts"], m["sockets"] or "", m["cores"], m["ghz"] or ""])
+            ws2.write_row(r, 0, [_cpu(t, m["cpu"], m.get("cpu_cores"), m["ghz"]), m["hosts"], m["sockets"] or "",
+                                 m["cores"], m["ghz"] or ""])
+            _cpu_note(ws2, r, 0, m["cpu"], t, m.get("cpu_cores"), m["ghz"])
             r += 1
         for label, val in ((t("ui_overall") + " " + t("cores"), s["cores"]), ("GHz " + t("c_total"), s["ghz_total"]),
                            (t("memory") + " (GB)", s["ram_gb"]), (t("c_vms"), s["vms"]), ("vCPU", s["vcpu"]),
@@ -618,7 +645,8 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
         for b in c["benchmarks"]:
             if b.get("metric") == "rPerf":
                 continue
-            ws3.write_row(r, 0, [t("c_side_" + b["side"]), b["cpu"], b.get("value") or "", b.get("spc") or "",
+            _cpu_note(ws3, r, 1, b["cpu"], t)
+            ws3.write_row(r, 0, [t("c_side_" + b["side"]), _cpu(t, b["cpu"]), b.get("value") or "", b.get("spc") or "",
                                  b.get("system") or "", b.get("url") or ""])
             r += 1
         if c["src"]["perf_ratio"]:
@@ -638,7 +666,7 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
             r += 2
             continue
         rows = [(t("c_platform"), f"Dell PowerEdge {rec.config.platform} x {rec.n_total}"),
-                (t("c_per_server"), f"{rec.config.cpu_count} x {rec.config.cpu_name}"),
+                (t("c_per_server"), f"{rec.config.cpu_count} x {_cpu(t, rec.config.cpu_id)}"),
                 (t("memory"), f"{rec.dimm.total_gb} GB ({rec.dimm.dimm_count} x {rec.dimm.dimm_size_gb} GB)"
                  if rec.dimm else ""),
                 (t("drives"), f"{rec.drives.count} x {rec.drives.drive_tb} TB NVMe" if rec.drives else t("c_external")),
@@ -660,7 +688,8 @@ def write_excel_customer(ctx: dict[str, Any], out: Path) -> Path:
                                t("power") + " W"])
             r += 1
             for x in sc[:8]:
-                ws4.write_row(r, 0, [f"{x.config.cpu_count} x {x.config.cpu_name}", f"PowerEdge {x.config.platform}",
+                _cpu_note(ws4, r, 0, x.config.cpu_id, t)
+                ws4.write_row(r, 0, [f"{x.config.cpu_count} x {_cpu(t, x.config.cpu_id)}", f"PowerEdge {x.config.platform}",
                                      x.n_total, x.n_total * x.config.total_cores])
                 ws4.write_number(r, 4, x.util_failed, bk.pct)
                 ws4.write_number(r, 5, x.power_w_total)

@@ -38,6 +38,7 @@ def translator(lang: str) -> Any:
             return key
         return str(e.get(lang) or e.get("en") or key)
 
+    t.lang = lang  # type: ignore[attr-defined]  # used by text renderers (CPU labels)
     return t
 
 
@@ -164,7 +165,8 @@ def source_view(project: Project, cs: ClusterSizing) -> dict[str, Any]:
     models: dict[str, dict[str, Any]] = {}
     for h in hosts:
         key = h.cpu_model or h.model or "unknown"
-        m = models.setdefault(key, {"cpu": key, "hosts": 0, "sockets": h.sockets, "cores": 0, "ghz": h.nominal_ghz})
+        m = models.setdefault(key, {"cpu": key, "hosts": 0, "sockets": h.sockets, "cores": 0, "ghz": h.nominal_ghz,
+                                    "cpu_cores": (h.cores // h.sockets) if h.cores and h.sockets else None})
         m["hosts"] += 1
         m["cores"] += h.cores or 0
     util = [(hc.util_used_pct, hc.su_cap) for hc in d.hosts if hc.util_used_pct is not None]

@@ -75,6 +75,8 @@ What you see, page by page:
   ports per host, IOPS limit), vCPU ratios/NUMA, licensing, optimizer objective, utilization
   handling, inventory-only mode, RISC factors and Monte Carlo. Each field shows inline help and its default; changed
   fields are highlighted. *Save* writes only the differences to `policy.yaml`; *Reset to defaults* removes it.
+* **CPU names** everywhere read "Name (cores, GHz)"; hover (or tab to) a CPU in the app or the HTML report for
+  cores/threads, base/turbo GHz, L3 cache and TDP (Excel: cell note).
 * **5 Results** – summary cards (recommended configuration, hosts, cores, capacity vs C_req in SPEC Score, headroom / failure-mode
   utilization, licensing delta, P50/P90, TCO), each with **Show calculation** expanders that reveal the formula,
   inputs, output, sources with clickable URLs and assumptions. Below: the bar chart of performance-normalized vs

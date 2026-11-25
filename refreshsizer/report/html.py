@@ -16,6 +16,9 @@ def env() -> Environment:
     e.filters["fmt"] = fmt
     e.filters["money"] = money
     e.filters["pct"] = pct
+    from refreshsizer.catalog.cpu_info import register
+
+    register(e)
     return e
 
 

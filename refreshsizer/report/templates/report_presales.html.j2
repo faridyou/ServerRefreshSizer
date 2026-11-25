@@ -13,7 +13,7 @@
 <h2>{{ t('s1') }}</h2>
 <section class="card">
 <table><tr><th>{{ t('cluster') }}</th><th>{{ t('mode') }} / {{ t('confidence') }}</th><th>{{ t('recommended') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">P90</th><th class="num">{{ t('util_failed') }}</th><th class="num">{{ t('core_match') }} / GHz</th><th class="num">{{ t('licensing_delta') }}</th><th class="num">TCO</th></tr>
-{% for c in clusters %}{% set r = c.rec %}<tr><td>{{ c.d.cluster }}</td><td>{{ c.d.mode.value }} / {{ c.d.confidence.value }}</td><td>{{ r.label if r else '-' }}</td><td class="num"><b>{{ r.n_total if r else '-' }}</b></td>
+{% for c in clusters %}{% set r = c.rec %}<tr><td>{{ c.d.cluster }}</td><td>{{ c.d.mode.value }} / {{ c.d.confidence.value }}</td><td>{{ r | cfg if r else '-' }}</td><td class="num"><b>{{ r.n_total if r else '-' }}</b></td>
 <td class="num">{{ c.cs.uncertainty.p90_hosts if c.cs.uncertainty else '-' }}</td><td class="num">{{ r.util_failed | pct if r else '-' }}</td>
 <td class="num">{{ c.cs.naive.core_match_hosts if c.cs.naive else '-' }} / {{ c.cs.naive.ghz_match_hosts if c.cs.naive else '-' }}</td>
 <td class="num">{{ c.license_delta | money if c.license_delta is not none else '-' }}</td><td class="num">{{ r.tco | money if r else '-' }}</td></tr>{% endfor %}
@@ -31,7 +31,7 @@
 {% if s.util_pct is not none %}{{ t('c_cpu_util') }}: {{ s.util_pct }} % ({{ s.util_basis }}).{% endif %}
 {% if s.collection_days %}{{ t('c_collection') }}: {{ s.collection_days | fmt }} {{ t('c_days') }}.{% endif %}</p>
 <table class="small"><tr><th>{{ t('cpu') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">{{ t('cores') }}</th><th class="num">GHz</th><th class="num">SPC</th><th>{{ t('sources') }}</th></tr>
-{% for m in s.models %}{% set b = (c.benchmarks | selectattr('side', 'equalto', 'source') | first) %}<tr><td>{{ m.cpu }}</td><td class="num">{{ m.hosts }}</td><td class="num">{{ m.cores }}</td><td class="num">{{ m.ghz | fmt }}</td><td class="num">{{ d.spc_source | fmt }}</td><td class="muted">{{ b.system ~ ' - ' ~ b.url if b else '' }}</td></tr>{% endfor %}
+{% for m in s.models %}{% set b = (c.benchmarks | selectattr('side', 'equalto', 'source') | first) %}<tr><td>{{ m.cpu | cpu(m.cpu_cores, m.ghz) }}</td><td class="num">{{ m.hosts }}</td><td class="num">{{ m.cores }}</td><td class="num">{{ m.ghz | fmt }}</td><td class="num">{{ d.spc_source | fmt }}</td><td class="muted">{{ b.system ~ ' - ' ~ b.url if b else '' }}</td></tr>{% endfor %}
 </table>
 </section>
 
@@ -47,7 +47,7 @@
   (t('p_step_headroom'), d.c_req | fmt ~ ' ' ~ t('unit'), 'U_max ' ~ (d.u_max | pct)),
 ] %}
 {% for label, val, how in steps %}<tr><td>{{ label }}</td><td class="num"><b>{{ val }}</b></td><td class="muted">{{ how }}</td></tr>{% endfor %}
-{% if r %}<tr><td>{{ t('p_step_host') }}</td><td class="num"><b>{{ r.su_host_effective | fmt }} {{ t('unit') }}</b></td><td class="muted">{{ r.config.cpu_count }} x {{ r.config.cpu_name }}, SPC {{ r.spc_target | fmt }}{% if r.su_host_effective < r.su_host %} ({{ t('p_after_reserve') }} {{ r.su_host | fmt }}){% endif %}</td></tr>
+{% if r %}<tr><td>{{ t('p_step_host') }}</td><td class="num"><b>{{ r.su_host_effective | fmt }} {{ t('unit') }}</b></td><td class="muted">{{ r.config.cpu_count }} x {{ r.config.cpu_id | cpu }}, SPC {{ r.spc_target | fmt }}{% if r.su_host_effective < r.su_host %} ({{ t('p_after_reserve') }} {{ r.su_host | fmt }}){% endif %}</td></tr>
 <tr><td>{{ t('p_step_hosts') }}</td><td class="num"><b>{{ r.n_total }}</b></td><td class="muted">{{ r.n_total - r.k_ha }} + {{ r.k_ha }} HA; {{ r.n_min_reason }}</td></tr>{% endif %}
 <tr><td>{{ t('memory') }}</td><td class="num"><b>{{ d.m_t | fmt }} GB</b></td><td class="muted">{{ d.mem_basis }} {{ d.m0 | fmt }} GB, +{{ d.growth_mem_pct | fmt }} %/yr</td></tr>
 <tr><td>{{ t('p_step_storage') }}</td><td class="num"><b>{{ d.storage_raw_tib | fmt }} TiB raw</b></td><td class="muted">{{ d.storage_used0_tib | fmt }} TiB used, +{{ d.growth_storage_pct | fmt }} %/yr, {{ d.protection }}</td></tr>
@@ -59,7 +59,7 @@
 <h3>{{ t('s8') }}</h3>
 <table class="small">
 <tr><td>Platform</td><td>Dell PowerEdge {{ r.config.platform }} x {{ r.n_total }}</td></tr>
-<tr><td>{{ t('cpu') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_name }} ({{ r.config.cores_per_cpu }} c, {{ c.cpu.base_ghz }} GHz)</td></tr>
+<tr><td>{{ t('cpu') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_id | cpu }}</td></tr>
 <tr><td>{{ t('memory') }}</td><td>{% if r.dimm %}{{ r.dimm.dimm_count }} x {{ r.dimm.dimm_size_gb }} GB = {{ r.dimm.total_gb }} GB, {{ r.dimm.dpc }} DPC @ {{ r.dimm.speed_mt_s }} MT/s{% endif %}</td></tr>
 <tr><td>{{ t('drives') }}</td><td>{% if r.drives %}{{ r.drives.count }} x {{ r.drives.drive_tb }} TB NVMe ({{ r.drives.raw_tib }} TiB){% else %}external{% endif %}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ r.nics }}</td></tr>
@@ -73,7 +73,7 @@
 {% if c.cs.scenarios %}
 <section class="card"><h3>{{ t('ui_scenarios') }}</h3>
 <table class="small"><tr><th>{{ t('cpu') }} / platform</th><th>{{ t('ui_spec_basis') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">{{ t('cores') }}</th><th class="num">{{ t('util_failed') }}</th><th class="num">TCO</th><th class="num">{{ t('ui_vs_rec') }}</th><th></th></tr>
-{% for x in c.cs.scenarios[:10] %}<tr><td>{{ x.label }}</td><td>{{ c.scenario_basis[x.label] }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ x.tco | money }}</td><td class="num">{{ (x.tco - r.tco) | money }}</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}
+{% for x in c.cs.scenarios[:10] %}<tr><td>{{ x | cfg }}</td><td>{{ c.scenario_basis[x.label] }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ x.tco | money }}</td><td class="num">{{ (x.tco - r.tco) | money }}</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}
 </table></section>
 {% endif %}
 

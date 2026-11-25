@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from refreshsizer import workflow
+from refreshsizer.catalog.cpu_info import config_label
 from refreshsizer.units import UNIT
 
 app = typer.Typer(add_completion=False, no_args_is_help=True,
@@ -117,7 +118,7 @@ def _print_sizing(run: Any) -> None:
     for cs in run.clusters:
         r = cs.recommended
         d = cs.demand
-        t.add_row(d.cluster, d.mode.value, d.confidence.value, f"{d.c_req:,.0f}", r.label if r else "none",
+        t.add_row(d.cluster, d.mode.value, d.confidence.value, f"{d.c_req:,.0f}", config_label(r) if r else "none",
                   str(r.n_total) if r else "-",
                   f"{cs.uncertainty.p50_hosts}/{cs.uncertainty.p90_hosts}" if cs.uncertainty else "-",
                   str(cs.naive.core_match_hosts) if cs.naive else "-",
@@ -134,7 +135,7 @@ def _print_sizing(run: Any) -> None:
         tags = scenario_tags(cs.scenarios, cs.recommended)
         base = cs.recommended.tco if cs.recommended else 0
         for c in cs.scenarios:
-            st.add_row(c.label, spec_basis(c), str(c.n_total), str(c.n_total * c.config.total_cores), f"{c.util_failed:.0%}",
+            st.add_row(config_label(c), spec_basis(c), str(c.n_total), str(c.n_total * c.config.total_cores), f"{c.util_failed:.0%}",
                        f"{c.tco:,.0f}", f"{c.tco - base:+,.0f}", ", ".join(tags.get(c.label, [])))
         console.print(st)
     for w in run.warnings:

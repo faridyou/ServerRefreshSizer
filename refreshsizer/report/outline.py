@@ -10,7 +10,16 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from refreshsizer.catalog.cpu_info import config_label, cpu_label
 from refreshsizer.report.explain import fmt, money, pct
+
+
+def _cpu(t: Any, key: str | None, cores: float | None = None, ghz: float | None = None) -> str:
+    return cpu_label(key, cores, ghz, getattr(t, "lang", "en"))
+
+
+def _cfg(t: Any, x: Any) -> str:
+    return config_label(x, getattr(t, "lang", "en"))
 
 
 @dataclass
@@ -48,7 +57,7 @@ class Outline:
 # ---------------------------------------------------------------------------------------------- pieces
 def _current_env(c: dict[str, Any], t: Any) -> list[Block]:
     s = c["src"]
-    rows = [[m["cpu"], str(m["hosts"]), str(m["sockets"] or ""), str(m["cores"]), fmt(m["ghz"])] for m in s["models"]]
+    rows = [[_cpu(t, m["cpu"], m.get("cpu_cores"), m["ghz"]), str(m["hosts"]), str(m["sockets"] or ""), str(m["cores"]), fmt(m["ghz"])] for m in s["models"]]
     rows.append([t("ui_overall"), str(s["hosts"]), str(s["sockets"]), str(s["cores"]),
                  f"{fmt(s['ghz_total'])} GHz {t('c_total')}"])
     util = f"{s['util_pct']} % ({s['util_basis']})" if s["util_pct"] is not None else t("c_no_util")
@@ -61,7 +70,7 @@ def _current_env(c: dict[str, Any], t: Any) -> list[Block]:
 
 
 def _benchmarks(c: dict[str, Any], t: Any) -> list[Block]:
-    rows = [[t("c_side_" + b["side"]), str(b["cpu"]), fmt(b.get("value")), str(b.get("spc") or ""),
+    rows = [[t("c_side_" + b["side"]), _cpu(t, str(b["cpu"])), fmt(b.get("value")), str(b.get("spc") or ""),
              str(b.get("system") or ""), str(b.get("url") or "")]
             for b in c["benchmarks"] if b.get("metric") != "rPerf"]
     out = [Block("para", t("c_bench_intro"), style="muted"),
@@ -76,8 +85,7 @@ def _proposal(c: dict[str, Any], t: Any, policy: dict[str, Any]) -> list[Block]:
     r, d, s = c["rec"], c["d"], c["src"]
     if not r:
         return [Block("para", "no feasible configuration", style="warn")]
-    rows = [[t("c_per_server"), f"{r.config.cpu_count} x {r.config.cpu_name} ({r.config.cores_per_cpu} "
-                                f"{t('cores').lower()})"],
+    rows = [[t("c_per_server"), f"{r.config.cpu_count} x {_cpu(t, r.config.cpu_id)}"],
             [t("memory"), f"{r.dimm.total_gb} GB ({r.dimm.dimm_count} x {r.dimm.dimm_size_gb} GB)" if r.dimm else ""],
             [t("drives"), f"{r.drives.count} x {r.drives.drive_tb} TB NVMe" if r.drives else t("c_external")],
             [t("network"), r.nics], [t("c_platform"), c["cs"].target_selection.split(";")[0]]]
@@ -105,7 +113,7 @@ def _alternatives(c: dict[str, Any], t: Any, with_cost: bool) -> list[Block]:
     header += ["TCO", t("ui_vs_rec"), ""] if with_cost else [t("power") + " (W)", ""]
     rows = []
     for x in sc[:10]:
-        row = [f"{x.config.cpu_count} x {x.config.cpu_name}", x.config.platform, str(x.n_total),
+        row = [f"{x.config.cpu_count} x {_cpu(t, x.config.cpu_id)}", x.config.platform, str(x.n_total),
                str(x.n_total * x.config.total_cores), pct(x.util_failed)]
         row += [money(x.tco), money(x.tco - r.tco) if r else ""] if with_cost else [f"{x.power_w_total:,.0f}"]
         row.append(", ".join(c["scenario_tags"].get(x.label, [])))
@@ -117,7 +125,7 @@ def _summary_table(ctx: dict[str, Any], t: Any) -> Block:
     rows = []
     for c in ctx["clusters"]:
         r, cs = c["rec"], c["cs"]
-        rows.append([c["d"].cluster, f"{c['d'].mode.value} / {c['d'].confidence.value}", r.label if r else "-",
+        rows.append([c["d"].cluster, f"{c['d'].mode.value} / {c['d'].confidence.value}", _cfg(t, r) if r else "-",
                      str(r.n_total) if r else "-", str(cs.uncertainty.p90_hosts) if cs.uncertainty else "-",
                      pct(r.util_failed) if r else "-",
                      f"{cs.naive.core_match_hosts} / {cs.naive.ghz_match_hosts}" if cs.naive else "-",
@@ -137,7 +145,7 @@ def _chain(c: dict[str, Any], t: Any) -> Block:
             [t("p_step_headroom"), f"{fmt(d.c_req)} {t('unit')}", f"U_max {pct(d.u_max)}"]]
     if r:
         rows += [[t("p_step_host"), f"{fmt(r.su_host_effective)} {t('unit')}",
-                  f"{r.config.cpu_count} x {r.config.cpu_name}, SPC {fmt(r.spc_target)}"],
+                  f"{r.config.cpu_count} x {_cpu(t, r.config.cpu_id)}, SPC {fmt(r.spc_target)}"],
                  [t("p_step_hosts"), str(r.n_total), f"{r.n_total - r.k_ha} + {r.k_ha} HA; {r.n_min_reason}"]]
     rows += [[t("memory"), f"{fmt(d.m_t)} GB", f"{d.mem_basis} {fmt(d.m0)} GB, +{fmt(d.growth_mem_pct)} %/yr"],
              [t("p_step_storage"), f"{fmt(d.storage_raw_tib)} TiB raw",
@@ -150,7 +158,7 @@ def _bom(c: dict[str, Any], t: Any, policy: dict[str, Any]) -> list[Block]:
     if not r:
         return []
     rows = [["Platform", f"Dell PowerEdge {r.config.platform} x {r.n_total}"],
-            [t("cpu"), f"{r.config.cpu_count} x {r.config.cpu_name} ({r.config.cores_per_cpu} c)"],
+            [t("cpu"), f"{r.config.cpu_count} x {_cpu(t, r.config.cpu_id)}"],
             [t("memory"), f"{r.dimm.dimm_count} x {r.dimm.dimm_size_gb} GB = {r.dimm.total_gb} GB, {r.dimm.dpc} DPC @ "
                           f"{r.dimm.speed_mt_s} MT/s" if r.dimm else ""],
             [t("drives"), f"{r.drives.count} x {r.drives.drive_tb} TB NVMe ({r.drives.raw_tib} TiB)" if r.drives

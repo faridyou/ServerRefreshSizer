@@ -20,7 +20,7 @@
 <h3>1. {{ t('c_current') }}</h3>
 <table>
 <tr><th>{{ t('cpu') }}</th><th class="num">{{ t('hosts') }}</th><th class="num">{{ t('c_sockets') }}</th><th class="num">{{ t('cores') }}</th><th class="num">GHz</th></tr>
-{% for m in s.models %}<tr><td>{{ m.cpu }}</td><td class="num">{{ m.hosts }}</td><td class="num">{{ m.sockets or '' }}</td><td class="num">{{ m.cores }}</td><td class="num">{{ m.ghz | fmt }}</td></tr>{% endfor %}
+{% for m in s.models %}<tr><td>{{ m.cpu | cpu(m.cpu_cores, m.ghz) }}</td><td class="num">{{ m.hosts }}</td><td class="num">{{ m.sockets or '' }}</td><td class="num">{{ m.cores }}</td><td class="num">{{ m.ghz | fmt }}</td></tr>{% endfor %}
 <tr><th>{{ t('ui_overall') }}</th><th class="num">{{ s.hosts }}</th><th class="num">{{ s.sockets }}</th><th class="num">{{ s.cores }}</th><th class="num">{{ s.ghz_total | fmt }} GHz {{ t('c_total') }}</th></tr>
 </table>
 <table>
@@ -34,7 +34,7 @@
 <h3>2. {{ t('c_benchmarks') }}</h3>
 <p>{{ t('c_bench_intro') }}</p>
 <table><tr><th></th><th>{{ t('cpu') }}</th><th class="num">SPECrate2017_int_base</th><th class="num">{{ t('c_per_core') }}</th><th>{{ t('system') }}</th><th>{{ t('sources') }}</th></tr>
-{% for b in c.benchmarks if b.metric != 'rPerf' %}<tr><td>{{ t('c_side_' ~ b.side) }}</td><td>{{ b.cpu }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td class="muted">{{ b.url }}</td></tr>{% endfor %}
+{% for b in c.benchmarks if b.metric != 'rPerf' %}<tr><td>{{ t('c_side_' ~ b.side) }}</td><td>{{ b.cpu | cpu }}</td><td class="num">{{ b.value | fmt }}</td><td class="num">{{ b.spc }}</td><td>{{ b.system }}</td><td class="muted">{{ b.url }}</td></tr>{% endfor %}
 </table>
 {% if s.perf_ratio %}<p class="note">{{ t('c_perf_ratio') | replace('{x}', s.perf_ratio | string) }}</p>{% endif %}
 </section>
@@ -48,7 +48,7 @@
 <div class="kpi"><div class="v">{{ r.util_failed | pct }}</div><div class="l">{{ t('c_util_after_failure') }}</div></div>
 </div>
 <table>
-<tr><td>{{ t('c_per_server') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_name }} ({{ r.config.cores_per_cpu }} {{ t('cores') | lower }})</td></tr>
+<tr><td>{{ t('c_per_server') }}</td><td>{{ r.config.cpu_count }} x {{ r.config.cpu_id | cpu }}</td></tr>
 <tr><td>{{ t('memory') }}</td><td>{% if r.dimm %}{{ r.dimm.total_gb }} GB ({{ r.dimm.dimm_count }} x {{ r.dimm.dimm_size_gb }} GB){% endif %}</td></tr>
 <tr><td>{{ t('drives') }}</td><td>{% if r.drives %}{{ r.drives.count }} x {{ r.drives.drive_tb }} TB NVMe{% else %}{{ t('c_external') }}{% endif %}</td></tr>
 <tr><td>{{ t('network') }}</td><td>{{ r.nics }}</td></tr>
@@ -65,7 +65,7 @@
 <section class="card">
 <h3>5. {{ t('c_alternatives') }}</h3>
 <table><tr><th>{{ t('cpu') }}</th><th>{{ t('c_platform') }}</th><th class="num">{{ t('c_servers') | capitalize }}</th><th class="num">{{ t('cores') }}</th><th class="num">{{ t('c_util_after_failure') }}</th><th class="num">{{ t('power') }}</th><th></th></tr>
-{% for x in c.cs.scenarios[:8] %}<tr><td>{{ x.config.cpu_count }} x {{ x.config.cpu_name }}</td><td>PowerEdge {{ x.config.platform }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ '{:,.0f}'.format(x.power_w_total) }} W</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}
+{% for x in c.cs.scenarios[:8] %}<tr><td>{{ x.config.cpu_count }} x {{ x.config.cpu_id | cpu }}</td><td>PowerEdge {{ x.config.platform }}</td><td class="num">{{ x.n_total }}</td><td class="num">{{ x.n_total * x.config.cpu_count * x.config.cores_per_cpu }}</td><td class="num">{{ x.util_failed | pct }}</td><td class="num">{{ '{:,.0f}'.format(x.power_w_total) }} W</td><td>{{ c.scenario_tags.get(x.label, []) | join(', ') }}</td></tr>{% endfor %}
 </table></section>
 {% endif %}
 {% endif %}

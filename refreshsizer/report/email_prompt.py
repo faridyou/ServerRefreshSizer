@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from refreshsizer.catalog.cpu_info import cpu_label
 from refreshsizer.model.entities import Project
 from refreshsizer.report.explain import money
 
@@ -99,7 +100,9 @@ TONE_FR = {"professional": "professionnel", "friendly": "cordial", "formal": "fo
 def _cluster_facts(c: dict[str, Any], t: Any, x: dict[str, str], prices: bool) -> list[str]:
     d, r, s, cs = c["d"], c["rec"], c["src"], c["cs"]
     out = [f"## {d.cluster}"]
-    cpus = ", ".join(f"{m['hosts']} x {m['cpu']} ({m['cores']} {t('cores').lower()})" for m in s["models"]) or "-"
+    lang = getattr(t, "lang", "en")
+    cpus = ", ".join(f"{m['hosts']} servers with {cpu_label(m['cpu'], m.get('cpu_cores'), m['ghz'], lang)}, "
+                     f"{m['cores']} {t('cores').lower()} in total" for m in s["models"]) or "-"
     cur = (f"- {x['current']}: {s['hosts']} {t('c_servers')}, {s['cores']} {t('cores').lower()} "
            f"({s['ghz_total']:,.0f} GHz), {s['ram_gb']:,} GB RAM, {s['vms']} VMs / {s['vcpu']:,.0f} vCPU, "
            f"{s['storage_used_tib']:,.1f} TiB; CPUs: {cpus}")
@@ -114,14 +117,15 @@ def _cluster_facts(c: dict[str, Any], t: Any, x: dict[str, str], prices: bool) -
     tgt_b = next((b for b in c["benchmarks"] if b["side"] == "target"), None)
     if src_b and tgt_b:
         ratio = f" -> x{s['perf_ratio']} per core" if s.get("perf_ratio") else ""
-        out.append(f"- {x['bench']}: {src_b['cpu']} {src_b['spc']} per core ({src_b['system']}) vs "
-                   f"{tgt_b['cpu']} {tgt_b['spc']} per core ({tgt_b['system']}){ratio}")
+        out.append(f"- {x['bench']}: {cpu_label(src_b['cpu'], lang=lang)} {src_b['spc']} per core "
+                   f"({src_b['system']}) vs {cpu_label(tgt_b['cpu'], lang=lang)} {tgt_b['spc']} per core "
+                   f"({tgt_b['system']}){ratio}")
     if not r:
         out.append(f"- {x['proposal']}: no feasible configuration (review constraints)")
         return out
     mem = f"{r.dimm.total_gb} GB" if r.dimm else "-"
     out.append(f"- {x['proposal']}: {r.n_total} x Dell PowerEdge {r.config.platform}, {r.config.cpu_count} x "
-               f"{r.config.cpu_name} ({r.config.cores_per_cpu} {t('cores').lower()}) and {mem} per server, network "
+               f"{cpu_label(r.config.cpu_id, lang=lang)} and {mem} per server, network "
                f"{r.nics}; {r.n_total * r.config.total_cores} {t('cores').lower()} in total; "
                f"{r.util_failed:.0%} CPU load with one server down; sized for {d.growth_cpu_pct:g} %/yr CPU growth "
                f"over {d.years} years, max {d.u_max:.0%} CPU, {r.k_ha} spare server(s) (N+{r.k_ha})")
@@ -145,7 +149,7 @@ def _cluster_facts(c: dict[str, Any], t: Any, x: dict[str, str], prices: bool) -
     alts = [y for y in cs.scenarios[:4] if y.label != r.label][:3]
     if alts:
         out.append(f"- {x['alts']}: " + "; ".join(
-            f"{y.n_total} x PowerEdge {y.config.platform} {y.config.cpu_count} x {y.config.cpu_name} "
+            f"{y.n_total} x PowerEdge {y.config.platform} {y.config.cpu_count} x {cpu_label(y.config.cpu_id, lang=lang)} "
             f"({y.util_failed:.0%} with one server down)" for y in alts))
     if prices:
         cost = [f"compute TCO over {d.years} yr {money(r.tco)} (hardware {money(r.capex_total)}, licences "
